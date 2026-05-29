@@ -1,48 +1,49 @@
 """
-metrics.py — Episode and per-timestep metric computation for the FANET simulator.
+metrics.py — Live, in-loop metric helpers ONLY.
 
-Metrics follow the definitions from IQMR (2024), Spectral RL, and DGATR:
+Per the metrics & logging spec, all reported episode metrics (PDR, delay,
+connectivity, energy, etc.) are computed in Stage 2 by scripts/analyze.py
+from the raw event log. This module is restricted to:
 
-    PDR             Packet delivery ratio = delivered / total_generated.
-    avg_delay       Mean end-to-end delay in timesteps (delivered packets only).
-    avg_hops        Mean hop count per delivered packet.
-    drop_rate       Fraction of packets dropped before reaching the GS.
-    avg_energy      Mean residual energy across all drones in joules.
-    network_connected  Whether the drone graph is fully connected (bool).
-    throughput      Delivered packets per simulation timestep.
-    routing_load    Ratio of forwarded (relay) transmissions to original packets.
+  * Building the current communication graph (used by the visualiser and by
+    the per-step connectivity sample written to the log).
+  * Computing the graded connectivity sample (frac_connected_to_gs and
+    num_components) that the env logs once per step.
+  * A small live HUD snapshot for the visualiser — explicitly NOT the source
+    of any reported metric.
+
+Do NOT add episode aggregation back into this module. New metrics belong
+in scripts/analyze.py so they can be added without re-running simulations.
 """
 
 from __future__ import annotations
 
-from statistics import mean
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Tuple
 
 import networkx as nx
+import numpy as np
 
 from fanet_sim import config
+from fanet_sim.envs.channel import are_connected, euclidean_distance
 
 if TYPE_CHECKING:
     from fanet_sim.envs.drone import Drone
     from fanet_sim.envs.fanet_env import FANETEnv
-    from fanet_sim.envs.packet import Packet
 
 
 # ---------------------------------------------------------------------------
-# Graph connectivity
+# Graph construction
 # ---------------------------------------------------------------------------
 
 def build_network_graph(drones: List["Drone"]) -> nx.Graph:
-    """Build a NetworkX graph of the current drone topology.
-
-    Nodes are drone IDs; edges exist between drones that are within
-    COMM_RANGE of each other.
+    """Build the current undirected communication graph (drones only).
 
     Args:
         drones: All Drone objects in the simulation.
 
     Returns:
-        An undirected NetworkX Graph.
+        Graph with drone IDs as nodes and an edge between any two drones
+        whose neighbour sets include each other.
     """
     G = nx.Graph()
     G.add_nodes_from(d.drone_id for d in drones)
@@ -52,152 +53,101 @@ def build_network_graph(drones: List["Drone"]) -> nx.Graph:
     return G
 
 
-def is_network_connected(drones: List["Drone"]) -> bool:
-    """Return True if every drone can reach every other drone via relay links.
+def build_graph_with_gs(
+    drones: List["Drone"],
+    gs_position: np.ndarray,
+) -> Tuple[nx.Graph, str]:
+    """Build the communication graph including the ground station as a node.
+
+    A drone is linked to the GS node if the FSPL received-signal test in
+    :func:`fanet_sim.envs.channel.are_connected` passes.
 
     Args:
-        drones: All Drone objects in the simulation.
+        drones:      All Drone objects.
+        gs_position: Ground-station position.
 
     Returns:
-        True if the induced communication graph is connected.
+        (graph, gs_node_label) — the graph with one extra node for the GS
+        and the label used for it (so callers do not collide with int IDs).
     """
+    gs_label = "GS"
     G = build_network_graph(drones)
-    return nx.is_connected(G) if len(G.nodes) > 0 else False
+    G.add_node(gs_label)
+    for d in drones:
+        if are_connected(d.position, gs_position):
+            G.add_edge(d.drone_id, gs_label)
+    return G, gs_label
 
 
 # ---------------------------------------------------------------------------
-# Episode-level metrics
+# Graded connectivity (logged per-step by the env)
 # ---------------------------------------------------------------------------
 
-def compute_episode_metrics(env: "FANETEnv") -> Dict[str, object]:
-    """Compute all standard metrics at the end of an episode.
+def connectivity_sample(
+    drones: List["Drone"],
+    gs_position: np.ndarray,
+) -> Tuple[float, int]:
+    """Return (frac_connected_to_gs, num_components) for the current step.
+
+    ``frac_connected_to_gs`` is the fraction of drones with *any* multi-hop
+    path to the ground station. This is the graded measure required by §B.3
+    of the metrics spec — do NOT collapse it to a binary flag.
 
     Args:
-        env: The FANETEnv instance after running a full episode.
+        drones:      All Drone objects.
+        gs_position: Ground-station position.
 
     Returns:
-        A dict with the following keys:
-
-        - ``PDR``               float  — packet delivery ratio.
-        - ``avg_delay``         float  — mean delivery delay in timesteps.
-        - ``avg_hops``          float  — mean hops per delivered packet.
-        - ``drop_rate``         float  — fraction of packets dropped.
-        - ``avg_energy``        float  — mean residual energy per drone (J).
-        - ``network_connected`` bool   — True if graph is connected at episode end.
-        - ``throughput``        float  — delivered packets per timestep.
-        - ``routing_load``      float  — relay tx count / total packets generated.
-        - ``total_generated``   int    — packets created this episode.
-        - ``total_delivered``   int    — packets that reached the GS.
-        - ``total_dropped``     int    — packets that were dropped.
+        (fraction in [0, 1], number of connected components in the drone-only
+        graph).
     """
-    total_generated = len(env.all_packets)
-    total_delivered = len(env.delivered)
-    total_dropped = len(env.dropped)
+    if not drones:
+        return 0.0, 0
 
-    pdr = total_delivered / total_generated if total_generated > 0 else 0.0
-    drop_rate = total_dropped / total_generated if total_generated > 0 else 0.0
+    G, gs = build_graph_with_gs(drones, gs_position)
+    if gs in G:
+        reachable = nx.node_connected_component(G, gs)
+        connected = sum(1 for d in drones if d.drone_id in reachable)
+    else:
+        connected = 0
+    frac = connected / len(drones)
 
-    delays = [p.delay() for p in env.delivered if p.delay() is not None]
-    avg_delay = mean(delays) if delays else 0.0
-
-    hops = [p.hop_count for p in env.delivered]
-    avg_hops = mean(hops) if hops else 0.0
-
-    energies = [d.energy for d in env.drones]
-    avg_energy = mean(energies) if energies else 0.0
-
-    connected = is_network_connected(env.drones)
-
-    steps = max(env.step_count, 1)
-    throughput = total_delivered / steps
-
-    # routing_load: relay hops beyond the first hop count as "control" overhead
-    total_relay_hops = sum(p.hop_count for p in env.all_packets)
-    routing_load = total_relay_hops / total_generated if total_generated > 0 else 0.0
-
-    return {
-        "PDR": pdr,
-        "avg_delay": avg_delay,
-        "avg_hops": avg_hops,
-        "drop_rate": drop_rate,
-        "avg_energy": avg_energy,
-        "network_connected": connected,
-        "throughput": throughput,
-        "routing_load": routing_load,
-        "total_generated": total_generated,
-        "total_delivered": total_delivered,
-        "total_dropped": total_dropped,
-    }
+    drone_only = build_network_graph(drones)
+    num_components = nx.number_connected_components(drone_only)
+    return frac, num_components
 
 
 # ---------------------------------------------------------------------------
-# Per-timestep snapshot
+# Live HUD snapshot (visualiser only — NOT for reporting)
 # ---------------------------------------------------------------------------
 
-def compute_step_metrics(env: "FANETEnv") -> Dict[str, object]:
-    """Compute a lightweight snapshot of metrics at the current timestep.
+def live_hud(env: "FANETEnv") -> Dict[str, object]:
+    """Return a lightweight snapshot for live display in the visualiser.
 
-    Useful for live visualisation and debugging.
+    These numbers are intentionally cheap and approximate. Reported metrics
+    must come from the Stage 2 analyser, not from this function.
 
     Args:
         env: The FANETEnv instance mid-episode.
 
     Returns:
-        A dict with:
-
-        - ``step``          int   — current timestep index.
-        - ``delivered``     int   — cumulative packets delivered so far.
-        - ``dropped``       int   — cumulative packets dropped so far.
-        - ``generated``     int   — cumulative packets generated so far.
-        - ``PDR``           float — running PDR.
-        - ``avg_delay``     float — running mean delay (delivered only).
-        - ``connected``     bool  — current graph connectivity.
-        - ``active_links``  int   — number of wireless links active this step.
+        Dict with: ``step``, ``delivered``, ``dropped``, ``generated``,
+        ``running_pdr``, ``active_links``, ``frac_connected_to_gs``.
     """
+    frac, _ = connectivity_sample(env.drones, env.gs_position)
     gen = len(env.all_packets)
     dlv = len(env.delivered)
-    drp = len(env.dropped)
-    pdr = dlv / gen if gen > 0 else 0.0
-
+    # Delivered-only running delay (None when no deliveries yet — never
+    # substitute 0 or infinity; that is the bug §B.2 of the spec warns about).
     delays = [p.delay() for p in env.delivered if p.delay() is not None]
-    avg_delay = mean(delays) if delays else 0.0
-
+    running_delay = sum(delays) / len(delays) if delays else None
     return {
         "step": env.step_count,
         "delivered": dlv,
-        "dropped": drp,
+        "dropped": len(env.dropped),
         "generated": gen,
-        "PDR": pdr,
-        "avg_delay": avg_delay,
-        "connected": is_network_connected(env.drones),
+        "running_pdr": (dlv / gen) if gen > 0 else 0.0,
+        "running_avg_delay": running_delay,
         "active_links": len(env.active_links),
+        "frac_connected_to_gs": frac,
     }
-
-
-# ---------------------------------------------------------------------------
-# Pretty-print helper
-# ---------------------------------------------------------------------------
-
-def print_episode_summary(metrics: Dict[str, object]) -> None:
-    """Print a formatted summary of episode metrics to stdout.
-
-    Args:
-        metrics: Dict returned by compute_episode_metrics().
-    """
-    sep = "=" * 52
-    print(sep)
-    print("  FANET Episode Summary")
-    print(sep)
-    print(f"  Packets generated :  {metrics['total_generated']}")
-    print(f"  Packets delivered :  {metrics['total_delivered']}")
-    print(f"  Packets dropped   :  {metrics['total_dropped']}")
-    print(sep)
-    print(f"  PDR               :  {metrics['PDR']:.4f}")
-    print(f"  Drop rate         :  {metrics['drop_rate']:.4f}")
-    print(f"  Avg delay (steps) :  {metrics['avg_delay']:.2f}")
-    print(f"  Avg hops          :  {metrics['avg_hops']:.2f}")
-    print(f"  Throughput (pkt/s):  {metrics['throughput']:.4f}")
-    print(f"  Routing load      :  {metrics['routing_load']:.4f}")
-    print(f"  Avg residual E (J):  {metrics['avg_energy']:.1f}")
-    print(f"  Network connected :  {metrics['network_connected']}")
-    print(sep)

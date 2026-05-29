@@ -17,7 +17,11 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 
 from fanet_sim import config
-from fanet_sim.envs.channel import link_quality, euclidean_distance
+from fanet_sim.envs.channel import (
+    are_connected,
+    euclidean_distance,
+    link_quality,
+)
 from fanet_sim.envs.packet import Packet
 
 
@@ -65,7 +69,10 @@ class Drone:
         self.speed: float = float(speed)
         self.waypoints: List[np.ndarray] = [w.astype(np.float64) for w in waypoints]
         self.wp_index: int = 0
-        self.energy: float = config.INITIAL_ENERGY
+        # Energy is tracked as two independent budgets so the topology agent's
+        # motion cost (Phase 4) does not get hidden inside the radio cost.
+        self.energy_radio: float = config.INITIAL_ENERGY
+        self.energy_motion: float = config.INITIAL_ENERGY
         self.queue: List[Packet] = []
         self.neighbors: Dict[int, "Drone"] = {}
         self.gs_position: np.ndarray = gs_position.astype(np.float64)
@@ -107,8 +114,8 @@ class Drone:
 
         self.velocity = unit * self.speed
         self.position = self.position + unit * actual_move
-        self.energy -= config.ENERGY_PER_MOVE * actual_move
-        self.energy = max(0.0, self.energy)
+        self.energy_motion -= config.ENERGY_PER_MOVE * actual_move
+        self.energy_motion = max(0.0, self.energy_motion)
 
         return actual_move
 
@@ -119,7 +126,9 @@ class Drone:
     def update_neighbors(self, all_drones: List["Drone"]) -> None:
         """Recompute the neighbour set from the full drone list.
 
-        A drone is a neighbour if it is within COMM_RANGE and is not *self*.
+        A drone is a neighbour if the FSPL received-signal test in
+        :func:`fanet_sim.envs.channel.are_connected` passes — i.e. the
+        received power at the receiver clears RX_SENSITIVITY_DBM.
 
         Args:
             all_drones: Every Drone object in the simulation.
@@ -128,8 +137,7 @@ class Drone:
         for other in all_drones:
             if other.drone_id == self.drone_id:
                 continue
-            dist = euclidean_distance(self.position, other.position)
-            if dist < config.COMM_RANGE:
+            if are_connected(self.position, other.position):
                 self.neighbors[other.drone_id] = other
 
     # ------------------------------------------------------------------
@@ -154,9 +162,23 @@ class Drone:
         return pkts
 
     def consume_tx_energy(self) -> None:
-        """Deduct one packet-transmission energy unit from the battery."""
-        self.energy -= config.ENERGY_PER_TX
-        self.energy = max(0.0, self.energy)
+        """Deduct one packet-transmission energy unit from the radio battery."""
+        self.energy_radio -= config.ENERGY_PER_TX
+        self.energy_radio = max(0.0, self.energy_radio)
+
+    def consume_rx_energy(self, n_packets: int = 1) -> None:
+        """Deduct receive energy for *n_packets* received this step.
+
+        Args:
+            n_packets: Number of packets received during the current step.
+        """
+        self.energy_radio -= config.ENERGY_PER_RX * n_packets
+        self.energy_radio = max(0.0, self.energy_radio)
+
+    def consume_idle_energy(self) -> None:
+        """Deduct one timestep of idle/listen energy from the radio battery."""
+        self.energy_radio -= config.ENERGY_PER_IDLE
+        self.energy_radio = max(0.0, self.energy_radio)
 
     # ------------------------------------------------------------------
     # State vector
@@ -196,13 +218,15 @@ class Drone:
             lq_map[nid] = lq
 
         dist_to_gs = euclidean_distance(self.position, self.gs_position)
-        is_connected_to_gs = dist_to_gs < config.COMM_RANGE
+        is_connected_to_gs = are_connected(self.position, self.gs_position)
 
         return {
             "position": tuple(self.position),
             "velocity": tuple(self.velocity),
             "distance_to_gs": dist_to_gs,
-            "residual_energy": self.energy,
+            "residual_energy": self.energy_radio + self.energy_motion,
+            "energy_radio": self.energy_radio,
+            "energy_motion": self.energy_motion,
             "queue_length": len(self.queue),
             "num_neighbors": len(self.neighbors),
             "neighbor_ids": neighbor_ids,
@@ -216,5 +240,6 @@ class Drone:
         pos = tuple(self.position.round(1))
         return (
             f"Drone(id={self.drone_id}, type={self.drone_type}, "
-            f"pos={pos}, energy={self.energy:.0f}J, queue={len(self.queue)})"
+            f"pos={pos}, e_radio={self.energy_radio:.0f}J, "
+            f"e_motion={self.energy_motion:.0f}J, queue={len(self.queue)})"
         )

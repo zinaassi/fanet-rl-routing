@@ -45,6 +45,7 @@ class Packet:
     ttl: int
     max_hops: int
     size_bytes: int = 512
+    is_control: bool = False
     current_holder: int | str = field(init=False)
     hop_count: int = field(default=0, init=False)
     delivered: bool = field(default=False, init=False)
@@ -144,12 +145,20 @@ class PacketFactory:
         self.max_hops = max_hops
         self.size = size_bytes
 
-    def create(self, source_id: int, created_at: int) -> Packet:
+    def create(
+        self,
+        source_id: int,
+        created_at: int,
+        is_control: bool = False,
+    ) -> Packet:
         """Create and return a new Packet.
 
         Args:
             source_id:  ID of the originating drone.
             created_at: Current simulation timestep.
+            is_control: True for routing/control/overhead traffic (e.g. future
+                        GNN embedding exchanges or RL agent messages). Phase 1
+                        data packets are always False.
 
         Returns:
             A freshly initialised Packet object.
@@ -161,6 +170,7 @@ class PacketFactory:
             ttl=self.ttl,
             max_hops=self.max_hops,
             size_bytes=self.size,
+            is_control=is_control,
         )
         self._next_id += 1
         return pkt

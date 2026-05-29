@@ -1,0 +1,60 @@
+{
+  "episode_meta": {
+    "record_type": "episode_meta",
+    "seed": 42,
+    "num_drones": 9,
+    "num_M": 6,
+    "num_C": 3,
+    "episode_length": 200,
+    "mobility_params": {
+      "speed_min": 10.0,
+      "speed_max": 30.0,
+      "num_waypoints": 5,
+      "area_width": 1000.0,
+      "area_height": 1000.0
+    },
+    "traffic_load": {
+      "packet_rate_per_M_per_step": 1,
+      "packet_size_bytes": 512,
+      "ttl": 50,
+      "max_hops": 10
+    },
+    "connectivity_model_params": {
+      "comm_range_m": 250.0,
+      "timestep_s": 0.1,
+      "routing": "greedy"
+    },
+    "started_at": 1779825678.76216,
+    "episode_id": 99
+  },
+  "raw_counts": {
+    "generated": 1200,
+    "delivered": 1121,
+    "dropped": 75,
+    "in_flight_at_end": 4,
+    "data_transmissions": 1759,
+    "control_transmissions": 0,
+    "drops_by_reason": {
+      "no_route": 75
+    }
+  },
+  "tier1": {
+    "PDR": 0.9341666666666667,
+    "avg_delay_steps": 0.5584299732381803,
+    "avg_delay_seconds": 0.055842997323818026,
+    "frac_connected_to_gs_mean": 0.9624101713653952,
+    "frac_connected_to_gs_min": 0.8888888888888888
+  },
+  "tier2": {
+    "avg_hops": 1.55842997323818,
+    "NRL": 0.0,
+    "drop_rate": 0.0625,
+    "num_components_mean": 1.3383084577114428,
+    "energy": {
+      "total_radio_consumed_J": 22.580000000074506,
+      "total_motion_consumed_J": 349.95221129758283,
+      "avg_radio_remaining_J": 207789.4911111111,
+      "avg_motion_remaining_J": 207753.11642096692
+    }
+  }
+}

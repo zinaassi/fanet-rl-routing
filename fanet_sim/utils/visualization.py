@@ -19,7 +19,7 @@ import matplotlib.animation as animation
 import numpy as np
 
 from fanet_sim import config
-from fanet_sim.utils.metrics import compute_step_metrics
+from fanet_sim.utils.metrics import live_hud
 
 if TYPE_CHECKING:
     from fanet_sim.envs.fanet_env import FANETEnv
@@ -116,7 +116,7 @@ class FANETVisualizer:
             obs, _, dones, _ = self.env.step()
             state["done"] = all(dones.values())
 
-            metrics = compute_step_metrics(self.env)
+            metrics = live_hud(self.env)
             self._draw_network(ax_net, artists, metrics)
             self._draw_metrics(ax_metrics, artists, metrics)
             return list(artists.values())
@@ -363,16 +363,18 @@ class FANETVisualizer:
         """
         if not metrics:
             return "Waiting…"
+        delay = metrics.get("running_avg_delay")
+        delay_str = f"{delay:.1f} steps" if delay is not None else "—"
         return (
             f"Step : {metrics.get('step', 0)}\n\n"
-            f"PDR  : {metrics.get('PDR', 0):.3f}\n"
-            f"Delay: {metrics.get('avg_delay', 0):.1f} steps\n\n"
+            f"PDR  : {metrics.get('running_pdr', 0):.3f}\n"
+            f"Delay: {delay_str}\n\n"
             f"Pkts\n"
             f"  gen : {metrics.get('generated', 0)}\n"
             f"  dlv : {metrics.get('delivered', 0)}\n"
             f"  drp : {metrics.get('dropped', 0)}\n\n"
             f"Links: {metrics.get('active_links', 0)}\n"
-            f"Conn : {'yes' if metrics.get('connected') else 'no'}"
+            f"Conn : {metrics.get('frac_connected_to_gs', 0):.2f}"
         )
 
     @staticmethod
