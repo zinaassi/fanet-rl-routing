@@ -24,6 +24,27 @@ python main.py --no-anim --routing qroute
 python main.py --no-anim --steps 500
 ```
 
+## PPO training
+
+Two policies are trained with PPO (routing stays greedy):
+
+* **K-link selection** (every drone) — picks which K neighbours to keep each
+  step. Reward: +1 / −1 per packet from that drone delivered / dropped.
+* **Topology movement** (C-drones only) — picks each C-drone's [dx, dy] move.
+  Reward: the local topology reward (neighbours gained + link-quality gain −
+  motion energy).
+
+Each drone trains its own policy independently; weights persist across episodes
+and are saved at the end. PDR is printed every episode so improvement is visible.
+
+```bash
+pip install torch
+
+python train.py                            # config defaults
+python train.py --episodes 100 --steps 400 # longer run
+python train.py --save my_policies.pt      # custom checkpoint path
+```
+
 ## Project structure
 
 ```

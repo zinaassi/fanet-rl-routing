@@ -19,16 +19,26 @@ Link selection:
     (:attr:`link_policy`), and keeps only the top-K as its active ``neighbors``
     (:meth:`update_neighbors`).
 
-Per-drone policies (untrained — random weights, no learning yet):
+Per-drone policies (trained with PPO by ``train.py``; random at construction):
     link_policy  — scores candidate links (all drones).
+    link_value   — PPO critic for the link policy (all drones).
     topo_policy  — maps local state to a [dx, dy] move (C-drones only).
+    topo_value   — PPO critic for the topology policy (C-drones only).
+
+The deterministic methods (:meth:`update_neighbors`, :meth:`policy_move`) drive
+evaluation/visualisation. The stochastic methods (:meth:`sample_links`,
+:meth:`sample_move`) are used during PPO rollout collection: they sample an
+action and return the transition data (log-prob, value, features) the trainer
+needs.
 """
 
 from __future__ import annotations
 
+import math
 from typing import Dict, List, Optional, Tuple
 import numpy as np
 import torch
+from torch.distributions import Normal
 
 from fanet_sim import config
 from fanet_sim.envs.channel import (
@@ -37,7 +47,13 @@ from fanet_sim.envs.channel import (
     link_quality,
 )
 from fanet_sim.envs.packet import Packet
-from fanet_sim.envs.policies import LinkScorePolicy, TopologyPolicy
+from fanet_sim.envs.policies import (
+    LinkScorePolicy,
+    LinkValue,
+    TopologyPolicy,
+    TopologyValue,
+)
+from fanet_sim.rl.sampling import sample_k_without_replacement
 
 
 class Drone:
@@ -98,10 +114,15 @@ class Drone:
         )
         self.arrived: bool = False
         self.k_links: int = config.K_LINKS
-        # Per-drone untrained MLP policies (random weights; no training yet).
+        # Per-drone MLP policies and their PPO critics (random at construction;
+        # train.py trains them and injects persistent weights each episode).
         self.link_policy: LinkScorePolicy = LinkScorePolicy()
+        self.link_value: LinkValue = LinkValue()
         self.topo_policy: Optional[TopologyPolicy] = (
             TopologyPolicy() if drone_type == "C" else None
+        )
+        self.topo_value: Optional[TopologyValue] = (
+            TopologyValue() if drone_type == "C" else None
         )
         # Energy is tracked as two independent budgets so the topology agent's
         # motion cost (Phase 4) does not get hidden inside the radio cost.
@@ -275,9 +296,120 @@ class Drone:
         top = torch.argsort(scores, descending=True).tolist()[:k]
         self.neighbors = {candidates[i].drone_id: candidates[i] for i in top}
 
+    def _link_value_features(self, candidates: List["Drone"]) -> torch.Tensor:
+        """Build the fixed 6-feature drone summary the link critic scores.
+
+        The link actor reads per-candidate features, but the PPO critic needs a
+        single fixed-length state vector. These six features summarise the
+        drone's routing situation:
+            1. distance to GS, normalised by the arena diagonal
+            2. queue length / 10
+            3. candidate count / (total drones - 1)
+            4. mean link quality over candidates
+            5. radio energy fraction remaining
+            6. 1.0 if the drone can reach the GS directly, else 0.0
+
+        Args:
+            candidates: The current in-range candidate drones.
+
+        Returns:
+            A length-6 float32 tensor.
+        """
+        diag = math.hypot(config.WIDTH, config.HEIGHT)
+        dist_gs = euclidean_distance(self.position, self.gs_position)
+        qualities = [
+            link_quality(euclidean_distance(self.position, c.position))
+            for c in candidates
+        ]
+        mean_q = sum(qualities) / len(qualities) if qualities else 0.0
+        total = config.NUM_M_DRONES + config.NUM_C_DRONES
+        return torch.tensor(
+            [
+                dist_gs / diag,
+                len(self.queue) / 10.0,
+                len(candidates) / max(1, total - 1),
+                mean_q,
+                self.energy_radio / config.INITIAL_ENERGY,
+                float(are_connected(self.position, self.gs_position)),
+            ],
+            dtype=torch.float32,
+        )
+
+    def sample_links(self) -> Optional[dict]:
+        """Stochastically select K links and return a PPO link transition.
+
+        Scores every candidate with :attr:`link_policy`, samples K of them
+        without replacement (Plackett–Luce) to form :attr:`neighbors`, and
+        records the data PPO needs. Used during training rollout collection in
+        place of the deterministic :meth:`update_neighbors`.
+
+        Returns:
+            A transition dict (``cand_feats``, ``value_feats``,
+            ``selected_order``, ``logp``, ``value``, ``reward``, ``done``), or
+            ``None`` if the drone has no candidates (neighbours set to empty).
+        """
+        candidates = list(self.candidates.values())
+        if not candidates:
+            self.neighbors = {}
+            return None
+
+        feats = torch.tensor(
+            [self._link_features(c) for c in candidates], dtype=torch.float32
+        )
+        with torch.no_grad():
+            logits = self.link_policy(feats)
+
+        k = int(max(config.K_LINKS_MIN, min(config.K_LINKS_MAX, self.k_links)))
+        order, logp = sample_k_without_replacement(logits, k)
+        self.neighbors = {candidates[i].drone_id: candidates[i] for i in order}
+
+        value_feats = self._link_value_features(candidates)
+        with torch.no_grad():
+            value = float(self.link_value(value_feats).item())
+
+        return {
+            "cand_feats": feats,
+            "value_feats": value_feats,
+            "selected_order": order,
+            "logp": logp,
+            "value": value,
+            "reward": 0.0,
+            "done": False,
+        }
+
     # ------------------------------------------------------------------
     # Movement policy (C-drones)
     # ------------------------------------------------------------------
+
+    def _topology_features(self, state: dict) -> torch.Tensor:
+        """Build the 8 local features the topology policy/critic read.
+
+        Order matches ``TopologyPolicy``'s Input(8):
+            pos_x, pos_y, vel_x, vel_y, num_neighbors, mean_link_quality,
+            mean_distance_to_neighbours, queue_length.
+
+        Args:
+            state: A ``get_state()`` dict for this drone.
+
+        Returns:
+            A length-8 float32 tensor.
+        """
+        px, py = state["position"]
+        vx, vy = state["velocity"]
+        qualities = list(state["link_quality"].values())
+        mean_quality = sum(qualities) / len(qualities) if qualities else 0.0
+        dists = state["neighbor_distances"]
+        mean_dist = sum(dists) / len(dists) if dists else 0.0
+        return torch.tensor(
+            [
+                px, py, vx, vy,
+                float(state["num_neighbors"]),
+                mean_quality,
+                mean_dist,
+                float(state["queue_length"]),
+            ],
+            dtype=torch.float32,
+        )
 
     def policy_move(self, state: Optional[dict] = None) -> np.ndarray:
         """Run the C-drone topology MLP to get a clamped [dx, dy] move.
@@ -303,29 +435,63 @@ class Drone:
         if state is None:
             state = self.get_state()
 
-        px, py = state["position"]
-        vx, vy = state["velocity"]
-        qualities = list(state["link_quality"].values())
-        mean_quality = sum(qualities) / len(qualities) if qualities else 0.0
-        dists = state["neighbor_distances"]
-        mean_dist = sum(dists) / len(dists) if dists else 0.0
-
-        feats = torch.tensor(
-            [
-                px, py, vx, vy,
-                float(state["num_neighbors"]),
-                mean_quality,
-                mean_dist,
-                float(state["queue_length"]),
-            ],
-            dtype=torch.float32,
-        )
+        feats = self._topology_features(state)
         with torch.no_grad():
             move = self.topo_policy(feats)
 
         max_step = config.TOPOLOGY_MAX_STEP_M
         move = torch.clamp(move, -max_step, max_step)
         return move.numpy().astype(np.float64)
+
+    def sample_move(
+        self, state: Optional[dict] = None
+    ) -> Tuple[np.ndarray, dict]:
+        """Sample a stochastic move and return it plus a PPO topology transition.
+
+        Treats the topology MLP output as the mean of a diagonal Gaussian (with
+        per-axis std ``exp(topo_policy.log_std)``), samples a raw [dx, dy], and
+        clamps it per axis to ``config.TOPOLOGY_MAX_STEP_M`` for application.
+        Used during training rollout collection in place of the deterministic
+        :meth:`policy_move`.
+
+        Args:
+            state: An optional pre-computed ``get_state()`` dict.
+
+        Returns:
+            A tuple ``(move, transition)`` where ``move`` is the clamped length-2
+            displacement to apply, and ``transition`` holds the PPO data
+            (``feats``, ``action`` (the raw sample), ``logp``, ``value``,
+            ``reward``, ``done``).
+
+        Raises:
+            ValueError: If this drone has no topology policy (not a C-drone).
+        """
+        if self.topo_policy is None or self.topo_value is None:
+            raise ValueError(f"Drone {self.drone_id} has no topology policy.")
+
+        if state is None:
+            state = self.get_state()
+
+        feats = self._topology_features(state)
+        with torch.no_grad():
+            mean = self.topo_policy(feats)
+            std = torch.exp(self.topo_policy.log_std)
+            dist = Normal(mean, std)
+            action = dist.sample()
+            logp = float(dist.log_prob(action).sum().item())
+            value = float(self.topo_value(feats).item())
+
+        max_step = config.TOPOLOGY_MAX_STEP_M
+        move = torch.clamp(action, -max_step, max_step).numpy().astype(np.float64)
+        transition = {
+            "feats": feats,
+            "action": action,
+            "logp": logp,
+            "value": value,
+            "reward": 0.0,
+            "done": False,
+        }
+        return move, transition
 
     # ------------------------------------------------------------------
     # Packet handling

@@ -143,3 +143,31 @@ RANDOM_SEED = 42
 # ---------------------------------------------------------------------------
 LOG_DIR: str = "logs"             # directory for per-episode JSONL files
 LOG_DRONE_STATE_EVERY_STEP: bool = True   # if False, only one snapshot at episode end
+
+# ---------------------------------------------------------------------------
+# PPO training (used by train.py only — the phase-1 simulator never trains)
+# ---------------------------------------------------------------------------
+# Two policies are trained, each drone/​C-drone owning its own weights:
+#   * the K-link selection MLP (LinkScorePolicy) on every drone, and
+#   * the topology movement MLP (TopologyPolicy) on every C-drone.
+# Both are optimised with PPO (clipped surrogate + GAE). These constants are the
+# shared hyper-parameters; train.py exposes --episodes / --steps overrides.
+TRAIN_EPISODES: int = 60          # number of training episodes
+TRAIN_MAX_STEPS: int = 300        # steps per training episode (overrides MAX_STEPS)
+
+PPO_LR: float = 3e-4              # Adam learning rate (per policy)
+PPO_GAMMA: float = 0.99          # reward discount factor
+PPO_LAMBDA: float = 0.95         # GAE smoothing parameter
+PPO_CLIP: float = 0.2            # PPO clipped-surrogate epsilon
+PPO_EPOCHS: int = 4              # optimisation passes per policy per episode
+PPO_VALUE_COEF: float = 0.5      # weight of the critic (value) loss
+PPO_ENTROPY_COEF: float = 0.01   # weight of the entropy bonus (exploration)
+
+# K-link reward: +1 when a packet that ORIGINATED at this drone is delivered to
+# the GS, -1 when one of its packets is dropped. (Only M-drones generate
+# packets, so only they receive a non-zero link reward.)
+LINK_REWARD_DELIVERED: float = 1.0
+LINK_REWARD_DROPPED: float = -1.0
+
+# Where train.py writes the trained weights (one checkpoint for all policies).
+POLICY_SAVE_PATH: str = "trained_policies.pt"
