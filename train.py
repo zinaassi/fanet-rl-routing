@@ -69,6 +69,11 @@ def parse_args() -> argparse.Namespace:
         help="Path to write the trained policy weights.",
     )
     parser.add_argument(
+        "--resume", type=str, default=None,
+        help="Path to a checkpoint to CONTINUE training from (loads weights and "
+             "Adam optimiser state). Omit to start from random weights.",
+    )
+    parser.add_argument(
         "--log-dir", type=str, default=os.path.join(config.LOG_DIR, "train"),
         help="Directory for per-episode event logs.",
     )
@@ -100,11 +105,14 @@ def main() -> None:
 
     ppo_cfg = PPOConfig()
     bank = PolicyBank(config.NUM_M_DRONES, config.NUM_C_DRONES, ppo_cfg)
+    if args.resume:
+        bank.load(args.resume)  # warm-start weights + optimiser state
 
     print("=" * 64)
     print("  FANET PPO Training")
     print("=" * 64)
     print(f"  drones        : {config.NUM_M_DRONES} M + {config.NUM_C_DRONES} C")
+    print(f"  resume from   : {args.resume if args.resume else '(none — random init)'}")
     print(f"  episodes      : {args.episodes}")
     print(f"  max steps     : {args.steps}")
     print(f"  base seed     : {args.seed}")

@@ -344,7 +344,10 @@ class PolicyBank:
         return sum(signals) / len(signals) if signals else 0.0
 
     def save(self, path: str) -> None:
-        """Save all policy and critic weights to a single checkpoint file.
+        """Save all policy/critic weights AND optimiser state to one checkpoint.
+
+        Saving the optimiser state (Adam moments) lets training resume seamlessly
+        via :meth:`load`; reloading only the weights would reset the optimiser.
 
         Args:
             path: Destination ``.pt`` file path.
@@ -357,15 +360,23 @@ class PolicyBank:
                 "link_values": {k: v.state_dict() for k, v in self.link_values.items()},
                 "topo_policies": {k: v.state_dict() for k, v in self.topo_policies.items()},
                 "topo_values": {k: v.state_dict() for k, v in self.topo_values.items()},
+                "link_optims": {k: v.state_dict() for k, v in self.link_optims.items()},
+                "topo_optims": {k: v.state_dict() for k, v in self.topo_optims.items()},
             },
             path,
         )
 
-    def load(self, path: str) -> None:
-        """Load weights previously written by :meth:`save`.
+    def load(self, path: str, load_optimizers: bool = True) -> None:
+        """Load weights (and optionally optimiser state) written by :meth:`save`.
+
+        Backward compatible with older checkpoints that stored weights only:
+        the optimiser blocks are loaded only if present.
 
         Args:
-            path: Source ``.pt`` file path.
+            path:            Source ``.pt`` file path.
+            load_optimizers: If True (default), also restore Adam state so
+                             training continues exactly where it left off. Set
+                             False to load weights only (e.g. for evaluation).
         """
         ckpt = torch.load(path, map_location="cpu")
         for k, sd in ckpt["link_policies"].items():
@@ -376,3 +387,9 @@ class PolicyBank:
             self.topo_policies[int(k)].load_state_dict(sd)
         for k, sd in ckpt["topo_values"].items():
             self.topo_values[int(k)].load_state_dict(sd)
+
+        if load_optimizers:
+            for k, sd in ckpt.get("link_optims", {}).items():
+                self.link_optims[int(k)].load_state_dict(sd)
+            for k, sd in ckpt.get("topo_optims", {}).items():
+                self.topo_optims[int(k)].load_state_dict(sd)
