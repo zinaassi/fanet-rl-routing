@@ -382,17 +382,28 @@ class Drone:
     # ------------------------------------------------------------------
 
     def _topology_features(self, state: dict) -> torch.Tensor:
-        """Build the 8 local features the topology policy/critic read.
+        """Build the 10 NORMALISED local features the topology policy/critic read.
 
-        Order matches ``TopologyPolicy``'s Input(8):
+        Order matches ``TopologyPolicy``'s Input(10):
             pos_x, pos_y, vel_x, vel_y, num_neighbors, mean_link_quality,
-            mean_distance_to_neighbours, queue_length.
+            mean_distance_to_neighbours, queue_length,
+            unit_dx_to_nearest_M, unit_dy_to_nearest_M.
+
+        Every feature is scaled to roughly [0, 1] (velocity / bearing to
+        ~[-1, 1]) so no single input dominates the MLP. Raw positions span
+        0–1750 m; left unnormalised they saturate the network and the policy
+        collapses to a constant clamped move (drifting C-drones into the walls).
+
+        The last two features are the unit vector pointing from this C-drone to
+        the nearest mission (M) drone — the relay target. The environment injects
+        ``state["nearest_m_dir"]`` before calling the policy; it defaults to
+        ``(0, 0)`` if absent.
 
         Args:
             state: A ``get_state()`` dict for this drone.
 
         Returns:
-            A length-8 float32 tensor.
+            A length-10 float32 tensor.
         """
         px, py = state["position"]
         vx, vy = state["velocity"]
@@ -400,13 +411,19 @@ class Drone:
         mean_quality = sum(qualities) / len(qualities) if qualities else 0.0
         dists = state["neighbor_distances"]
         mean_dist = sum(dists) / len(dists) if dists else 0.0
+        nm_dx, nm_dy = state.get("nearest_m_dir", (0.0, 0.0))
         return torch.tensor(
             [
-                px, py, vx, vy,
-                float(state["num_neighbors"]),
+                px / config.WIDTH,
+                py / config.HEIGHT,
+                vx / config.DRONE_SPEED_MAX,
+                vy / config.DRONE_SPEED_MAX,
+                float(state["num_neighbors"]) / config.K_LINKS_MAX,
                 mean_quality,
-                mean_dist,
-                float(state["queue_length"]),
+                mean_dist / config.COMM_RANGE,
+                float(state["queue_length"]) / 10.0,
+                float(nm_dx),
+                float(nm_dy),
             ],
             dtype=torch.float32,
         )

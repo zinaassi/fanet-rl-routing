@@ -14,10 +14,28 @@ The policy uses local information only, taken from ``Drone.get_state()``
 mean_distance_to_neighbours, queue_length) and outputs a movement vector
 ``[dx, dy]`` clamped to ``config.TOPOLOGY_MAX_STEP_M`` metres per axis.
 
-Reward (local only — no global metrics):
-    + increase in num_neighbors
-    + improvement in mean local link quality
-    - motion energy consumed this step
+Reward — RELAY COVERAGE objective (local):
+    + coverage : number of MISSION (M) drones within radio range (settling value)
+    + progress : metres of distance REDUCED toward the nearest M-drone this step,
+                 scaled by the max step size (potential-based shaping — the dense
+                 per-step signal that actually drives movement toward relays)
+    - motion   : small penalty on motion energy consumed this step
+
+The C-drone's job is to relay mission traffic, so it homes toward mission drones
+and sits where it covers them. ``coverage`` alone is sparse (an integer that only
+changes when an M-drone crosses the range boundary); the arena is ~2475 m across
+but a C-drone moves ≤3 m/step, so a static distance term changes only ~0.002/step
+— below the noise floor. ``progress`` fixes that: a full-speed step straight at
+the nearest M-drone yields ≈+1 reward, a strong learnable signal. Only M-drones
+count, so C-drones do not chase each other. Both quantities are supplied by the
+environment (which has the global drone list); ``prev_state``/``new_state`` are
+kept only for interface compatibility.
+
+Design history: earlier rewards used the *change* in own-neighbour count (made
+the borders a zero-signal trap), then an absolute own-neighbour count (froze
+drones once they had any neighbours), then a static M-proximity term (too weak
+per step to overcome the arena/step-size scale). This progress-shaped relay
+reward is the version that actually produces movement.
 """
 
 from __future__ import annotations
@@ -67,14 +85,19 @@ class TopologyAgent:
         prev_state: dict,
         new_state: dict,
         distance_moved: float,
+        coverage: int = 0,
+        progress: float = 0.0,
         weights: Optional[Dict[str, float]] = None,
     ) -> float:
-        """Compute the local reward for one C-drone move.
+        """Compute the relay-coverage reward for one C-drone move.
 
         Args:
-            prev_state:     The C-drone's state *before* it moved this step.
-            new_state:      Its state *after* moving and re-selecting links.
+            prev_state:     State before the move (interface compat; unused).
+            new_state:      State after the move (interface compat; unused).
             distance_moved: Metres travelled this step (drives motion energy).
+            coverage:       Number of M-drones currently within radio range.
+            progress:       Metres of distance reduced toward the nearest M-drone
+                            this step (negative if the C-drone moved away).
             weights:        Optional override for
                             ``config.TOPOLOGY_REWARD_WEIGHTS``.
 
@@ -83,15 +106,12 @@ class TopologyAgent:
         """
         w = config.TOPOLOGY_REWARD_WEIGHTS if weights is None else weights
 
-        d_neighbors = new_state["num_neighbors"] - prev_state["num_neighbors"]
-        d_quality = (
-            _mean(new_state["link_quality"].values())
-            - _mean(prev_state["link_quality"].values())
-        )
+        # Scale progress by the max step so a full-speed approach ≈ +1.
+        progress_scaled = progress / config.TOPOLOGY_MAX_STEP_M
         motion_energy = config.ENERGY_PER_MOVE * distance_moved
 
         return (
-            w["num_neighbors"] * d_neighbors
-            + w["link_quality"] * d_quality
+            w["coverage"] * coverage
+            + w["progress"] * progress_scaled
             - w["motion_energy"] * motion_energy
         )

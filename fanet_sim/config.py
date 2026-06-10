@@ -122,15 +122,20 @@ WAYPOINT_ARRIVAL_THRESHOLD: float = 2.0  # metres — drone is "at" its end poin
 # axis to TOPOLOGY_MAX_STEP_M metres before it is applied.
 TOPOLOGY_MAX_STEP_M: float = DRONE_SPEED_MAX * TIMESTEP   # max metres per axis per step
 
-# Local reward for the topology policy (equal-weight placeholder; the RL agent
-# re-learns these later):
-#   num_neighbors  — + reward for gaining neighbours this step
-#   link_quality   — + reward for improving mean local link quality
-#   motion_energy  — - penalty per joule of motion energy spent moving
+# Local reward for the topology policy — RELAY COVERAGE objective. C-drones home
+# toward MISSION (M) drones so they sit where they can relay mission traffic,
+# instead of freezing in place or clumping with each other:
+#   coverage      — + reward per M-drone currently within radio range (integer)
+#   progress      — + metres of distance REDUCED toward the nearest M-drone this
+#                   step, scaled by the max step size (≈+1 for a full-speed
+#                   approach). This is the dense per-step gradient that overcomes
+#                   the arena-size vs 3 m/step scale problem and drives movement.
+#   motion_energy — - small penalty per joule of motion energy spent moving
+# (Only M-drones count, so C-drones don't reward each other for clustering.)
 TOPOLOGY_REWARD_WEIGHTS: dict = {
-    "num_neighbors": 1.0,
-    "link_quality": 1.0,
-    "motion_energy": 1.0,
+    "coverage": 1.0,
+    "progress": 3.0,
+    "motion_energy": 0.2,
 }
 
 # ---------------------------------------------------------------------------

@@ -415,6 +415,28 @@ class FANETEnv:
         for drone in self.drones:
             drone.update_neighbors()
 
+    def _nearest_m_unit(self, drone: Drone, m_drones: List[Drone]) -> Tuple[float, float]:
+        """Return the unit vector from *drone* toward the nearest M-drone.
+
+        This is the relay-target bearing fed to the topology policy. Returns
+        ``(0.0, 0.0)`` if there are no M-drones or the nearest is collocated.
+
+        Args:
+            drone:    The C-drone being steered.
+            m_drones: All mission (M) drones.
+
+        Returns:
+            A ``(dx, dy)`` unit vector (each component in [-1, 1]).
+        """
+        if not m_drones:
+            return (0.0, 0.0)
+        nearest = min(m_drones, key=lambda m: euclidean_distance(drone.position, m.position))
+        delta = nearest.position - drone.position
+        dist = float(np.linalg.norm(delta))
+        if dist < 1e-9:
+            return (0.0, 0.0)
+        return (float(delta[0] / dist), float(delta[1] / dist))
+
     def _select_links_training(self) -> None:
         """Training variant of :meth:`_recompute_links` that records rollouts.
 
@@ -468,11 +490,15 @@ class FANETEnv:
         #     pre-move state and distance travelled so the local reward can be
         #     measured once the new links are known. In training the move is
         #     sampled and a PPO transition recorded (reward filled in at 2b).
+        m_drones = [d for d in self.drones if d.drone_type == "M"]
         c_prev_states: Dict[int, dict] = {}
         c_move_dist: Dict[int, float] = {}
         for drone in self.drones:
             if drone.drone_type == "C":
                 prev_state = drone.get_state()
+                # Tell the policy which way the nearest mission drone is — the
+                # relay target it homes toward (last 2 topology features).
+                prev_state["nearest_m_dir"] = self._nearest_m_unit(drone, m_drones)
                 if self.training:
                     delta, transition = drone.sample_move(prev_state)
                     self._topo_buffer[drone.drone_id].append(transition)
@@ -490,13 +516,28 @@ class FANETEnv:
             self._recompute_links()
 
         # 2b. Local topology reward for each C-drone (post-link observation).
+        #     Relay-coverage reward: how many M-drones the C-drone now covers,
+        #     plus the metres of distance it reduced toward the nearest M-drone
+        #     this step (progress shaping — see TopologyAgent.reward).
         topo_rewards: Dict[int, float] = {}
         for drone in self.drones:
             if drone.drone_type == "C":
+                coverage = sum(
+                    1 for cand in drone.candidates.values() if cand.drone_type == "M"
+                )
+                if m_drones:
+                    prev_pos = np.asarray(c_prev_states[drone.drone_id]["position"])
+                    dist_prev = min(euclidean_distance(prev_pos, m.position) for m in m_drones)
+                    dist_new = min(euclidean_distance(drone.position, m.position) for m in m_drones)
+                    progress = dist_prev - dist_new
+                else:
+                    progress = 0.0
                 r = self._topology_agent.reward(
                     c_prev_states[drone.drone_id],
                     drone.get_state(),
                     c_move_dist[drone.drone_id],
+                    coverage=coverage,
+                    progress=progress,
                 )
                 topo_rewards[drone.drone_id] = r
                 if self.training:

@@ -21,19 +21,20 @@ LinkValue        (one instance per drone, all drones)
         Input(6) -> Linear(16) -> ReLU -> Linear(16) -> ReLU -> Linear(1)
 
 TopologyPolicy   (one instance per C-drone)
-    Maps a C-drone's 8-feature local state to a movement vector [dx, dy]. For
+    Maps a C-drone's 10-feature local state to a movement vector [dx, dy]. For
     PPO the output is the MEAN of a diagonal Gaussian whose per-axis log-std is
     the learnable parameter ``log_std``; the eval path uses the mean directly.
-        Input(8) -> Linear(32) -> ReLU -> Linear(32) -> ReLU -> Linear(2)
+        Input(10) -> Linear(32) -> ReLU -> Linear(32) -> ReLU -> Linear(2)
 
-    The 8 input features (see Drone._topology_features) are:
+    The 10 input features (see Drone._topology_features) are:
         pos_x, pos_y, vel_x, vel_y, num_neighbors, mean_link_quality,
-        mean_distance_to_neighbours, queue_length.
+        mean_distance_to_neighbours, queue_length,
+        unit_dx_to_nearest_M, unit_dy_to_nearest_M.
 
 TopologyValue    (one instance per C-drone)
-    PPO critic for the topology policy. Maps the same 8-feature state to a
+    PPO critic for the topology policy. Maps the same 10-feature state to a
     scalar state value.
-        Input(8) -> Linear(32) -> ReLU -> Linear(32) -> ReLU -> Linear(1)
+        Input(10) -> Linear(32) -> ReLU -> Linear(32) -> ReLU -> Linear(1)
 """
 
 from __future__ import annotations
@@ -41,11 +42,13 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 
+from fanet_sim import config
+
 # Architecture dimensions (kept here so they are defined in exactly one place).
 LINK_SCORE_INPUT_DIM: int = 5
 LINK_SCORE_HIDDEN_DIM: int = 16
 LINK_VALUE_INPUT_DIM: int = 6
-TOPOLOGY_INPUT_DIM: int = 8
+TOPOLOGY_INPUT_DIM: int = 10
 TOPOLOGY_HIDDEN_DIM: int = 32
 TOPOLOGY_OUTPUT_DIM: int = 2
 
@@ -119,21 +122,31 @@ class TopologyPolicy(nn.Module):
             nn.ReLU(),
             nn.Linear(TOPOLOGY_HIDDEN_DIM, TOPOLOGY_OUTPUT_DIM),
         )
-        # Learnable log standard deviation, one per output axis. Starts at 0
-        # (std = 1) which, relative to the metre-scale moves, gives ample
-        # initial exploration; PPO shrinks it as the policy sharpens.
-        self.log_std = nn.Parameter(torch.zeros(TOPOLOGY_OUTPUT_DIM))
+        # Learnable log standard deviation, one per output axis. Starts at 0.5
+        # (std ≈ 1.65 m, ~half the 3 m max step) to give healthy initial
+        # exploration so the policy discovers that moving toward mission drones
+        # pays off; PPO shrinks it as the policy sharpens.
+        self.log_std = nn.Parameter(torch.full((TOPOLOGY_OUTPUT_DIM,), 0.5))
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        """Map a state vector to a raw (unclamped) movement MEAN.
+        """Map a state vector to a movement MEAN bounded to the max step.
+
+        The raw network output is squashed with ``tanh`` and scaled by
+        ``config.TOPOLOGY_MAX_STEP_M``, so the mean already spans the full
+        ±max-step range per axis. This lets the policy command a full-speed move
+        from modest network weights — the network only has to choose a
+        *direction* (handed to it by the nearest-M bearing feature), not learn to
+        scale its output up to metres. Without this the raw output stays tiny and
+        the C-drones barely move.
 
         Args:
-            x: Tensor of shape ``(8,)`` (or ``(N, 8)``).
+            x: Tensor of shape ``(10,)`` (or ``(N, 10)``).
 
         Returns:
-            Tensor of shape ``(2,)`` (or ``(N, 2)``) — the raw mean [dx, dy].
+            Tensor of shape ``(2,)`` (or ``(N, 2)``) — the mean [dx, dy] in
+            metres, each component in ``[-TOPOLOGY_MAX_STEP_M, +…]``.
         """
-        return self.net(x)
+        return torch.tanh(self.net(x)) * config.TOPOLOGY_MAX_STEP_M
 
 
 class TopologyValue(nn.Module):

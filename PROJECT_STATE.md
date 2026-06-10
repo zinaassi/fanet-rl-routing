@@ -154,14 +154,29 @@ Four small MLPs live in `policies.py`. Each drone owns its **own** instances
 
 ### 5.2 Topology movement — **C-drones only**
 
-- **Actor** `TopologyPolicy`: `Input(8) → 32 → 32 → 2`. Maps the C-drone's local
-  state (pos, vel, #neighbours, mean link quality, mean neighbour distance,
-  queue) to a movement **mean** `[dx, dy]`. A learnable `log_std` makes it a
-  diagonal Gaussian for PPO; eval uses the mean directly. Output clamped to
-  `TOPOLOGY_MAX_STEP_M` per axis.
-- **Critic** `TopologyValue`: `Input(8) → 32 → 32 → 1`.
-- **Reward** (already implemented in `topology_agent.py`, dense, local):
-  `+ gain in #neighbours + improvement in mean link quality − motion energy`.
+- **Actor** `TopologyPolicy`: `Input(10) → 32 → 32 → 2`. Maps the C-drone's local
+  state to a movement **mean** `[dx, dy]`. A learnable `log_std` makes it a
+  diagonal Gaussian for PPO; eval uses the mean directly.
+  - **Inputs are normalised to ~[0,1]** (positions by arena size, distances by
+    range, etc.) — raw 0–1750 m positions otherwise saturate the MLP and the
+    policy collapses to a constant move that drifts C-drones into the walls.
+  - The last 2 of the 10 features are the **unit bearing to the nearest M-drone**
+    (the relay target) — without it the policy can't tell which way to go.
+  - The output is **`tanh`-scaled to ±`TOPOLOGY_MAX_STEP_M`**, so the policy
+    commands full-speed moves from modest weights instead of barely nudging.
+- **Critic** `TopologyValue`: `Input(10) → 32 → 32 → 1`.
+- **Reward** (in `topology_agent.py`, dense, local) — **relay-coverage**:
+  `+ coverage (M-drones in range) + 3·progress (metres reduced toward nearest
+  M-drone, scaled by step size) − 0.2·motion energy`. The progress term is
+  potential-based shaping: it's the dense per-step signal that overcomes the
+  arena-size-vs-3 m-step scale problem and drives the C-drones to home in on the
+  mission drones. Only M-drones count, so C-drones don't chase each other.
+  - *Measured (seed 42):* trained C-drones move 1.28 m/step (random 0.39) and
+    cover 3.21 M-drones each (random 2.14).
+  - *Reward design history* (each fixed a real failure, in order): differential
+    own-neighbour reward → border trap; absolute own-neighbour → froze in place;
+    static M-proximity → too weak per step; **progress-shaped relay coverage +
+    bearing feature + tanh output** → actually moves.
 
 ### 5.3 PPO (`rl/ppo.py`)
 
@@ -254,6 +269,11 @@ radio range, smaller area, more drones. To improve *learning*: more episodes, or
   actor/critic/optimiser in `PolicyBank`.
 - **Source-attributed link reward.** "A packet from this drone" = the drone that
   *originated* it. Consequence: C-drone link policies get no signal (§5.1).
+- **Topology policy = homing relay** (§5.2): normalised features + a nearest-M
+  bearing input + `tanh`-scaled output + a progress-shaped relay-coverage reward.
+  This stack was reached by fixing, in turn, border-drift, freeze-in-place, a
+  too-weak distance signal, and a too-small output magnitude. If C-drones ever
+  go static or wander again, that's the chain of knobs to check.
 - **Fixed scenario by default** in `train.py` for a readable learning curve;
   torch is re-seeded after `reset()` so exploration noise still varies.
 - **Training vs eval gap.** Training PDR is stochastic (exploration); the
