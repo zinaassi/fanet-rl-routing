@@ -28,6 +28,7 @@ from pathlib import Path
 from fanet_sim import config
 from fanet_sim.envs.fanet_env import FANETEnv
 from fanet_sim.rl.ppo import PolicyBank, PPOConfig
+from fanet_sim.utils.visualization import FANETVisualizer
 from scripts.analyze import analyze, print_report, read_jsonl
 
 
@@ -59,6 +60,15 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--log", type=str, default=None,
         help="Path for the JSONL event log. Defaults to {LOG_DIR}/eval_{id}.jsonl.",
+    )
+    parser.add_argument(
+        "--save-anim", type=str, default=None, metavar="PATH",
+        help="Save a matplotlib animation of the run to PATH (e.g. eval.gif). "
+             "Shows the trained C-drone movement and link choices.",
+    )
+    parser.add_argument(
+        "--show", action="store_true",
+        help="Show the animation in an interactive window instead of saving.",
     )
     return parser.parse_args()
 
@@ -98,10 +108,19 @@ def main() -> None:
     env.reset()
 
     t0 = time.perf_counter()
-    for _ in range(config.MAX_STEPS):
-        _, _, dones, _ = env.step()
-        if all(dones.values()):
-            break
+    if args.show or args.save_anim:
+        # The visualiser drives env.step() itself, one call per frame.
+        vis = FANETVisualizer(env, interval_ms=50)
+        if args.show:
+            print("Showing interactive animation …")
+            vis.show()
+        else:
+            vis.animate(save_path=args.save_anim)
+    else:
+        for _ in range(config.MAX_STEPS):
+            _, _, dones, _ = env.step()
+            if all(dones.values()):
+                break
     env.close_logger()
     print(f"Episode finished in {time.perf_counter() - t0:.2f}s\n")
 
