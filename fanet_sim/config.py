@@ -56,6 +56,22 @@ from fanet_sim.envs.channel import MAX_LINK_DISTANCE_M as _MAX_LINK_DISTANCE_M
 COMM_RANGE: float = _MAX_LINK_DISTANCE_M
 
 # ---------------------------------------------------------------------------
+# K-link selection policy
+# ---------------------------------------------------------------------------
+# Instead of passively keeping every reachable drone as a neighbour, each drone
+# actively keeps only its top-K candidate links. Candidates are ranked by a
+# per-drone PyTorch MLP (see fanet_sim/envs/policies.py:LinkScorePolicy):
+#   Input(5) -> Linear(16) -> ReLU -> Linear(16) -> ReLU -> Linear(1)
+# The 5 input features per candidate are link quality, distance to the
+# candidate, the candidate's distance to GS, the candidate's queue length, and
+# the candidate's number of current links. Weights are randomly initialised —
+# there is no training yet. K_LINKS is the default value; a learned policy may
+# later pick a per-drone value anywhere in [K_LINKS_MIN, K_LINKS_MAX].
+K_LINKS: int = 3                 # default active links kept per drone
+K_LINKS_MIN: int = 2             # policy lower bound on K
+K_LINKS_MAX: int = 5             # policy upper bound on K
+
+# ---------------------------------------------------------------------------
 # Energy
 # ---------------------------------------------------------------------------
 INITIAL_ENERGY: float = 207792.0  # joules  (11.1 V × 5200 mAh, from IQMR)
@@ -85,10 +101,37 @@ NUM_EPISODES: int = 1             # number of episodes (for testing)
 GS_POSITION: tuple = (875.0, 875.0)   # centre of the 1750 x 1750 m 2-D area
 
 # ---------------------------------------------------------------------------
-# Waypoints
+# M-drone mobility (straight line: start -> end, then stop)
 # ---------------------------------------------------------------------------
-NUM_WAYPOINTS: int = 5            # waypoints generated per drone at episode start
-WAYPOINT_ARRIVAL_THRESHOLD: float = 2.0  # metres — drone is "at" a waypoint when this close
+# M-drones no longer roam on random cyclic waypoints. Each M-drone is given a
+# random start point (its initial position) and a random end point at episode
+# start; it flies in a straight line from start to end and then stops.
+M_DRONE_MOBILITY: str = "straight_line"
+WAYPOINT_ARRIVAL_THRESHOLD: float = 2.0  # metres — drone is "at" its end point when this close
+
+# ---------------------------------------------------------------------------
+# C-drone topology policy (untrained PyTorch MLP; RL trains it later)
+# ---------------------------------------------------------------------------
+# C-drones no longer follow scripted waypoints. Each C-drone owns a PyTorch MLP
+# (see fanet_sim/envs/policies.py:TopologyPolicy) that maps its 8-feature local
+# state to a movement vector [dx, dy]:
+#   Input(8) -> Linear(32) -> ReLU -> Linear(32) -> ReLU -> Linear(2)
+# The 8 input features are pos_x, pos_y, vel_x, vel_y, num_neighbors,
+# mean_link_quality, mean_distance_to_neighbours, and queue_length. Weights are
+# randomly initialised — there is no training yet. The output is clamped per
+# axis to TOPOLOGY_MAX_STEP_M metres before it is applied.
+TOPOLOGY_MAX_STEP_M: float = DRONE_SPEED_MAX * TIMESTEP   # max metres per axis per step
+
+# Local reward for the topology policy (equal-weight placeholder; the RL agent
+# re-learns these later):
+#   num_neighbors  — + reward for gaining neighbours this step
+#   link_quality   — + reward for improving mean local link quality
+#   motion_energy  — - penalty per joule of motion energy spent moving
+TOPOLOGY_REWARD_WEIGHTS: dict = {
+    "num_neighbors": 1.0,
+    "link_quality": 1.0,
+    "motion_energy": 1.0,
+}
 
 # ---------------------------------------------------------------------------
 # Random seed (None = non-deterministic)

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m py_compile fanet_sim/config.py fanet_sim/envs/*.py fanet_sim/utils/*.py main.py scripts/analyze.py)",
+      "Bash(python -c \"import fanet_sim.utils.visualization, fanet_sim.utils.metrics; print\\('viz+metrics import OK'\\)\")"
+    ]
+  }
+}

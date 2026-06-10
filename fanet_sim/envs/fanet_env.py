@@ -19,12 +19,14 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
+import torch
 
 from fanet_sim import config
 from fanet_sim.envs import channel
 from fanet_sim.envs.channel import are_connected, euclidean_distance
 from fanet_sim.envs.drone import Drone
 from fanet_sim.envs.packet import DropReason, Packet, PacketFactory
+from fanet_sim.envs.topology_agent import TopologyAgent
 from fanet_sim.utils.event_log import EventLogger
 from fanet_sim.utils.metrics import connectivity_sample
 
@@ -208,6 +210,10 @@ class FANETEnv:
 
         self._q_router: Optional[QRouter] = None
 
+        # Placeholder topology agent that steers the C-drones (stateless, so a
+        # single shared instance drives every C-drone).
+        self._topology_agent = TopologyAgent()
+
         # Stage-1 event logger
         if log_path is None:
             log_path = os.path.join(config.LOG_DIR, f"episode_{episode_id}.jsonl")
@@ -230,9 +236,11 @@ class FANETEnv:
             observations: Dict mapping drone_id → state dict (from get_state()).
         """
         # Re-seed so reset() is reproducible regardless of how many episodes
-        # have already been run with this env instance.
+        # have already been run with this env instance. torch is seeded too so
+        # the per-drone MLP weight initialisation is reproducible.
         self.rng = np.random.default_rng(self.seed)
         random.seed(self.seed)
+        torch.manual_seed(self.seed)
 
         self._factory.reset()
         self.step_count = 0
@@ -254,9 +262,8 @@ class FANETEnv:
         if self.routing == "q-routing":
             self._q_router = QRouter(num_drones=total)
 
-        # Compute initial neighbour sets
-        for drone in self.drones:
-            drone.update_neighbors(self.drones)
+        # Compute initial candidate pools and top-K active links.
+        self._recompute_links()
 
         # Episode metadata — the seed MUST be recorded (spec §D).
         self._logger.log_episode_meta(
@@ -268,7 +275,8 @@ class FANETEnv:
             mobility_params={
                 "speed_min": config.DRONE_SPEED_MIN,
                 "speed_max": config.DRONE_SPEED_MAX,
-                "num_waypoints": config.NUM_WAYPOINTS,
+                "m_drone_mobility": config.M_DRONE_MOBILITY,
+                "k_links": config.K_LINKS,
                 "area_width": config.WIDTH,
                 "area_height": config.HEIGHT,
             },
@@ -316,7 +324,11 @@ class FANETEnv:
         return {d.drone_id: d.get_state() for d in self.drones}
 
     def _create_drones(self) -> List[Drone]:
-        """Create and return all drones with random initial positions and waypoints.
+        """Create and return all drones.
+
+        M-drones get a random start point and a random end point and fly the
+        straight line between them. C-drones get a random start point only;
+        they are steered each step by the topology agent.
 
         Returns:
             List of Drone objects (M-drones first, then C-drones).
@@ -325,49 +337,50 @@ class FANETEnv:
         drone_id = 0
 
         for _ in range(config.NUM_M_DRONES):
-            pos, wps, spd = self._random_pose()
+            start = self._random_point()
+            end = self._random_point()
             drones.append(Drone(
                 drone_id=drone_id,
                 drone_type="M",
-                initial_position=pos,
-                waypoints=wps,
-                speed=spd,
+                initial_position=start,
+                speed=self._random_speed(),
                 gs_position=self.gs_position,
+                end_point=end,
             ))
             drone_id += 1
 
         for _ in range(config.NUM_C_DRONES):
-            pos, wps, spd = self._random_pose()
             drones.append(Drone(
                 drone_id=drone_id,
                 drone_type="C",
-                initial_position=pos,
-                waypoints=wps,
-                speed=spd,
+                initial_position=self._random_point(),
+                speed=self._random_speed(),
                 gs_position=self.gs_position,
             ))
             drone_id += 1
 
         return drones
 
-    def _random_pose(
-        self,
-    ) -> Tuple[np.ndarray, List[np.ndarray], float]:
-        """Generate a random start position, waypoint list, and speed.
-
-        Returns:
-            (initial_position, waypoints, speed) tuple.
-        """
-        pos = self.rng.uniform(
+    def _random_point(self) -> np.ndarray:
+        """Return a uniformly random (x, y) point inside the arena."""
+        return self.rng.uniform(
             [0.0, 0.0], [config.WIDTH, config.HEIGHT]
         ).astype(np.float64)
 
-        wps = [
-            self.rng.uniform([0.0, 0.0], [config.WIDTH, config.HEIGHT]).astype(np.float64)
-            for _ in range(config.NUM_WAYPOINTS)
-        ]
-        speed = float(self.rng.uniform(config.DRONE_SPEED_MIN, config.DRONE_SPEED_MAX))
-        return pos, wps, speed
+    def _random_speed(self) -> float:
+        """Return a uniformly random speed in [DRONE_SPEED_MIN, DRONE_SPEED_MAX]."""
+        return float(self.rng.uniform(config.DRONE_SPEED_MIN, config.DRONE_SPEED_MAX))
+
+    def _recompute_links(self) -> None:
+        """Refresh every drone's candidate pool, then its top-K active links.
+
+        Two passes are required: candidate degrees feed the link score, so all
+        candidate pools must exist before any drone selects its top-K links.
+        """
+        for drone in self.drones:
+            drone.update_candidates(self.drones)
+        for drone in self.drones:
+            drone.update_neighbors()
 
     # ------------------------------------------------------------------
     # Step
@@ -386,20 +399,44 @@ class FANETEnv:
 
         Returns:
             observations: Dict[drone_id, state_dict]
-            rewards:      Dict[drone_id, float]  (stub — 0.0 for now)
+            rewards:      Dict[drone_id, float]. C-drones carry the topology
+                          agent's local reward; M-drones are 0.0 until the
+                          routing RL agent is added later.
             dones:        Dict[drone_id, bool]
             infos:        Dict[drone_id, dict]   (empty for now)
         """
         self.tx_events = []
         self._rx_counts = defaultdict(int)
 
-        # 1. Move drones
+        # 1a. Move M-drones along their straight start -> end line.
         for drone in self.drones:
-            drone.step_move(config.TIMESTEP)
+            if drone.drone_type == "M":
+                drone.step_move(config.TIMESTEP)
 
-        # 2. Recompute neighbour sets
+        # 1b. Move C-drones with the topology agent. Capture each C-drone's
+        #     pre-move state and distance travelled so the local reward can be
+        #     measured once the new links are known.
+        c_prev_states: Dict[int, dict] = {}
+        c_move_dist: Dict[int, float] = {}
         for drone in self.drones:
-            drone.update_neighbors(self.drones)
+            if drone.drone_type == "C":
+                prev_state = drone.get_state()
+                delta = self._topology_agent.act(drone, prev_state)
+                c_prev_states[drone.drone_id] = prev_state
+                c_move_dist[drone.drone_id] = drone.apply_velocity(delta, config.TIMESTEP)
+
+        # 2. Recompute candidate pools and re-select top-K active links.
+        self._recompute_links()
+
+        # 2b. Local topology reward for each C-drone (post-link observation).
+        topo_rewards: Dict[int, float] = {}
+        for drone in self.drones:
+            if drone.drone_type == "C":
+                topo_rewards[drone.drone_id] = self._topology_agent.reward(
+                    c_prev_states[drone.drone_id],
+                    drone.get_state(),
+                    c_move_dist[drone.drone_id],
+                )
 
         # 3. Update active links for visualiser
         self._update_active_links()
@@ -425,12 +462,19 @@ class FANETEnv:
         # 8. Log per-step network state and per-drone state.
         self._log_step_and_drone_state()
 
-        done = self.step_count >= config.MAX_STEPS
+        # The episode ends when the step budget is exhausted OR every M-drone
+        # has reached its destination (there is no mission traffic left to
+        # generate or deliver once they have all arrived).
+        m_drones = [d for d in self.drones if d.drone_type == "M"]
+        all_m_arrived = bool(m_drones) and all(d.arrived for d in m_drones)
+        done = self.step_count >= config.MAX_STEPS or all_m_arrived
         if done:
             self.close_logger()
 
         observations = {d.drone_id: d.get_state() for d in self.drones}
-        rewards = {d.drone_id: 0.0 for d in self.drones}
+        # C-drones receive the topology agent's local reward; M-drone routing
+        # rewards stay 0.0 until the routing RL agent is added in a later phase.
+        rewards = {d.drone_id: topo_rewards.get(d.drone_id, 0.0) for d in self.drones}
         dones = {d.drone_id: done for d in self.drones}
         infos: Dict[int, dict] = {d.drone_id: {} for d in self.drones}
 
