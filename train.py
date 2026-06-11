@@ -116,8 +116,9 @@ def main() -> None:
     print(f"  episodes      : {args.episodes}")
     print(f"  max steps     : {args.steps}")
     print(f"  base seed     : {args.seed}")
-    print(f"  link reward   : +{config.LINK_REWARD_DELIVERED:g} delivered / "
-          f"{config.LINK_REWARD_DROPPED:g} dropped (per source drone)")
+    print(f"  link reward   : +{config.LINK_REWARD_DELIVERED:g} / "
+          f"{config.LINK_REWARD_DROPPED:g}  (M-drones: source packets | "
+          f"C-drones: relay forwarded vs. voided)")
     print(f"  lr={ppo_cfg.lr:g}  gamma={ppo_cfg.gamma:g}  lam={ppo_cfg.lam:g}  "
           f"clip={ppo_cfg.clip:g}  epochs={ppo_cfg.epochs}")
     print(f"  save to       : {args.save}")

@@ -211,9 +211,15 @@ class FANETEnv:
         # The link transition each drone recorded THIS step (reward filled in
         # after routing once delivered/dropped outcomes are known).
         self._pending_link_tr: Dict[int, dict] = {}
-        # Per-step K-link reward, keyed by the SOURCE drone of each packet:
-        # +1 per delivered packet, -1 per dropped packet originating there.
+        # Per-step K-link reward for M-drones, keyed by the SOURCE drone of each
+        # packet: +1 per delivered packet, -1 per dropped packet originating there.
         self._step_src_reward: Dict[int, float] = defaultdict(float)
+        # Per-step K-link reward for C-drones, keyed by the CURRENT HOLDER: a
+        # relay-usefulness signal — +1 each time a drone forwards/delivers a
+        # packet it holds, -1 each time a packet voids or expires while it holds
+        # it. C-drones generate no packets of their own, so their link policy is
+        # trained on how good a relay they are, not on packet ownership.
+        self._step_relay_reward: Dict[int, float] = defaultdict(float)
 
         self.gs_position: np.ndarray = np.array(config.GS_POSITION, dtype=np.float64)
         self._factory = PacketFactory(
@@ -278,6 +284,7 @@ class FANETEnv:
         self._topo_buffer = defaultdict(list)
         self._pending_link_tr = {}
         self._step_src_reward = defaultdict(float)
+        self._step_relay_reward = defaultdict(float)
 
         # Open a new logger for this episode (close any prior one).
         if self._logger is not None:
@@ -480,6 +487,7 @@ class FANETEnv:
         self._rx_counts = defaultdict(int)
         self._pending_link_tr = {}
         self._step_src_reward = defaultdict(float)
+        self._step_relay_reward = defaultdict(float)
 
         # 1a. Move M-drones along their straight start -> end line.
         for drone in self.drones:
@@ -557,12 +565,23 @@ class FANETEnv:
         self._expire_queued_packets()
 
         # 6b. Now that this step's deliveries/drops are known, fill in the
-        #     K-link reward for each link transition recorded this step. The
-        #     reward is the net (+1 delivered, -1 dropped) over packets that
-        #     ORIGINATED at the drone (see config.LINK_REWARD_*).
+        #     K-link reward for each link transition recorded this step. The two
+        #     drone types are rewarded for what their link choices are FOR:
+        #       - M-drones: net (+1 delivered, -1 dropped) over packets that
+        #         ORIGINATED at the drone (mission-traffic delivery).
+        #       - C-drones: net relay usefulness (+1 per packet forwarded or
+        #         delivered, -1 per packet voided/expired while holding) — they
+        #         have no packets of their own, so they learn to be good relays.
+        #     (see config.LINK_REWARD_*).
         if self.training:
-            for did, transition in self._pending_link_tr.items():
-                transition["reward"] = self._step_src_reward.get(did, 0.0)
+            for drone in self.drones:
+                transition = self._pending_link_tr.get(drone.drone_id)
+                if transition is None:
+                    continue
+                if drone.drone_type == "C":
+                    transition["reward"] = self._step_relay_reward.get(drone.drone_id, 0.0)
+                else:
+                    transition["reward"] = self._step_src_reward.get(drone.drone_id, 0.0)
 
         # 7. Radio idle/listen energy and accumulated rx energy for the step.
         for drone in self.drones:
@@ -666,8 +685,10 @@ class FANETEnv:
                 pkt.relay_to("GS")
                 pkt.mark_delivered(self.step_count)
                 self.delivered.append(pkt)
-                # K-link reward credit to the packet's originating drone.
+                # Link reward: end-to-end credit to the originating M-drone, and
+                # relay credit to this holder for delivering a packet it carried.
                 self._step_src_reward[pkt.source_id] += config.LINK_REWARD_DELIVERED
+                self._step_relay_reward[drone.drone_id] += config.LINK_REWARD_DELIVERED
                 drone.consume_tx_energy()
                 self.tx_events.append((drone.drone_id, "GS"))
                 if self._logger is not None:
@@ -688,7 +709,10 @@ class FANETEnv:
             if next_hop is None:
                 pkt.mark_dropped(DropReason.NO_NEXT_HOP)
                 self.dropped.append(pkt)
+                # The void happened at THIS holder because its kept links left no
+                # neighbour closer to the GS: source blame + relay blame here.
                 self._step_src_reward[pkt.source_id] += config.LINK_REWARD_DROPPED
+                self._step_relay_reward[drone.drone_id] += config.LINK_REWARD_DROPPED
                 if self._logger is not None:
                     self._logger.log_packet_event(
                         event="dropped",
@@ -705,6 +729,9 @@ class FANETEnv:
             # Forward
             pkt.relay_to(next_hop.drone_id)
             next_hop.enqueue(pkt)
+            # Relay credit: this holder's kept links gave the packet a viable
+            # next hop toward the GS (a successful one-hop relay).
+            self._step_relay_reward[drone.drone_id] += config.LINK_REWARD_DELIVERED
             drone.consume_tx_energy()
             self.tx_events.append((drone.drone_id, next_hop.drone_id))
             self._rx_counts[next_hop.drone_id] += 1
@@ -766,7 +793,10 @@ class FANETEnv:
             pkt.mark_dropped(DropReason.TTL_EXPIRED)
             reason = "ttl_expired"
         self.dropped.append(pkt)
+        # Source blame, plus relay blame to whoever was holding it when it died.
         self._step_src_reward[pkt.source_id] += config.LINK_REWARD_DROPPED
+        if holder is not None:
+            self._step_relay_reward[holder.drone_id] += config.LINK_REWARD_DROPPED
         if self._logger is not None:
             self._logger.log_packet_event(
                 event="dropped",

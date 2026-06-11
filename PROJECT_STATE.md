@@ -1,6 +1,6 @@
 # FANET RL Routing — Project State
 
-_Last updated: 2026-06-10_
+_Last updated: 2026-06-11_
 
 This document is the single place to understand **what the simulator is, how it
 works, what has been built, and what has not.** Read this first when returning to
@@ -51,6 +51,10 @@ void (no neighbour closer to the GS).
 
 Absolute PDR is connectivity-bound (50 drones over 1750×1750 m at 250 m range is
 sparse); see §8.
+
+> ⚠️ These numbers predate the **C-drone relay link reward** (added 2026-06-11,
+> §5.1) and the C-drone reward rework, so the saved `trained_policies.pt` is
+> stale. **A 1000-step retrain is pending** before re-quoting metrics.
 
 ---
 
@@ -146,11 +150,26 @@ Four small MLPs live in `policies.py`. Each drone owns its **own** instances
     stochastic version of top-K.
 - **Critic** `LinkValue`: `Input(6) → 16 → 16 → 1` over a fixed drone summary
   (dist-to-GS, queue, #candidates, mean link quality, energy, GS-reachable).
-- **Reward**: `+1` when a packet **that originated at this drone** is delivered,
-  `-1` when one of its packets is dropped (`config.LINK_REWARD_*`). Credited to
-  the source drone the step the packet resolves. **Only M-drones generate
-  packets**, so C-drone link policies receive a zero signal (this matches the
-  literal spec; their link nets effectively stay put).
+- **Reward** — **role-specific, because M- and C-drones keep links for different
+  reasons** (`config.LINK_REWARD_*`, magnitudes ±1 for both so one LR fits):
+  - **M-drones — mission-traffic delivery (source-attributed):** `+1` when a
+    packet **that originated at this drone** is delivered, `-1` when one of its
+    packets is dropped, credited the step the packet resolves. An M-drone's link
+    choice is judged by whether *its own* traffic gets through.
+  - **C-drones — relay usefulness (holder-attributed):** a C-drone generates no
+    packets, so it is judged on how good a *relay* it is. `+1` each step for each
+    packet it **forwards onward or delivers** to the GS, `-1` for each packet that
+    **voids or expires while it is holding it** (a void = its kept links left no
+    neighbour closer to the GS). This is local and causal: the blame for a dead
+    end lands on the drone whose links caused it, not on innocent upstream relays.
+  - *Why split (was source-only for everyone):* source-only gave C-drones a
+    permanent **zero** reward (they own no packets), so their link nets never
+    moved off random init. The relay reward makes "K-link training on **all**
+    drones" actually true. The signal is sparse until a C-drone is positioned on a
+    traffic path — but the topology policy (§5.2) drives it there, so the two
+    C-drone policies compose: movement gets it onto paths, link selection then
+    learns which links relay well. (Env: `_step_src_reward` vs
+    `_step_relay_reward` in `fanet_env.py`; assigned per drone type at step 6b.)
 
 ### 5.2 Topology movement — **C-drones only**
 
@@ -240,7 +259,7 @@ python main.py            # saves episode.gif
 | Packets | `PACKET_RATE=1`, `PACKET_TTL=50`, `MAX_HOPS=10` |
 | Episode | `MAX_STEPS=1000` (training overrides via `--steps`) |
 | PPO | `PPO_LR=3e-4`, `PPO_GAMMA=0.99`, `PPO_LAMBDA=0.95`, `PPO_CLIP=0.2`, `PPO_EPOCHS=4`, value/entropy coefs |
-| Link reward | `LINK_REWARD_DELIVERED=+1`, `LINK_REWARD_DROPPED=−1` |
+| Link reward | `LINK_REWARD_DELIVERED=+1`, `LINK_REWARD_DROPPED=−1` (role-specific: M=source, C=relay — §5.1) |
 
 ---
 
@@ -267,8 +286,11 @@ radio range, smaller area, more drones. To improve *learning*: more episodes, or
   greedy geographic routing is the fixed baseline.
 - **Per-drone independent policies.** No weight sharing; each drone has its own
   actor/critic/optimiser in `PolicyBank`.
-- **Source-attributed link reward.** "A packet from this drone" = the drone that
-  *originated* it. Consequence: C-drone link policies get no signal (§5.1).
+- **Role-specific link reward** (§5.1). M-drones: source-attributed (their own
+  packets' end-to-end fate). C-drones: holder-attributed relay reward (forwarded
+  vs. voided/expired-at-me). Earlier the reward was source-only for everyone,
+  which left C-drone link policies with a zero signal; the relay reward fixes that
+  so all drones learn link selection for their actual job.
 - **Topology policy = homing relay** (§5.2): normalised features + a nearest-M
   bearing input + `tanh`-scaled output + a progress-shaped relay-coverage reward.
   This stack was reached by fixing, in turn, border-drift, freeze-in-place, a
