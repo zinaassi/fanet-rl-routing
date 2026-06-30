@@ -112,7 +112,7 @@ WAYPOINT_ARRIVAL_THRESHOLD: float = 2.0  # metres — drone is "at" its end poin
 # ---------------------------------------------------------------------------
 # C-drone topology policy (untrained PyTorch MLP; RL trains it later)
 # ---------------------------------------------------------------------------
-# C-drones no longer follow scripted waypoints. Each C-drone owns a PyTorch MLP
+#  Each C-drone owns a PyTorch MLP
 # (see fanet_sim/envs/policies.py:TopologyPolicy) that maps its 8-feature local
 # state to a movement vector [dx, dy]:
 #   Input(8) -> Linear(32) -> ReLU -> Linear(32) -> ReLU -> Linear(2)
