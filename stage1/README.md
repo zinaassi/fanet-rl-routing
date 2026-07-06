@@ -22,8 +22,13 @@ python -m stage1.evaluate --quick
 python -m stage1.evaluate --jobs 16
 
 # slices of the grid
-python -m stage1.evaluate --layouts ring grid --ks 0.6 --routers dijkstra greedy
+python -m stage1.evaluate --layouts ring grid --ks 8 --routers dijkstra greedy
 python -m stage1.evaluate --n-topologies 10 --n-channels 5 --steps 500 --base-seed 7
+
+# visualize the routing decisions for one topology (one panel per router:
+# links, next-hop arrows, unreachable drones, PDR of one simulated episode)
+python -m stage1.viz --layout random --k 8 --topology 1
+python -m stage1.viz --layout ring --k 16 --topology 0 --routers greedy dijkstra
 ```
 
 Outputs land in `stage1/out/` (override with `--out-dir`):
@@ -33,8 +38,9 @@ Outputs land in `stage1/out/` (override with `--out-dir`):
 | `results_per_sim.csv` | one row per (layout, k, router, topology, realization) |
 | `results_summary.csv` | per-cell mean, between-topology std, within-topology std for each metric |
 | `drop_locations.csv` | drop histogram per cell, by node kind (M/C) and reason (channel / no_route) |
-| `calibration.png` | p_loss vs distance for each k, with the link cutoff |
+| `calibration.png` | p_loss vs distance for each k, with the hard 250 m range |
 | `pdr.png`, `delay_decomposition.png`, `unreachable.png` | summary figures over the grid |
+| `routes_<layout>_k<k>_t<topology>.png` | per-topology routing map from `stage1.viz` |
 
 A headline table (global PDR per layout/k, checking `direct <= greedy <=
 dijkstra`) is printed at the end of every run. Prune-disconnection events
@@ -46,8 +52,13 @@ dijkstra`) is printed at the end of every run. Prune-disconnection events
   (875, 875). The GS is a **pure sink**: it never transmits and emits nothing.
 - 36 mission drones (M-drones, nodes 0–35): positions uniform at random.
 - 14 communication drones (C-drones, nodes 36–49), placed per `--layout`:
-  - `ring` — evenly spaced on a circle of radius 450 m around the GS
-    (deterministic; starts at angle 0).
+  - `ring` — evenly spaced on a circle of radius 250 m around the GS
+    (deterministic; starts at angle 0). **Note:** the radius equals the
+    hard communication range, so ring C-drones sit exactly at the GS's
+    range edge where `p_loss = 1` — they have *no usable direct link to
+    the GS* and can only relay inward (`RING_RADIUS_M` in `config.py`;
+    set it below 250 m, e.g. 125 m where `p_loss = 0.5`, to give them a
+    usable last hop).
   - `grid` — a deterministic staggered lattice covering the area: rows of
     4/3/4/3 points at the row/cell centres (`config.GRID_ROW_SIZES`).
   - `random` — uniform at random, resampled per topology seed.
@@ -60,25 +71,29 @@ same topology index — layout comparisons see the same traffic geometry.
 
 ## Channel model (`stage1/channel.py`)
 
+Hard communication range `COMM_RANGE_M = 250 m` plus a distance-normalised
+logistic loss curve:
+
 ```
-P_rx(d)   = P_tx + G_tx + G_rx - 20*log10(d) - 20*log10(f) + 147.55   [dBm]
-M(d)      = P_rx(d) - P_sens                                          [dB]
-p_loss(d) = 1 / (1 + exp(k * M(d)))
+u(d)      = clip(d / COMM_RANGE_M, 0, 1)
+sigma(x)  = 1 / (1 + exp(-x))
+p_loss(d) = (sigma(k*(u - 1/2)) - sigma(-k/2)) / (sigma(k/2) - sigma(-k/2))
 ```
 
-with `P_tx = 30 dBm`, `G_tx = G_rx = 2 dBi`, `f = 2.4 GHz`,
-`P_sens = -54 dBm`. The margin crosses zero at ~249.6 m, so
-**p_loss(250 m) ≈ 0.5 for every k**. Steepness sweep `k ∈ {0.3, 0.6, 1.0}`.
+The rescaling pins the endpoints for **every** steepness k:
+`p_loss(0) = 0`, `p_loss(125 m) = 0.5`, `p_loss(250 m) = 1`, and the curve
+saturates at 1 beyond the range. k is a pure shape knob — it never changes
+the communication range: small k approaches a linear ramp 0 → 1, large k
+approaches a step at 125 m. Steepness sweep `k ∈ {4, 8, 16}`.
 
-Link existence: an edge exists iff `p_loss(d) <= P_LOSS_CUTOFF = 0.95`,
-which caps link range at ~773 m (k=0.3), ~439 m (k=0.6), ~350 m (k=1.0).
-Note that at k=1.0 the ring C-drones (450 m from the GS) have **no direct
-edge to the GS** — that is a property of the sweep, not a bug.
+Link existence: an edge exists iff `d <= COMM_RANGE_M` **and** the link can
+actually deliver (`p_loss < 1`): drones farther apart than 250 m have no
+link at all, and packets can never be routed through them.
 
 ## Graph construction (`stage1/world.py`)
 
 - Directed graph over 51 nodes; candidate edge `i -> j` iff
-  `p_loss(d_ij) <= CUTOFF` (GS never a source).
+  `d_ij <= COMM_RANGE_M` and `p_loss < 1` (GS never a source).
 - **Prune**: each drone keeps only its `MAX_OUT_EDGES = 5` lowest-p_loss
   outgoing **drone-to-drone** edges (ties broken by neighbour id).
 - **GS exemption (interpretation)**: the drone→GS edge is *exempt from the
@@ -88,7 +103,7 @@ edge to the GS** — that is a property of the sweep, not a bug.
 - Edge weight `w(i,j) = -log(1 - p_loss(i,j))`, so shortest paths maximise
   end-to-end delivery probability.
 - Whenever the prune disconnects a drone that raw range alone would
-  connect (a path to the GS exists in the cutoff-only graph but not in the
+  connect (a path to the GS exists in the range-only graph but not in the
   pruned graph), the event is logged and counted
   (`prune_disconnected_count` in the CSVs).
 
@@ -164,7 +179,8 @@ terminate at the GS (covers `None` hops, downstream dead ends, and cycles).
 
 | Knob | Current default |
 |---|---|
-| `P_LOSS_CUTOFF` | 0.95 |
+| `COMM_RANGE_M` (hard link range) | 250 m |
+| `RING_RADIUS_M` | 250 m (= `COMM_RANGE_M`, so ring C-drones have no direct GS link — intended?) |
+| `K_SWEEP` (loss-curve steepness) | (4, 8, 16) |
 | `MAX_OUT_EDGES` (per-drone out-edge cap) | 5 |
 | GS-bound edges exempt from the cap | yes (see interpretation above) |
-| `P_SENS_DBM` @ 2.4 GHz | -54 dBm (p_loss = 0.5 at ~250 m) |

@@ -22,6 +22,12 @@ from . import channel, config
 
 Seed = Union[int, Sequence[int]]
 
+# A link whose delivery probability (1 - p_loss) is below this floor can never
+# carry a packet in practice, so no edge is created for it. This also makes
+# edge existence at the range boundary (d ~= COMM_RANGE_M, where p_loss -> 1)
+# immune to floating-point dust in recomputed distances.
+_MIN_DELIVERY_PROB: float = 1e-12
+
 
 def _ring_positions() -> np.ndarray:
     """C-drone ring: evenly spaced on a circle of RING_RADIUS_M around GS."""
@@ -77,7 +83,13 @@ def candidate_graph(
     k: float,
     kinds: Optional[Sequence[str]] = None,
 ) -> nx.DiGraph:
-    """Directed cutoff graph: edge i->j iff p_loss(d_ij) <= P_LOSS_CUTOFF.
+    """Directed range graph: edge i->j iff d_ij <= COMM_RANGE_M and p_loss < 1.
+
+    The hard communication range is COMM_RANGE_M (250 m): nodes farther
+    apart than that have no link at all and can never exchange packets. A
+    boundary link at exactly the range edge has p_loss = 1 (it could never
+    deliver), so it is not created either — ring C-drones placed exactly at
+    COMM_RANGE_M from the GS therefore have no direct GS edge.
 
     The last row of ``positions`` (or the node whose kind is "GS") is the
     ground station; it is a pure sink and never a source, so it has no
@@ -102,9 +114,11 @@ def candidate_graph(
         if i == gs_id:
             continue  # GS never transmits
         for j in range(n):
-            if j == i or ploss[i, j] > config.P_LOSS_CUTOFF:
+            if j == i or dists[i, j] > config.COMM_RANGE_M:
                 continue
             p = float(ploss[i, j])
+            if p >= 1.0 - _MIN_DELIVERY_PROB:
+                continue  # boundary link (d ~= COMM_RANGE_M): can never deliver
             g.add_edge(i, j, dist=float(dists[i, j]), p_loss=p, weight=-math.log1p(-p))
     return g
 
@@ -144,7 +158,7 @@ class World:
     layout: str
     k: float
     positions: np.ndarray
-    raw_graph: nx.DiGraph        # cutoff-only candidate graph
+    raw_graph: nx.DiGraph        # range-only candidate graph (no out-edge cap)
     graph: nx.DiGraph            # after the per-drone out-edge prune
     prune_disconnected: tuple[int, ...]  # drones connected in raw_graph but not in graph
 

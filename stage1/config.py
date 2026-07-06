@@ -16,21 +16,21 @@ N_C_DRONES: int = 14            # communication drones (relay only)
 N_DRONES: int = N_M_DRONES + N_C_DRONES
 GS_ID: int = N_DRONES           # ground station node id (= 50); pure sink
 
-RING_RADIUS_M: float = 450.0    # 'ring' layout: C-drone ring radius around GS
+RING_RADIUS_M: float = 250.0    # 'ring' layout: C-drone ring radius around GS
+                                # NOTE: equal to COMM_RANGE_M, so ring C-drones sit
+                                # exactly at the GS's range edge where p_loss = 1 —
+                                # they have NO usable direct link to the GS and can
+                                # only relay inward. Set below 250 (e.g. 125 m,
+                                # where p_loss = 0.5) to give them a usable last hop.
 GRID_ROW_SIZES: tuple[int, ...] = (4, 3, 4, 3)  # 'grid' layout: staggered lattice, 14 points
 
 # --------------------------------------------------------------------------
-# Channel (pending advisor confirmation: P_SENS_DBM at 2.4 GHz)
+# Channel: hard communication range + distance-normalised logistic loss
 # --------------------------------------------------------------------------
-P_TX_DBM: float = 30.0
-G_TX_DBI: float = 2.0
-G_RX_DBI: float = 2.0
-FREQ_HZ: float = 2.4e9
-P_SENS_DBM: float = -54.0       # calibrated so margin M(d)=0 at ~250 m
-K_SWEEP: tuple[float, ...] = (0.3, 0.6, 1.0)   # logistic steepness sweep
-
-# Link-existence cutoff (pending advisor confirmation)
-P_LOSS_CUTOFF: float = 0.95     # edge i->j exists iff p_loss(d_ij) <= P_LOSS_CUTOFF
+COMM_RANGE_M: float = 250.0     # hard range: no link exists beyond this distance
+K_SWEEP: tuple[float, ...] = (4.0, 8.0, 16.0)  # logistic steepness sweep
+                                # (dimensionless, on d / COMM_RANGE_M; small k ~ linear
+                                #  ramp 0 -> 1, large k ~ step at COMM_RANGE_M / 2)
 
 # --------------------------------------------------------------------------
 # Graph pruning (pending advisor confirmation: cap=5, GS-bound edges uncapped)

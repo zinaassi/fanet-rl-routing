@@ -124,7 +124,7 @@ def test_emission_rate_one_packet_per_m_drone_per_step():
 
 
 def test_channel_seed_reproducible_and_varying():
-    w = world.build_world("random", 0.6, 1)
+    w = world.build_world("random", 8.0, 1)
     table = routing_table(DijkstraRouter(), w.graph)
     a = sim.run_sim(w.graph, table, np.random.default_rng(7), n_steps=100)
     b = sim.run_sim(w.graph, table, np.random.default_rng(7), n_steps=100)
@@ -135,7 +135,7 @@ def test_channel_seed_reproducible_and_varying():
 
 
 def test_delay_invariant_on_real_world():
-    w = world.build_world("random", 0.6, 1)
+    w = world.build_world("random", 8.0, 1)
     table = routing_table(DijkstraRouter(), w.graph)
     res = sim.run_sim(w.graph, table, np.random.default_rng(7), n_steps=100)
     d = res.delivered
