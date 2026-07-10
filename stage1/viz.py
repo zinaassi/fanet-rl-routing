@@ -55,7 +55,7 @@ def _draw_panel(ax, w: world.World, router_name: str, table, routed, m) -> None:
 
     # Hard-range circle around the GS and the arena border.
     ax.add_patch(plt.Circle(
-        config.GS_POS, config.COMM_RANGE_M, fill=False,
+        config.GS_POS, config.RANGE_M, fill=False,
         edgecolor=MUTED, linewidth=1, linestyle=(0, (4, 3)),
     ))
     ax.add_patch(plt.Rectangle(
@@ -165,7 +165,7 @@ def render(
                markeredgecolor=UNREACHABLE, label="unreachable (no route to GS)"),
         Line2D([], [], marker="*", linestyle="", color=INK, markersize=12, label="GS"),
         Line2D([], [], linestyle=(0, (4, 3)), color=MUTED,
-               label=f"{config.COMM_RANGE_M:.0f} m range around GS"),
+               label=f"{config.RANGE_M:.0f} m range around GS"),
         Line2D([], [], color=GRID, label="in-range link (pruned graph)"),
     ]
     fig.legend(handles=handles, loc="lower center", ncol=3,
@@ -191,13 +191,13 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
         description="Visualize per-drone routing decisions for one topology.",
     )
     p.add_argument("--layout", default="ring", choices=config.LAYOUTS)
-    p.add_argument("--k", type=float, default=config.K_SWEEP[1])
+    p.add_argument("--k", type=float, default=config.K_SWEEP[-1])
     p.add_argument("--topology", type=int, default=0)
     p.add_argument("--routers", nargs="+", default=list(config.ROUTERS),
                    choices=config.ROUTERS)
     p.add_argument("--steps", type=int, default=config.N_STEPS)
     p.add_argument("--base-seed", type=int, default=config.BASE_SEED)
-    p.add_argument("--out-dir", default=config.OUT_DIR)
+    p.add_argument("--out-dir", default=config.OUT_DIR_VIZ)
     return p.parse_args(argv)
 
 

@@ -84,8 +84,23 @@ def run_sim(
     rng: np.random.Generator,
     n_steps: int,
     sources: Optional[Sequence[int]] = None,
+    emit_period: int = 1,
+    max_tx_per_step: Optional[int] = 1,
 ) -> SimResult:
-    """Run one episode; ``sources`` defaults to all nodes with kind == "M"."""
+    """Run one episode; ``sources`` defaults to all nodes with kind == "M".
+
+    ``emit_period`` controls the offered load: each source emits one packet
+    every ``emit_period`` steps (default 1 = the spec load of 1 packet per
+    M-drone per step). Emissions are staggered by drone id — source s emits
+    when (step + s) % emit_period == 0 — so the aggregate load is smooth
+    rather than bursty.
+
+    ``max_tx_per_step`` is the per-drone service rate (default 1 = spec).
+    ``None`` means unlimited: every queued packet is (re)transmitted each
+    step, so queues never build and packets never interact — a "no queues"
+    mode that isolates pure channel x routing effects (its PDR is then
+    load-independent, since packets are independent).
+    """
     gs_id: int = graph.graph["gs_id"]
     drones = tuple(sorted(n for n in graph.nodes if n != gs_id))
     index: Dict[int, int] = {d: i for i, d in enumerate(drones)}
@@ -113,6 +128,8 @@ def run_sim(
 
     for step in range(n_steps):
         for s in sources:  # emission phase
+            if (step + s) % emit_period:
+                continue
             pid = len(src_l)
             src_l.append(s)
             emit_l.append(step)
@@ -123,27 +140,34 @@ def run_sim(
             queues[index[s]].append(pid)
 
         active = [i for i in range(len(drones)) if queues[i]]
-        draws = rng.random(len(active))  # one attempt per active drone
+        tx_counts = [
+            len(queues[i]) if max_tx_per_step is None else min(max_tx_per_step, len(queues[i]))
+            for i in active
+        ]
+        draws = rng.random(sum(tx_counts))  # one draw per transmission attempt
         arrivals: list[tuple[int, int]] = []  # (receiver index, packet id)
-        for a, i in enumerate(active):
-            pid = queues[i].popleft()
-            v = hop_of[i]
-            if v < 0:  # no route: drop-on-no-progress
-                status_l[pid] = DROPPED_NO_ROUTE
-                end_l[pid] = step
-                end_node_l[pid] = drones[i]
-            elif draws[a] < loss_of[i]:  # lost on air: no retransmission
-                status_l[pid] = DROPPED_CHANNEL
-                end_l[pid] = step
-                end_node_l[pid] = drones[i]
-            else:
-                hops_l[pid] += 1
-                if v == gs_id:
-                    status_l[pid] = DELIVERED
+        a = 0
+        for i, n_tx in zip(active, tx_counts):
+            for _ in range(n_tx):
+                pid = queues[i].popleft()
+                v = hop_of[i]
+                if v < 0:  # no route: drop-on-no-progress
+                    status_l[pid] = DROPPED_NO_ROUTE
                     end_l[pid] = step
-                    end_node_l[pid] = gs_id
+                    end_node_l[pid] = drones[i]
+                elif draws[a] < loss_of[i]:  # lost on air: no retransmission
+                    status_l[pid] = DROPPED_CHANNEL
+                    end_l[pid] = step
+                    end_node_l[pid] = drones[i]
                 else:
-                    arrivals.append((index[v], pid))
+                    hops_l[pid] += 1
+                    if v == gs_id:
+                        status_l[pid] = DELIVERED
+                        end_l[pid] = step
+                        end_node_l[pid] = gs_id
+                    else:
+                        arrivals.append((index[v], pid))
+                a += 1
 
         for j, pid in arrivals:  # hand-offs land after all transmissions
             queues[j].append(pid)

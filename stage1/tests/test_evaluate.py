@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pytest
 
-from stage1 import evaluate, metrics
+from stage1 import config, evaluate, metrics
 
 
 def test_aggregate_between_vs_within_topology():
@@ -26,8 +26,8 @@ def test_aggregate_ignores_nan_cells():
 
 def test_run_unit_is_reproducible():
     kwargs = dict(base_seed=99, routers=("dijkstra",), n_channels=2, n_steps=50)
-    a = evaluate.run_unit(("ring", 0.6, 0), **kwargs)
-    b = evaluate.run_unit(("ring", 0.6, 0), **kwargs)
+    a = evaluate.run_unit(("ring", 0.1, 0), **kwargs)
+    b = evaluate.run_unit(("ring", 0.1, 0), **kwargs)
     assert a.rows == b.rows
     assert a.prune_disconnected == b.prune_disconnected
 
@@ -43,7 +43,7 @@ def test_end_to_end_quick_run(tmp_path):
             "--out-dir", out,
         ]
     )
-    assert len(agg) == 3 * 3 * 3  # layouts x ks x routers
+    assert len(agg) == len(config.LAYOUTS) * len(config.K_SWEEP) * len(config.ROUTERS)
     for name in (
         "results_per_sim.csv",
         "results_summary.csv",
@@ -56,5 +56,6 @@ def test_end_to_end_quick_run(tmp_path):
         assert os.path.exists(os.path.join(out, name)), name
     with open(os.path.join(out, "results_per_sim.csv")) as f:
         rows = list(csv.DictReader(f))
-    assert len(rows) == 27  # one sim per cell with 1 topology x 1 realization
+    # one sim per cell with 1 topology x 1 realization
+    assert len(rows) == len(config.LAYOUTS) * len(config.K_SWEEP) * len(config.ROUTERS)
     assert all(float(r["n_emitted"]) == 36 * 50 for r in rows)

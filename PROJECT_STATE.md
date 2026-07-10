@@ -60,31 +60,39 @@ sparse); see §8.
 
 ## 3. Repository map
 
+The RL simulator (this document's subject) lives under `rl_sim/`, kept
+separate from `stage1/` (the standalone classical routing baseline) and
+top-level docs:
+
 ```
 fanet-rl-routing/
-├── train.py                  # PPO training entry point (NEW)
-├── eval.py                   # run the sim with trained/random policies (NEW)
-├── main.py                   # phase-1 sim entry point (random policies; protected)
-├── trained_policies.pt       # example saved checkpoint (produced by train.py)
 ├── PROJECT_STATE.md          # this file
-├── fanet_sim/
-│   ├── config.py             # ALL parameters (sim + PPO hyper-params)
-│   ├── envs/
-│   │   ├── drone.py          # Drone: state, mobility, link selection, policies
-│   │   ├── channel.py        # FSPL link model (protected)
-│   │   ├── packet.py         # Packet + PacketFactory (protected)
-│   │   ├── policies.py       # the 4 MLPs: 2 actors + 2 critics
-│   │   ├── topology_agent.py # C-drone controller + local topology reward
-│   │   └── fanet_env.py      # environment: reset()/step(), routing, rollouts
-│   ├── rl/                   # PPO support (NEW package)
-│   │   ├── sampling.py       # Plackett–Luce sample / log-prob maths
-│   │   └── ppo.py            # PPOConfig, GAE, updates, PolicyBank, save/load
-│   └── utils/
-│       ├── metrics.py        # connectivity sampling helpers (protected)
-│       ├── event_log.py      # JSONL event logger
-│       └── visualization.py  # matplotlib animation (protected)
-└── scripts/
-    └── analyze.py            # Stage-2 metric computation from the JSONL log (protected)
+├── stage1/                   # classical routing baseline (standalone, see stage1/README.md)
+├── docs/                     # proposal / reference documents
+└── rl_sim/                   # RL simulator + training/eval pipeline
+    ├── train.py               # PPO training entry point (NEW)
+    ├── eval.py                 # run the sim with trained/random policies (NEW)
+    ├── main.py                 # phase-1 sim entry point (random policies; protected)
+    ├── trained_policies.pt     # example saved checkpoint (produced by train.py)
+    ├── logs/                   # JSONL event logs (gitignored)
+    ├── fanet_sim/
+    │   ├── config.py             # ALL parameters (sim + PPO hyper-params)
+    │   ├── envs/
+    │   │   ├── drone.py          # Drone: state, mobility, link selection, policies
+    │   │   ├── channel.py        # FSPL link model (protected)
+    │   │   ├── packet.py         # Packet + PacketFactory (protected)
+    │   │   ├── policies.py       # the 4 MLPs: 2 actors + 2 critics
+    │   │   ├── topology_agent.py # C-drone controller + local topology reward
+    │   │   └── fanet_env.py      # environment: reset()/step(), routing, rollouts
+    │   ├── rl/                   # PPO support (NEW package)
+    │   │   ├── sampling.py       # Plackett–Luce sample / log-prob maths
+    │   │   └── ppo.py            # PPOConfig, GAE, updates, PolicyBank, save/load
+    │   └── utils/
+    │       ├── metrics.py        # connectivity sampling helpers (protected)
+    │       ├── event_log.py      # JSONL event logger
+    │       └── visualization.py  # matplotlib animation (protected)
+    └── scripts/
+        └── analyze.py             # Stage-2 metric computation from the JSONL log (protected)
 ```
 
 **Protected files** (must not be modified per project constraint): `metrics.py`,
@@ -216,6 +224,9 @@ after routing each step once deliveries/drops are known.
 ---
 
 ## 6. Workflow — how to use it
+
+The RL simulator lives in `rl_sim/`; run all commands below from inside
+that directory (`cd rl_sim && ...`).
 
 ```bash
 pip install numpy matplotlib networkx pillow torch

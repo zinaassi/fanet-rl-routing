@@ -68,34 +68,40 @@ def _ensure_dir(path: str) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
 
 
-def calibration_plot(out_path: str, ks: Sequence[float] = config.K_SWEEP) -> None:
-    """p_loss vs distance for each k, with the hard communication range."""
+def calibration_plot(
+    out_path: str,
+    ks: Sequence[float] = config.K_SWEEP,
+    range_m: float | None = None,
+) -> None:
+    """p_loss = exp(-k*M(d)) vs distance, over the valid domain (0, RANGE_M).
+
+    p_loss is undefined at and beyond the hard range (the margin turns
+    negative there), so the curves stop just short of it and the range edge
+    is marked with a dashed line.
+    """
     _style()
-    rng_m = config.COMM_RANGE_M
-    d = np.linspace(0.0, 1.2 * rng_m, 600)
+    rng_m = float(range_m if range_m is not None else config.RANGE_M)
+    d = np.linspace(1e-3, rng_m * (1.0 - 1e-9), 600)
     fig, ax = plt.subplots(figsize=(6.4, 4.0))
     for k, color in zip(ks, SLOTS):
-        pl = channel.p_loss(d, k)
+        pl = channel.p_loss(d, k, rng_m)
         ax.plot(d, pl, color=color, linewidth=2, label=f"k = {k}")
     ax.axvline(rng_m, color=MUTED, linewidth=1, linestyle=(0, (4, 3)))
     ax.text(
         rng_m - 4,
-        0.35,
-        f"hard range: no links beyond {rng_m:.0f} m",
+        0.30,
+        f"hard range: no links at d ≥ {rng_m:.0f} m (p_loss → 1)",
         fontsize=8,
         color=MUTED,
         ha="right",
         rotation=90,
     )
-    mid = rng_m / 2.0
-    ax.axvline(mid, color=GRID, linewidth=0.8)
-    ax.text(mid + 5, 0.03, f"{mid:.0f} m: p_loss = 0.5", fontsize=8, color=MUTED)
     ax.set_xlabel("link distance d [m]")
     ax.set_ylabel("p_loss(d)")
-    ax.set_title("Channel calibration: p_loss 0 → 1 over 0 → 250 m")
-    ax.set_xlim(0, 1.2 * rng_m)
+    ax.set_title(f"Channel calibration: p_loss = exp(-k·M(d)), range {rng_m:.0f} m")
+    ax.set_xlim(0, 1.05 * rng_m)
     ax.set_ylim(0, 1.02)
-    ax.legend(loc="center right", labelcolor=INK_2)
+    ax.legend(loc="upper left", labelcolor=INK_2)
     _ensure_dir(out_path)
     fig.tight_layout()
     fig.savefig(out_path, dpi=160)

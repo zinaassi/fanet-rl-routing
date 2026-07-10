@@ -123,8 +123,17 @@ def test_emission_rate_one_packet_per_m_drone_per_step():
     assert np.all(np.isin(res.src, [0, 1]))
 
 
+def test_emit_period_staggers_load():
+    # Source s emits when (step + s) % emit_period == 0:
+    # id 0 -> steps 0 and 3; id 1 -> steps 2 and 5.
+    g, hops = relay_world()
+    res = sim.run_sim(g, hops, np.random.default_rng(0), n_steps=6, emit_period=3)
+    assert list(res.src) == [0, 1, 0, 1]
+    assert list(res.emit_step) == [0, 2, 3, 5]
+
+
 def test_channel_seed_reproducible_and_varying():
-    w = world.build_world("random", 8.0, 1)
+    w = world.build_world("random", 0.1, 1)
     table = routing_table(DijkstraRouter(), w.graph)
     a = sim.run_sim(w.graph, table, np.random.default_rng(7), n_steps=100)
     b = sim.run_sim(w.graph, table, np.random.default_rng(7), n_steps=100)
@@ -135,7 +144,7 @@ def test_channel_seed_reproducible_and_varying():
 
 
 def test_delay_invariant_on_real_world():
-    w = world.build_world("random", 8.0, 1)
+    w = world.build_world("random", 0.1, 1)
     table = routing_table(DijkstraRouter(), w.graph)
     res = sim.run_sim(w.graph, table, np.random.default_rng(7), n_steps=100)
     d = res.delivered
@@ -143,3 +152,17 @@ def test_delay_invariant_on_real_world():
     assert np.array_equal(res.delay_steps[d], res.hops[d] + res.queue_wait_steps[d])
     assert np.all(res.hops[d] >= 1)
     assert np.all(res.queue_wait_steps[d] >= 0)
+
+
+def test_no_queues_mode_forwards_everything_each_step():
+    # Unlimited service: the relay forwards BOTH same-step arrivals on the
+    # next step, so queues never build and delay == hops exactly.
+    g, hops = relay_world()
+    res = sim.run_sim(
+        g, hops, np.random.default_rng(0), n_steps=6, max_tx_per_step=None
+    )
+    d = res.delivered
+    assert d.sum() == 10  # 2 emitted/step x 5 steps fully drained; last 2 in flight
+    assert np.all(res.delay_steps[d] == 2)  # 2 hops, zero queue wait
+    assert np.all(res.queue_wait_steps[d] == 0)
+    assert res.queue_depths.max() <= 2  # only the arrivals of the current step

@@ -110,12 +110,20 @@ def run_unit(
     routers: Sequence[str],
     n_channels: int,
     n_steps: int,
+    range_m: Optional[float] = None,
+    emit_period: int = config.EMIT_PERIOD_STEPS,
+    max_tx_per_step: Optional[int] = 1,
 ) -> UnitResult:
-    """Build one topology and run all routers x channel realizations on it."""
+    """Build one topology and run all routers x channel realizations on it.
+
+    ``range_m`` overrides config.RANGE_M (candidate-range validation only);
+    ``emit_period`` sets the offered load and ``max_tx_per_step`` the
+    service rate (None = no queues; see sim.run_sim).
+    """
     layout, k, t = unit
     layout_idx = config.LAYOUTS.index(layout)
     k_idx = config.K_SWEEP.index(k) if k in config.K_SWEEP else int(k * 1000)
-    w = world.build_world(layout, k, (base_seed, _TOPOLOGY_STREAM, t))
+    w = world.build_world(layout, k, (base_seed, _TOPOLOGY_STREAM, t), range_m=range_m)
 
     rows: List[dict] = []
     drop_hist: Dict[Tuple[str, str, str], int] = {}
@@ -126,7 +134,10 @@ def run_unit(
             seed = np.random.SeedSequence(
                 (base_seed, _CHANNEL_STREAM, t, c, layout_idx, k_idx, r_idx)
             )
-            result = sim.run_sim(w.graph, table, np.random.default_rng(seed), n_steps)
+            result = sim.run_sim(
+                w.graph, table, np.random.default_rng(seed), n_steps,
+                emit_period=emit_period, max_tx_per_step=max_tx_per_step,
+            )
             row = {
                 "layout": layout,
                 "k": k,
@@ -315,7 +326,16 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p.add_argument("--steps", type=int, default=None,
                    help=f"episode length in 100 ms steps (default {config.N_STEPS})")
     p.add_argument("--base-seed", type=int, default=config.BASE_SEED)
-    p.add_argument("--out-dir", default=config.OUT_DIR)
+    p.add_argument("--out-dir", default=config.OUT_DIR_EVALUATION)
+    p.add_argument("--emit-period", type=int, default=config.EMIT_PERIOD_STEPS,
+                   help="each M-drone emits 1 packet every N steps, staggered "
+                        f"by id (default {config.EMIT_PERIOD_STEPS}; 3 = 1/3 load)")
+    p.add_argument("--no-queues", action="store_true",
+                   help="unlimited transmissions per drone per step: queues never "
+                        "build, isolating pure channel x routing effects")
+    p.add_argument("--range-m", type=float, default=None,
+                   help="override config.RANGE_M (candidate-range validation only; "
+                        "the frozen value in config.py is the source of truth)")
     p.add_argument("--jobs", type=int, default=1,
                    help="worker processes (results are identical for any value)")
     p.add_argument("--quick", action="store_true",
@@ -350,12 +370,18 @@ def main(argv: Optional[Sequence[str]] = None) -> Dict[CellKey, Dict[str, metric
         n_topologies, n_channels, n_steps, n_sims, len(units), args.jobs,
     )
 
+    if args.range_m is not None:
+        log.info("RANGE_M override: %g m (config value %g m untouched)",
+                 args.range_m, config.RANGE_M)
     worker = partial(
         run_unit,
         base_seed=args.base_seed,
         routers=tuple(args.routers),
         n_channels=n_channels,
         n_steps=n_steps,
+        range_m=args.range_m,
+        emit_period=args.emit_period,
+        max_tx_per_step=None if args.no_queues else 1,
     )
     results = _run_all_units(units, worker, args.jobs)
     _log_prune_events(results)

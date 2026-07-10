@@ -5,6 +5,9 @@ foundation for a reinforcement-learning routing and topology-control project.
 
 ## Quick start
 
+All commands below are run from the `rl_sim/` directory (this package's
+parent), e.g. `cd rl_sim && python main.py --no-anim`.
+
 ```bash
 pip install numpy matplotlib networkx pillow
 

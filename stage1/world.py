@@ -24,7 +24,7 @@ Seed = Union[int, Sequence[int]]
 
 # A link whose delivery probability (1 - p_loss) is below this floor can never
 # carry a packet in practice, so no edge is created for it. This also makes
-# edge existence at the range boundary (d ~= COMM_RANGE_M, where p_loss -> 1)
+# edge existence at the range boundary (d ~= RANGE_M, where p_loss -> 1)
 # immune to floating-point dust in recomputed distances.
 _MIN_DELIVERY_PROB: float = 1e-12
 
@@ -82,19 +82,24 @@ def candidate_graph(
     positions: np.ndarray,
     k: float,
     kinds: Optional[Sequence[str]] = None,
+    range_m: Optional[float] = None,
 ) -> nx.DiGraph:
-    """Directed range graph: edge i->j iff d_ij <= COMM_RANGE_M and p_loss < 1.
+    """Directed hard-range graph: edge i->j exists iff d_ij < RANGE_M.
 
-    The hard communication range is COMM_RANGE_M (250 m): nodes farther
-    apart than that have no link at all and can never exchange packets. A
-    boundary link at exactly the range edge has p_loss = 1 (it could never
-    deliver), so it is not created either — ring C-drones placed exactly at
-    COMM_RANGE_M from the GS therefore have no direct GS edge.
+    The hard-range rule is REQUIRED by the channel model, not redundant
+    with it: p_loss(d) = exp(-k*M(d)) is only a valid probability for
+    d < RANGE_M (beyond it the margin is negative and exp(-k*M) > 1), so
+    out-of-range pairs are excluded here BEFORE p_loss is ever evaluated.
+    A link within floating-point dust of the boundary (delivery probability
+    below ``_MIN_DELIVERY_PROB``) is not created either — it could never
+    carry a packet. Ring C-drones placed exactly at RANGE_M from the GS
+    therefore have no direct GS edge.
 
     The last row of ``positions`` (or the node whose kind is "GS") is the
     ground station; it is a pure sink and never a source, so it has no
     outgoing edges. Edge attributes: ``dist``, ``p_loss`` and
-    ``weight = -log(1 - p_loss)``.
+    ``weight = -log(1 - p_loss)``. ``range_m`` overrides ``config.RANGE_M``
+    (used by the calibration sweep).
     """
     n = len(positions)
     if kinds is None:
@@ -102,23 +107,26 @@ def candidate_graph(
     if len(kinds) != n or kinds.count("GS") != 1:
         raise ValueError("kinds must match positions and contain exactly one GS")
     gs_id = kinds.index("GS")
+    r = float(range_m if range_m is not None else config.RANGE_M)
 
     diff = positions[:, None, :] - positions[None, :, :]
     dists = np.sqrt((diff**2).sum(axis=2))
-    ploss = np.asarray(channel.p_loss(dists, k))
+    in_range = dists < r
+    ploss = np.ones_like(dists)  # placeholder outside the valid domain
+    ploss[in_range] = channel.p_loss(dists[in_range], k, r)
 
-    g = nx.DiGraph(gs_id=gs_id, k=k)
+    g = nx.DiGraph(gs_id=gs_id, k=k, range_m=r)
     for i in range(n):
         g.add_node(i, pos=(float(positions[i, 0]), float(positions[i, 1])), kind=kinds[i])
     for i in range(n):
         if i == gs_id:
             continue  # GS never transmits
         for j in range(n):
-            if j == i or dists[i, j] > config.COMM_RANGE_M:
-                continue
+            if j == i or not in_range[i, j]:
+                continue  # hard range: no link at d >= RANGE_M
             p = float(ploss[i, j])
             if p >= 1.0 - _MIN_DELIVERY_PROB:
-                continue  # boundary link (d ~= COMM_RANGE_M): can never deliver
+                continue  # boundary link (d ~= RANGE_M): can never deliver
             g.add_edge(i, j, dist=float(dists[i, j]), p_loss=p, weight=-math.log1p(-p))
     return g
 
@@ -163,11 +171,18 @@ class World:
     prune_disconnected: tuple[int, ...]  # drones connected in raw_graph but not in graph
 
 
-def build_world(layout: str, k: float, topology_seed: Seed) -> World:
-    """Sample a topology and build its pruned communication graph."""
+def build_world(
+    layout: str, k: float, topology_seed: Seed, range_m: Optional[float] = None
+) -> World:
+    """Sample a topology and build its pruned communication graph.
+
+    ``range_m`` overrides ``config.RANGE_M`` (calibration sweep only); the
+    C-drone layout geometry (e.g. RING_RADIUS_M) is NOT rescaled with it —
+    the fleet design is fixed, only the radio-range assumption varies.
+    """
     positions = sample_positions(layout, topology_seed)
     kinds = ("M",) * config.N_M_DRONES + ("C",) * config.N_C_DRONES + ("GS",)
-    raw = candidate_graph(positions, k, kinds)
+    raw = candidate_graph(positions, k, kinds, range_m=range_m)
     pruned = prune_out_edges(raw)
     lost = tuple(sorted(drones_reaching_gs(raw) - drones_reaching_gs(pruned)))
     return World(

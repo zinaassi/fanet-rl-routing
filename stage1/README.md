@@ -14,6 +14,10 @@ From the **repo root**:
 # test suite
 python -m pytest stage1/tests -q
 
+# RANGE/P_sens calibration sweep — run FIRST; prints a recommendation that a
+# human applies by setting RANGE_M in stage1/config.py (never auto-applied)
+python -m stage1.calibrate --jobs 16
+
 # small smoke test (3 topologies x 2 channel realizations x 200 steps, full grid)
 python -m stage1.evaluate --quick
 
@@ -22,25 +26,29 @@ python -m stage1.evaluate --quick
 python -m stage1.evaluate --jobs 16
 
 # slices of the grid
-python -m stage1.evaluate --layouts ring grid --ks 8 --routers dijkstra greedy
+python -m stage1.evaluate --layouts ring grid --ks 0.1 --routers dijkstra greedy
 python -m stage1.evaluate --n-topologies 10 --n-channels 5 --steps 500 --base-seed 7
 
 # visualize the routing decisions for one topology (one panel per router:
 # links, next-hop arrows, unreachable drones, PDR of one simulated episode)
-python -m stage1.viz --layout random --k 8 --topology 1
-python -m stage1.viz --layout ring --k 16 --topology 0 --routers greedy dijkstra
+python -m stage1.viz --layout random --k 0.1 --topology 1
+python -m stage1.viz --layout ring --k 0.2 --topology 0 --routers greedy dijkstra
 ```
 
-Outputs land in `stage1/out/` (override with `--out-dir`):
+Outputs land in `stage1/out/`, one subfolder per tool (override with
+`--out-dir`):
 
-| File | Contents |
+| Path | Contents |
 |---|---|
-| `results_per_sim.csv` | one row per (layout, k, router, topology, realization) |
-| `results_summary.csv` | per-cell mean, between-topology std, within-topology std for each metric |
-| `drop_locations.csv` | drop histogram per cell, by node kind (M/C) and reason (channel / no_route) |
-| `calibration.png` | p_loss vs distance for each k, with the hard 250 m range |
-| `pdr.png`, `delay_decomposition.png`, `unreachable.png` | summary figures over the grid |
-| `routes_<layout>_k<k>_t<topology>.png` | per-topology routing map from `stage1.viz` |
+| `evaluation/results_per_sim.csv` | one row per (layout, k, router, topology, realization) |
+| `evaluation/results_summary.csv` | per-cell mean, between-topology std, within-topology std for each metric |
+| `evaluation/drop_locations.csv` | drop histogram per cell, by node kind (M/C) and reason (channel / no_route) |
+| `evaluation/*.png` | pdr, delay-decomposition, unreachable and channel-calibration figures for the evaluated grid |
+| `calibration/calibration_sweep.csv` | per-candidate-range stats from `stage1.calibrate` |
+| `calibration/sens_grid.csv`, `calibration/sensitivity_grid.png` | full (k, RANGE_M) sensitivity grid (validation study) |
+| `calibration/ploss_curves_R450.png` | loss curves at the recommended operating point |
+| `validation/k<k>_R<range>/` | full three-router runs at candidate (k, RANGE_M) points via `--range-m` (see its README) |
+| `viz/routes_<layout>_k<k>_t<topology>.png` | per-topology routing map from `stage1.viz` |
 
 A headline table (global PDR per layout/k, checking `direct <= greedy <=
 dijkstra`) is printed at the end of every run. Prune-disconnection events
@@ -53,12 +61,12 @@ dijkstra`) is printed at the end of every run. Prune-disconnection events
 - 36 mission drones (M-drones, nodes 0–35): positions uniform at random.
 - 14 communication drones (C-drones, nodes 36–49), placed per `--layout`:
   - `ring` — evenly spaced on a circle of radius 250 m around the GS
-    (deterministic; starts at angle 0). **Note:** the radius equals the
-    hard communication range, so ring C-drones sit exactly at the GS's
-    range edge where `p_loss = 1` — they have *no usable direct link to
-    the GS* and can only relay inward (`RING_RADIUS_M` in `config.py`;
-    set it below 250 m, e.g. 125 m where `p_loss = 0.5`, to give them a
-    usable last hop).
+    (deterministic; starts at angle 0). **Note:** the radius currently
+    equals the hard communication range, so ring C-drones sit exactly at
+    the GS's range edge — no link exists there (edges require
+    `d < RANGE_M`), so they have *no direct link to the GS* and can only
+    relay inward (`RING_RADIUS_M` in `config.py`; set it below `RANGE_M`
+    to give them a usable last hop).
   - `grid` — a deterministic staggered lattice covering the area: rows of
     4/3/4/3 points at the row/cell centres (`config.GRID_ROW_SIZES`).
   - `random` — uniform at random, resampled per topology seed.
@@ -71,29 +79,64 @@ same topology index — layout comparisons see the same traffic geometry.
 
 ## Channel model (`stage1/channel.py`)
 
-Hard communication range `COMM_RANGE_M = 250 m` plus a distance-normalised
-logistic loss curve:
+FSPL margin with an exponential loss curve on a hard range:
 
 ```
-u(d)      = clip(d / COMM_RANGE_M, 0, 1)
-sigma(x)  = 1 / (1 + exp(-x))
-p_loss(d) = (sigma(k*(u - 1/2)) - sigma(-k/2)) / (sigma(k/2) - sigma(-k/2))
+P_rx(d)   = P_tx + G_tx + G_rx - 20*log10(d) - 20*log10(f) + 147.55   [dBm]
+P_sens    = P_rx(RANGE_M)        (derived: margin is 0 exactly at RANGE_M)
+M(d)      = P_rx(d) - P_sens  =  20*log10(RANGE_M / d)                [dB]
+p_loss(d) = exp(-k * M(d))       valid ONLY for 0 < d < RANGE_M
 ```
 
-The rescaling pins the endpoints for **every** steepness k:
-`p_loss(0) = 0`, `p_loss(125 m) = 0.5`, `p_loss(250 m) = 1`, and the curve
-saturates at 1 beyond the range. k is a pure shape knob — it never changes
-the communication range: small k approaches a linear ramp 0 → 1, large k
-approaches a step at 125 m. Steepness sweep `k ∈ {4, 8, 16}`.
+with `P_tx = 30 dBm`, `G_tx = G_rx = 2 dBi`, `f = 2.4 GHz`. Properties
+(unit-tested): `p_loss -> 1` as `d -> RANGE_M` from below (M -> 0),
+`p_loss -> 0` as `d -> 0` (M -> +inf), and p_loss is strictly increasing in
+d over `(0, RANGE_M)`. Equivalently `p_loss = (d/RANGE_M)^(20k/ln 10)` — a
+power law. Decay sweep `k ∈ {0.05, 0.1, 0.2}` (per dB of margin).
 
-Link existence: an edge exists iff `d <= COMM_RANGE_M` **and** the link can
-actually deliver (`p_loss < 1`): drones farther apart than 250 m have no
-link at all, and packets can never be routed through them.
+**Hard range, required by the formula (not redundant with it):** for
+`d >= RANGE_M` the margin is `<= 0` and `exp(-k*M) >= 1`, which is not a
+valid probability — `p_loss` is *undefined* there and is never evaluated
+(it raises if asked). Edge existence is therefore defined purely by the
+hard range:
+
+```
+edge (i -> j) exists  iff  d(i,j) < RANGE_M
+```
+
+This rule is what keeps the loss formula inside its valid domain. There is
+no separate `P_LOSS_CUTOFF` constant any more. (One guard remains: a link
+within floating-point dust of the boundary, delivery probability below
+1e-12, is not created — it could never carry a packet.)
+
+`P_sens` is not stored in config: it is derived from `RANGE_M` via
+`channel.p_sens_dbm()` (for the historical 250 m assumption this
+reproduces the original −54 dBm calibration).
+
+## Choosing RANGE_M (`stage1/calibrate.py` — run FIRST)
+
+`RANGE_M` is our own assumption, not given by the project spec: too small
+and the network is too sparse to route on at all; too large and every
+layout is fully connected and ~saturated, so neither router nor C-drone
+layout comparisons can discriminate. `python -m stage1.calibrate` sweeps
+candidate ranges (150–400 m), derives `P_sens` for each, runs the
+global-information dijkstra router only (30 topologies × 10 channel seeds
+per layout at `k = CAL_K`), and prints per range: mean PDR per layout, the
+layout spread (max−min), and the fraction of severely disconnected
+topologies (<10% of drones with any path to the GS). It recommends the
+smallest range with mid-band PDR (~30–80%), spread > 5 points, and
+severe-disconnection < 5% — with justification, but **never auto-applies
+it**: a human confirms by setting `RANGE_M` in `stage1/config.py`.
+
+**Once set, `RANGE_M` is frozen for the entire project** — Stage 2,
+Stage 3, and Algorithm 2 must import it from `stage1/config.py` rather
+than redefining it; re-tuning it per stage invalidates cross-stage
+comparisons.
 
 ## Graph construction (`stage1/world.py`)
 
 - Directed graph over 51 nodes; candidate edge `i -> j` iff
-  `d_ij <= COMM_RANGE_M` and `p_loss < 1` (GS never a source).
+  `d_ij < RANGE_M` (the hard-range rule; GS never a source).
 - **Prune**: each drone keeps only its `MAX_OUT_EDGES = 5` lowest-p_loss
   outgoing **drone-to-drone** edges (ties broken by neighbour id).
 - **GS exemption (interpretation)**: the drone→GS edge is *exempt from the
@@ -129,8 +172,15 @@ terminate at the GS (covers `None` hops, downstream dead ends, and cycles).
 ## Simulator (`stage1/sim.py`)
 
 - Discrete 100 ms steps; episode = 1000 steps (`--steps`).
+- Offered load: each M-drone emits 1 packet every `EMIT_PERIOD_STEPS` steps
+  (staggered by drone id; `--emit-period` on both CLIs). The spec default
+  is 1 (36 pkt/step), which **saturates** the network — roughly half the
+  drones develop unstable queues and the in-flight exclusion then biases
+  router comparisons; period 3 (1/3 load) gives congestion-free
+  comparisons. Pending advisor decision.
 - Each step, in order:
-  1. every M-drone appends 1 new packet to its own unbounded FIFO queue;
+  1. every M-drone due to emit appends 1 new packet to its own unbounded
+     FIFO queue;
   2. every drone with a non-empty queue attempts to transmit exactly its
      head-of-queue packet: draw `r ~ U(0,1)`; if `r < p_loss(link)` the
      packet is **dropped permanently** (no retransmission), otherwise it is
@@ -179,8 +229,8 @@ terminate at the GS (covers `None` hops, downstream dead ends, and cycles).
 
 | Knob | Current default |
 |---|---|
-| `COMM_RANGE_M` (hard link range) | 250 m |
-| `RING_RADIUS_M` | 250 m (= `COMM_RANGE_M`, so ring C-drones have no direct GS link — intended?) |
-| `K_SWEEP` (loss-curve steepness) | (4, 8, 16) |
+| `RANGE_M` (hard link range; fixes `P_sens`) | 250 m — pending confirmation of the `stage1/calibrate.py` recommendation; frozen project-wide once set |
+| `RING_RADIUS_M` | 250 m (= `RANGE_M`, so ring C-drones have no direct GS link — intended?) |
+| `K_SWEEP` (loss-decay per dB of margin) | (0.05, 0.1, 0.2) |
 | `MAX_OUT_EDGES` (per-drone out-edge cap) | 5 |
 | GS-bound edges exempt from the cap | yes (see interpretation above) |
