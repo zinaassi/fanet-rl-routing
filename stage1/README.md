@@ -28,11 +28,6 @@ python -m stage1.evaluate --jobs 16
 # slices of the grid
 python -m stage1.evaluate --layouts ring grid --ks 0.1 --routers dijkstra greedy
 python -m stage1.evaluate --n-topologies 10 --n-channels 5 --steps 500 --base-seed 7
-
-# visualize the routing decisions for one topology (one panel per router:
-# links, next-hop arrows, unreachable drones, PDR of one simulated episode)
-python -m stage1.viz --layout random --k 0.1 --topology 1
-python -m stage1.viz --layout ring --k 0.2 --topology 0 --routers greedy dijkstra
 ```
 
 Outputs land in `stage1/out/`, one subfolder per tool (override with
@@ -45,10 +40,6 @@ Outputs land in `stage1/out/`, one subfolder per tool (override with
 | `evaluation/drop_locations.csv` | drop histogram per cell, by node kind (M/C) and reason (channel / no_route) |
 | `evaluation/*.png` | pdr, delay-decomposition, unreachable and channel-calibration figures for the evaluated grid |
 | `calibration/calibration_sweep.csv` | per-candidate-range stats from `stage1.calibrate` |
-| `calibration/sens_grid.csv`, `calibration/sensitivity_grid.png` | full (k, RANGE_M) sensitivity grid (validation study) |
-| `calibration/ploss_curves_R450.png` | loss curves at the recommended operating point |
-| `validation/k<k>_R<range>/` | full three-router runs at candidate (k, RANGE_M) points via `--range-m` (see its README) |
-| `viz/routes_<layout>_k<k>_t<topology>.png` | per-topology routing map from `stage1.viz` |
 
 A headline table (global PDR per layout/k, checking `direct <= greedy <=
 dijkstra`) is printed at the end of every run. Prune-disconnection events

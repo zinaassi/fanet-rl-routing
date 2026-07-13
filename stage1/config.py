@@ -99,8 +99,6 @@ BASE_SEED: int = 20260706       # root of all seeding; override with --base-seed
 OUT_DIR: str = "stage1/out"
 OUT_DIR_EVALUATION: str = OUT_DIR + "/evaluation"    # stage1.evaluate
 OUT_DIR_CALIBRATION: str = OUT_DIR + "/calibration"  # stage1.calibrate + channel studies
-OUT_DIR_VALIDATION: str = OUT_DIR + "/validation"    # full runs at candidate (k, RANGE_M)
-OUT_DIR_VIZ: str = OUT_DIR + "/viz"                  # stage1.viz route maps
 
 # Quick smoke-test overrides (used by `python -m stage1.evaluate --quick`)
 QUICK_N_TOPOLOGIES: int = 3

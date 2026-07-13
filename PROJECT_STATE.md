@@ -62,7 +62,18 @@ sparse); see §8.
 
 The RL simulator (this document's subject) lives under `rl_sim/`, kept
 separate from `stage1/` (the standalone classical routing baseline) and
-top-level docs:
+top-level docs.
+
+> **Stage 1 status (finalized, see `stage1/README.md` for detail):** the
+> greedy-vs-dijkstra comparison protocol is finalized in `stage1/compare.py`.
+> `restricted_pdr` (delivery ratio over graph-reachable M-drones only, shared
+> denominator across routers) is the **primary** comparison metric — global
+> PDR and %-unreachable are context only. Protocol: paired sign test over
+> per-topology deltas + a normal-approximation 95% CI, no queues (isolates
+> channel × routing), random placement for both M- and C-drones (ring/grid
+> layouts are out of scope for this comparison — they matter only for future
+> C-drone-placement work). `PRACTICAL_SIGNIFICANCE_THRESHOLD = 0.10` is
+> carried from planning and **not yet confirmed by the team**.
 
 ```
 fanet-rl-routing/
