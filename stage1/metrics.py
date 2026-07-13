@@ -10,6 +10,7 @@ import numpy as np
 
 from . import config, sim
 from .routing import NextHops, routed_drones
+from .world import drones_reaching_gs
 
 
 def queue_slopes(queue_depths: np.ndarray, window: int) -> np.ndarray:
@@ -100,6 +101,48 @@ def drop_histogram(result: sim.SimResult) -> Dict[int, int]:
     dropped = result.resolved & ~result.delivered
     nodes, counts = np.unique(result.end_node[dropped], return_counts=True)
     return {int(n): int(c) for n, c in zip(nodes, counts)}
+
+
+def reachable_m_drones(graph: nx.DiGraph) -> frozenset[int]:
+    """M-drones with ANY directed path to the GS in the (pruned) graph.
+
+    Router-INDEPENDENT: this is a property of the graph alone, so it is the
+    same population of source drones for every router. That is exactly what
+    makes it a fair, shared denominator for ``restricted_pdr`` — the two
+    routers being compared are scored over identical sets of drones.
+    """
+    reachable = drones_reaching_gs(graph)
+    return frozenset(
+        d for d in reachable if graph.nodes[d].get("kind", "M") == "M"
+    )
+
+
+def restricted_pdr(result: sim.SimResult, graph: nx.DiGraph) -> float:
+    """Delivery ratio over packets emitted by graph-reachable M-drones only.
+
+    ``restricted_pdr = delivered packets whose source is a graph-reachable
+    M-drone / all packets emitted by graph-reachable M-drones``.
+
+    The reachable set (``reachable_m_drones``) is router-independent, so both
+    routers are scored over the SAME population. Key rule: a reachable drone
+    that a router fails to route (e.g. greedy's drop-on-no-progress)
+    contributes its full EMITTED count to the denominator and 0 to the
+    numerator — the denominator counts emitted packets, not merely resolved
+    ones, so a router cannot park a stranded drone's traffic in the
+    still-in-flight bucket to flatter its score. Returns NaN if no reachable
+    M-drone emitted anything (e.g. a fully disconnected topology).
+
+    This is a standalone comparison metric; it is intentionally NOT folded
+    into ``sim_metrics`` / the evaluate CSVs, and it does not touch the
+    existing ``pdr_global`` / ``unreachable_frac_*`` metrics.
+    """
+    reachable = reachable_m_drones(graph)
+    from_reachable = np.isin(result.src, list(reachable))
+    emitted = int(from_reachable.sum())
+    if emitted == 0:
+        return float("nan")
+    delivered = int((result.delivered & from_reachable).sum())
+    return delivered / emitted
 
 
 @dataclass(frozen=True)

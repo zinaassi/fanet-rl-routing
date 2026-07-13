@@ -41,17 +41,24 @@ FREQ_HZ: float = 2.4e9
 #
 # RANGE_M is fixed for the entire project after calibration in
 # stage1/calibrate.py — do not re-tune per stage, or cross-stage
-# comparisons become invalid. FROZEN 2026-07-07: confirmed at 320 m,
-# selected from the no-queues (k, RANGE_M) sensitivity grid — smallest
-# range clearing the mid-band PDR / layout-spread / connectivity criteria
-# at k=0.4 (see stage1/out/calibration/).
+# comparisons become invalid. FROZEN 2026-07-07 at 320 m.
+#
+# Justification: RANGE_M=320 was initially selected via a PDR-gate
+# calibration sweep and RETAINED after an independent, algorithm-free check:
+# it sits at ~1.16x the Gupta-Kumar critical connectivity radius
+# (r_c ≈ 276 m for 51 nodes in 1750x1750 m), giving ~79% probability of a
+# fully connected random topology. The primary comparison metric
+# (restricted_pdr, see metrics.py) conditions on graph-reachability, so
+# residual disconnection cannot bias the router comparison.
 RANGE_M: float = 320.0
 
-# K_SWEEP is likewise FROZEN to the single confirmed operating point (was a
-# 3-value sweep during calibration; k=0.4 was chosen alongside RANGE_M
-# above — see stage1/out/calibration/router_*.png for the router
-# comparison at this point). Kept as a tuple so evaluate.py/plots.py, which
-# iterate over it, need no changes.
+# K_SWEEP is FROZEN to the single confirmed operating point (was a 3-value
+# sweep during calibration). k=0.4 was originally chosen by inspecting
+# Dijkstra-only layout-spread plots — a circular provenance (the metric that
+# picked k was itself Dijkstra-based). That provenance is not re-derived;
+# instead robustness evidence at a second k value is maintained via
+# stage1/compare.py runs (see stage1/out/compare/). Kept as a tuple so
+# evaluate.py/plots.py, which iterate over it, need no changes.
 K_SWEEP: tuple[float, ...] = (0.4,)
 
 # --------------------------------------------------------------------------
@@ -110,3 +117,13 @@ CAL_N_CHANNEL_REALIZATIONS: int = 10
 CAL_K: float = 0.1              # default k for calibrate.py's OWN exploratory
                                 # sweep (independent of the frozen K_SWEEP
                                 # above); override per run with --k
+
+# --------------------------------------------------------------------------
+# Router comparison protocol (stage1/compare.py — greedy vs dijkstra)
+# --------------------------------------------------------------------------
+COMPARE_N_TOPOLOGIES: int = 1000
+COMPARE_N_CHANNEL_REALIZATIONS: int = 20
+PRACTICAL_SIGNIFICANCE_THRESHOLD: float = 0.10
+                                # default carried from planning; NOT yet
+                                # confirmed by the team — confirm before citing
+                                # in any writeup.

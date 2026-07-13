@@ -119,16 +119,23 @@ reproduces the original −54 dBm calibration).
 and the network is too sparse to route on at all; too large and every
 layout is fully connected and ~saturated, so neither router nor C-drone
 layout comparisons can discriminate. `python -m stage1.calibrate` sweeps
-candidate ranges (150–400 m), derives `P_sens` for each, runs the
-global-information dijkstra router only (30 topologies × 10 channel seeds
-per layout at `k = CAL_K`), and prints per range: mean PDR per layout, the
-layout spread (max−min), and the fraction of severely disconnected
-topologies (<10% of drones with any path to the GS). It recommends the
-smallest range with mid-band PDR (~30–80%), spread > 5 points, and
-severe-disconnection < 5% — with justification, but **never auto-applies
-it**: a human confirms by setting `RANGE_M` in `stage1/config.py`.
+candidate ranges, derives `P_sens` for each, runs the global-information
+dijkstra router only, and prints per range: mean PDR per layout, the layout
+spread (max−min), and the fraction of severely disconnected topologies
+(<10% of drones with any path to the GS). It recommends a range but
+**never auto-applies it**: a human confirms by setting `RANGE_M` in
+`stage1/config.py`.
 
-**Once set, `RANGE_M` is frozen for the entire project** — Stage 2,
+**RANGE_M is FROZEN at 320 m.** It was initially selected via the PDR-gate
+calibration sweep above and RETAINED after an independent, algorithm-free
+check: 320 m sits at ~1.16× the Gupta–Kumar critical connectivity radius
+(r_c ≈ 276 m for 51 nodes in a 1750×1750 m area), giving ~79% probability
+of a fully connected random topology. The primary comparison metric
+(`restricted_pdr`, see below and `stage1/compare.py`) conditions on
+graph-reachability, so residual disconnection cannot bias the router
+comparison.
+
+**Once frozen, `RANGE_M` is fixed for the entire project** — Stage 2,
 Stage 3, and Algorithm 2 must import it from `stage1/config.py` rather
 than redefining it; re-tuning it per stage invalidates cross-stage
 comparisons.
@@ -229,7 +236,7 @@ terminate at the GS (covers `None` hops, downstream dead ends, and cycles).
 
 | Knob | Current default |
 |---|---|
-| `RANGE_M` (hard link range; fixes `P_sens`) | 250 m — pending confirmation of the `stage1/calibrate.py` recommendation; frozen project-wide once set |
+| `RANGE_M` (hard link range; fixes `P_sens`) | **320 m — FROZEN** (calibration sweep + Gupta–Kumar retention check, see "Choosing RANGE_M"); fixed project-wide |
 | `RING_RADIUS_M` | 250 m (= `RANGE_M`, so ring C-drones have no direct GS link — intended?) |
 | `K_SWEEP` (loss-decay per dB of margin) | (0.05, 0.1, 0.2) |
 | `MAX_OUT_EDGES` (per-drone out-edge cap) | 5 |
