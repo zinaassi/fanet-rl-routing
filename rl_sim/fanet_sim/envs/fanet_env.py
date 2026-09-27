@@ -3,12 +3,11 @@ fanet_env.py — Main FANET simulation environment.
 
 Provides a PettingZoo-style interface (reset / step) so that a MARL
 framework can be plugged in during a later phase without rewriting the
-core.  In phase 1, the *actions* argument to step() is ignored and
-greedy geographic routing runs internally.
+core.  In phase 1A the *actions* argument to step() is ignored and the
+selected non-learned routing rule runs internally.
 
-Routing baselines implemented here:
+Routing rules implemented here:
     - Greedy geographic routing  (default)
-    - Q-routing                  (optional, toggled via *routing* arg)
 """
 
 from __future__ import annotations
@@ -19,14 +18,12 @@ from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-import torch
 
 from fanet_sim import config
 from fanet_sim.envs import channel
 from fanet_sim.envs.channel import are_connected, euclidean_distance
 from fanet_sim.envs.drone import Drone
 from fanet_sim.envs.packet import DropReason, Packet, PacketFactory
-from fanet_sim.envs.topology_agent import TopologyAgent
 from fanet_sim.utils.event_log import EventLogger
 from fanet_sim.utils.metrics import connectivity_sample
 
@@ -70,78 +67,6 @@ def greedy_next_hop(
 
 
 # ---------------------------------------------------------------------------
-# Q-routing baseline
-# ---------------------------------------------------------------------------
-
-class QRouter:
-    """Simple Q-table router.
-
-    State  = drone ID (current holder).
-    Action = next-hop neighbour ID.
-    Reward = negative delay (−1 per hop).
-
-    The Q-table is a 2-D array indexed by [drone_id, neighbour_id].
-    Unknown (drone_id, neighbour_id) entries default to 0.
-    """
-
-    def __init__(self, num_drones: int, alpha: float = 0.1, gamma: float = 0.9) -> None:
-        """Initialise the Q-table.
-
-        Args:
-            num_drones: Total number of drones (determines table size).
-            alpha:      Learning rate.
-            gamma:      Discount factor.
-        """
-        self.q: np.ndarray = np.zeros((num_drones, num_drones), dtype=np.float64)
-        self.alpha = alpha
-        self.gamma = gamma
-
-    def select_action(self, drone: Drone) -> Optional[int]:
-        """Choose the next-hop neighbour ID with the highest Q-value.
-
-        Falls back to greedy geographic routing if no neighbours exist.
-
-        Args:
-            drone: The drone currently holding the packet.
-
-        Returns:
-            Neighbour drone ID, or None if no neighbours.
-        """
-        if not drone.neighbors:
-            return None
-        nids = list(drone.neighbors.keys())
-        # Pick the neighbour with the highest Q-value for this drone.
-        best_nid = max(nids, key=lambda nid: self.q[drone.drone_id, nid])
-        return best_nid
-
-    def update(
-        self,
-        from_id: int,
-        to_id: int,
-        reward: float,
-        next_drone: Optional[Drone],
-    ) -> None:
-        """Perform a Q-learning update.
-
-        Args:
-            from_id:    ID of the drone that forwarded the packet.
-            to_id:      ID of the next-hop drone.
-            reward:     Immediate reward (negative delay).
-            next_drone: The next-hop Drone object (used for max-Q bootstrap).
-        """
-        current_q = self.q[from_id, to_id]
-        if next_drone and next_drone.neighbors:
-            max_next = max(
-                self.q[to_id, nid] for nid in next_drone.neighbors
-            )
-        else:
-            max_next = 0.0
-        self.q[from_id, to_id] = current_q + self.alpha * (
-            reward + self.gamma * max_next - current_q
-        )
-
-
-# ---------------------------------------------------------------------------
 # Main environment
 # ---------------------------------------------------------------------------
 
@@ -162,7 +87,7 @@ class FANETEnv:
         active_links:     Set of (id_a, id_b) pairs that were active this step
                           (used by the visualiser).
         tx_events:        List of (from_id, to_id) transmissions this step.
-        routing:          'greedy' or 'q-routing'.
+        routing:          'greedy'.
         rng:              NumPy random generator.
     """
 
@@ -172,13 +97,11 @@ class FANETEnv:
         log_path: Optional[str] = None,
         episode_id: int = 0,
         seed: Optional[int] = None,
-        training: bool = False,
-        policy_bank: Optional[object] = None,
     ) -> None:
         """Create the environment (does NOT run reset automatically).
 
         Args:
-            routing:     Routing baseline to use: 'greedy' or 'q-routing'.
+            routing:     Routing rule to use: 'greedy'.
             log_path:    Path to write the Stage-1 JSONL event log. If None,
                          a default of ``{config.LOG_DIR}/episode_{id}.jsonl``
                          is used.
@@ -187,39 +110,12 @@ class FANETEnv:
             seed:        RNG seed for this run. Defaults to config.RANDOM_SEED.
                          Recorded in the episode-meta log record so the run
                          is reproducible.
-            training:    If True, the K-link and topology policies act
-                         STOCHASTICALLY and every step's transitions are
-                         recorded for PPO (see :meth:`get_link_rollouts` /
-                         :meth:`get_topology_rollouts`). If False (default) the
-                         simulator behaves exactly as in phase 1 (deterministic
-                         top-K links, deterministic moves).
-            policy_bank: Optional ``PolicyBank`` whose persistent networks are
-                         injected into the drones each reset, so training
-                         carries weights across episodes. None for plain runs.
         """
         self.routing = routing
         self.episode_id = episode_id
         self.seed = config.RANDOM_SEED if seed is None else seed
         self.rng = np.random.default_rng(self.seed)
         random.seed(self.seed)
-
-        self.training = training
-        self.policy_bank = policy_bank
-        # Per-drone PPO rollouts collected during a training episode.
-        self._link_buffer: Dict[int, List[dict]] = defaultdict(list)
-        self._topo_buffer: Dict[int, List[dict]] = defaultdict(list)
-        # The link transition each drone recorded THIS step (reward filled in
-        # after routing once delivered/dropped outcomes are known).
-        self._pending_link_tr: Dict[int, dict] = {}
-        # Per-step K-link reward for M-drones, keyed by the SOURCE drone of each
-        # packet: +1 per delivered packet, -1 per dropped packet originating there.
-        self._step_src_reward: Dict[int, float] = defaultdict(float)
-        # Per-step K-link reward for C-drones, keyed by the CURRENT HOLDER: a
-        # relay-usefulness signal — +1 each time a drone forwards/delivers a
-        # packet it holds, -1 each time a packet voids or expires while it holds
-        # it. C-drones generate no packets of their own, so their link policy is
-        # trained on how good a relay they are, not on packet ownership.
-        self._step_relay_reward: Dict[int, float] = defaultdict(float)
 
         self.gs_position: np.ndarray = np.array(config.GS_POSITION, dtype=np.float64)
         self._factory = PacketFactory(
@@ -236,12 +132,6 @@ class FANETEnv:
         self.dropped: List[Packet] = []
         self.active_links: set = set()
         self.tx_events: List[Tuple[int, int]] = []
-
-        self._q_router: Optional[QRouter] = None
-
-        # Placeholder topology agent that steers the C-drones (stateless, so a
-        # single shared instance drives every C-drone).
-        self._topology_agent = TopologyAgent()
 
         # Stage-1 event logger
         if log_path is None:
@@ -265,11 +155,9 @@ class FANETEnv:
             observations: Dict mapping drone_id → state dict (from get_state()).
         """
         # Re-seed so reset() is reproducible regardless of how many episodes
-        # have already been run with this env instance. torch is seeded too so
-        # the per-drone MLP weight initialisation is reproducible.
+        # have already been run with this env instance.
         self.rng = np.random.default_rng(self.seed)
         random.seed(self.seed)
-        torch.manual_seed(self.seed)
 
         self._factory.reset()
         self.step_count = 0
@@ -279,12 +167,6 @@ class FANETEnv:
         self.active_links = set()
         self.tx_events = []
         self._rx_counts = defaultdict(int)
-        # Fresh PPO rollout buffers for this episode.
-        self._link_buffer = defaultdict(list)
-        self._topo_buffer = defaultdict(list)
-        self._pending_link_tr = {}
-        self._step_src_reward = defaultdict(float)
-        self._step_relay_reward = defaultdict(float)
 
         # Open a new logger for this episode (close any prior one).
         if self._logger is not None:
@@ -293,11 +175,7 @@ class FANETEnv:
 
         self.drones = self._create_drones()
 
-        total = config.NUM_M_DRONES + config.NUM_C_DRONES
-        if self.routing == "q-routing":
-            self._q_router = QRouter(num_drones=total)
-
-        # Compute initial candidate pools and top-K active links.
+        # Compute initial candidate pools and active links.
         self._recompute_links()
 
         # Episode metadata — the seed MUST be recorded (spec §D).
@@ -311,7 +189,6 @@ class FANETEnv:
                 "speed_min": config.DRONE_SPEED_MIN,
                 "speed_max": config.DRONE_SPEED_MAX,
                 "m_drone_mobility": config.M_DRONE_MOBILITY,
-                "k_links": config.K_LINKS,
                 "area_width": config.WIDTH,
                 "area_height": config.HEIGHT,
             },
@@ -394,11 +271,6 @@ class FANETEnv:
             ))
             drone_id += 1
 
-        # In training, swap in the bank's persistent networks so weights learnt
-        # in earlier episodes carry over (drones are recreated every reset).
-        if self.policy_bank is not None:
-            self.policy_bank.inject(drones)
-
         return drones
 
     def _random_point(self) -> np.ndarray:
@@ -412,53 +284,15 @@ class FANETEnv:
         return float(self.rng.uniform(config.DRONE_SPEED_MIN, config.DRONE_SPEED_MAX))
 
     def _recompute_links(self) -> None:
-        """Refresh every drone's candidate pool, then its top-K active links.
+        """Refresh every drone's candidate pool, then its active link set.
 
-        Two passes are required: candidate degrees feed the link score, so all
-        candidate pools must exist before any drone selects its top-K links.
+        Two passes are kept so every candidate pool exists before any drone
+        reads its neighbours.
         """
         for drone in self.drones:
             drone.update_candidates(self.drones)
         for drone in self.drones:
             drone.update_neighbors()
-
-    def _nearest_m_unit(self, drone: Drone, m_drones: List[Drone]) -> Tuple[float, float]:
-        """Return the unit vector from *drone* toward the nearest M-drone.
-
-        This is the relay-target bearing fed to the topology policy. Returns
-        ``(0.0, 0.0)`` if there are no M-drones or the nearest is collocated.
-
-        Args:
-            drone:    The C-drone being steered.
-            m_drones: All mission (M) drones.
-
-        Returns:
-            A ``(dx, dy)`` unit vector (each component in [-1, 1]).
-        """
-        if not m_drones:
-            return (0.0, 0.0)
-        nearest = min(m_drones, key=lambda m: euclidean_distance(drone.position, m.position))
-        delta = nearest.position - drone.position
-        dist = float(np.linalg.norm(delta))
-        if dist < 1e-9:
-            return (0.0, 0.0)
-        return (float(delta[0] / dist), float(delta[1] / dist))
-
-    def _select_links_training(self) -> None:
-        """Training variant of :meth:`_recompute_links` that records rollouts.
-
-        Refreshes candidate pools, then has each drone STOCHASTICALLY sample its
-        K links (Plackett–Luce). Each drone with candidates contributes one PPO
-        link transition this step; the transition's reward is filled in after
-        routing (step 6b). Drones with no candidates record nothing.
-        """
-        for drone in self.drones:
-            drone.update_candidates(self.drones)
-        for drone in self.drones:
-            transition = drone.sample_links()
-            if transition is not None:
-                self._link_buffer[drone.drone_id].append(transition)
-                self._pending_link_tr[drone.drone_id] = transition
 
     # ------------------------------------------------------------------
     # Step
@@ -470,87 +304,29 @@ class FANETEnv:
     ) -> Tuple[Dict[int, dict], Dict[int, float], Dict[int, bool], Dict[int, dict]]:
         """Advance the simulation by one timestep.
 
-        In phase 1 *actions* is ignored; greedy routing runs internally.
+        In phase 1A *actions* is ignored; the selected routing rule runs
+        internally.
 
         Args:
             actions: Optional dict of drone_id → action (ignored in phase 1).
 
         Returns:
             observations: Dict[drone_id, state_dict]
-            rewards:      Dict[drone_id, float]. C-drones carry the topology
-                          agent's local reward; M-drones are 0.0 until the
-                          routing RL agent is added later.
+            rewards:      Dict[drone_id, float]. Always 0.0 in phase 1A — no
+                          policy is being trained.
             dones:        Dict[drone_id, bool]
             infos:        Dict[drone_id, dict]   (empty for now)
         """
         self.tx_events = []
         self._rx_counts = defaultdict(int)
-        self._pending_link_tr = {}
-        self._step_src_reward = defaultdict(float)
-        self._step_relay_reward = defaultdict(float)
 
-        # 1a. Move M-drones along their straight start -> end line.
+        # 1. Move M-drones along their straight start -> end line.
         for drone in self.drones:
             if drone.drone_type == "M":
                 drone.step_move(config.TIMESTEP)
 
-        # 1b. Move C-drones with the topology policy. Capture each C-drone's
-        #     pre-move state and distance travelled so the local reward can be
-        #     measured once the new links are known. In training the move is
-        #     sampled and a PPO transition recorded (reward filled in at 2b).
-        m_drones = [d for d in self.drones if d.drone_type == "M"]
-        c_prev_states: Dict[int, dict] = {}
-        c_move_dist: Dict[int, float] = {}
-        for drone in self.drones:
-            if drone.drone_type == "C":
-                prev_state = drone.get_state()
-                # Tell the policy which way the nearest mission drone is — the
-                # relay target it homes toward (last 2 topology features).
-                prev_state["nearest_m_dir"] = self._nearest_m_unit(drone, m_drones)
-                if self.training:
-                    delta, transition = drone.sample_move(prev_state)
-                    self._topo_buffer[drone.drone_id].append(transition)
-                else:
-                    delta = self._topology_agent.act(drone, prev_state)
-                c_prev_states[drone.drone_id] = prev_state
-                c_move_dist[drone.drone_id] = drone.apply_velocity(delta, config.TIMESTEP)
-
-        # 2. Recompute candidate pools and re-select active links. In training
-        #    the K links are sampled (and PPO transitions recorded); otherwise
-        #    the deterministic top-K is used.
-        if self.training:
-            self._select_links_training()
-        else:
-            self._recompute_links()
-
-        # 2b. Local topology reward for each C-drone (post-link observation).
-        #     Relay-coverage reward: how many M-drones the C-drone now covers,
-        #     plus the metres of distance it reduced toward the nearest M-drone
-        #     this step (progress shaping — see TopologyAgent.reward).
-        topo_rewards: Dict[int, float] = {}
-        for drone in self.drones:
-            if drone.drone_type == "C":
-                coverage = sum(
-                    1 for cand in drone.candidates.values() if cand.drone_type == "M"
-                )
-                if m_drones:
-                    prev_pos = np.asarray(c_prev_states[drone.drone_id]["position"])
-                    dist_prev = min(euclidean_distance(prev_pos, m.position) for m in m_drones)
-                    dist_new = min(euclidean_distance(drone.position, m.position) for m in m_drones)
-                    progress = dist_prev - dist_new
-                else:
-                    progress = 0.0
-                r = self._topology_agent.reward(
-                    c_prev_states[drone.drone_id],
-                    drone.get_state(),
-                    c_move_dist[drone.drone_id],
-                    coverage=coverage,
-                    progress=progress,
-                )
-                topo_rewards[drone.drone_id] = r
-                if self.training:
-                    # The transition appended for this C-drone this step.
-                    self._topo_buffer[drone.drone_id][-1]["reward"] = r
+        # 2. Recompute candidate pools and re-select active links.
+        self._recompute_links()
 
         # 3. Update active links for visualiser
         self._update_active_links()
@@ -563,25 +339,6 @@ class FANETEnv:
 
         # 6. Expire stale packets still in queues
         self._expire_queued_packets()
-
-        # 6b. Now that this step's deliveries/drops are known, fill in the
-        #     K-link reward for each link transition recorded this step. The two
-        #     drone types are rewarded for what their link choices are FOR:
-        #       - M-drones: net (+1 delivered, -1 dropped) over packets that
-        #         ORIGINATED at the drone (mission-traffic delivery).
-        #       - C-drones: net relay usefulness (+1 per packet forwarded or
-        #         delivered, -1 per packet voided/expired while holding) — they
-        #         have no packets of their own, so they learn to be good relays.
-        #     (see config.LINK_REWARD_*).
-        if self.training:
-            for drone in self.drones:
-                transition = self._pending_link_tr.get(drone.drone_id)
-                if transition is None:
-                    continue
-                if drone.drone_type == "C":
-                    transition["reward"] = self._step_relay_reward.get(drone.drone_id, 0.0)
-                else:
-                    transition["reward"] = self._step_src_reward.get(drone.drone_id, 0.0)
 
         # 7. Radio idle/listen energy and accumulated rx energy for the step.
         for drone in self.drones:
@@ -603,20 +360,11 @@ class FANETEnv:
         done = self.step_count >= config.MAX_STEPS or all_m_arrived
         if done:
             self.close_logger()
-            # Mark each per-drone trajectory's final transition terminal so GAE
-            # does not bootstrap past the end of the episode.
-            if self.training:
-                for buf in self._link_buffer.values():
-                    if buf:
-                        buf[-1]["done"] = True
-                for buf in self._topo_buffer.values():
-                    if buf:
-                        buf[-1]["done"] = True
 
         observations = {d.drone_id: d.get_state() for d in self.drones}
-        # C-drones receive the topology agent's local reward; M-drone routing
-        # rewards stay 0.0 until the routing RL agent is added in a later phase.
-        rewards = {d.drone_id: topo_rewards.get(d.drone_id, 0.0) for d in self.drones}
+        # Phase 1A has no learned policy, so every reward is 0.0. The key is
+        # kept so the PettingZoo-style step() signature stays intact.
+        rewards = {d.drone_id: 0.0 for d in self.drones}
         dones = {d.drone_id: done for d in self.drones}
         infos: Dict[int, dict] = {d.drone_id: {} for d in self.drones}
 
@@ -685,10 +433,6 @@ class FANETEnv:
                 pkt.relay_to("GS")
                 pkt.mark_delivered(self.step_count)
                 self.delivered.append(pkt)
-                # Link reward: end-to-end credit to the originating M-drone, and
-                # relay credit to this holder for delivering a packet it carried.
-                self._step_src_reward[pkt.source_id] += config.LINK_REWARD_DELIVERED
-                self._step_relay_reward[drone.drone_id] += config.LINK_REWARD_DELIVERED
                 drone.consume_tx_energy()
                 self.tx_events.append((drone.drone_id, "GS"))
                 if self._logger is not None:
@@ -709,10 +453,6 @@ class FANETEnv:
             if next_hop is None:
                 pkt.mark_dropped(DropReason.NO_NEXT_HOP)
                 self.dropped.append(pkt)
-                # The void happened at THIS holder because its kept links left no
-                # neighbour closer to the GS: source blame + relay blame here.
-                self._step_src_reward[pkt.source_id] += config.LINK_REWARD_DROPPED
-                self._step_relay_reward[drone.drone_id] += config.LINK_REWARD_DROPPED
                 if self._logger is not None:
                     self._logger.log_packet_event(
                         event="dropped",
@@ -729,9 +469,6 @@ class FANETEnv:
             # Forward
             pkt.relay_to(next_hop.drone_id)
             next_hop.enqueue(pkt)
-            # Relay credit: this holder's kept links gave the packet a viable
-            # next hop toward the GS (a successful one-hop relay).
-            self._step_relay_reward[drone.drone_id] += config.LINK_REWARD_DELIVERED
             drone.consume_tx_energy()
             self.tx_events.append((drone.drone_id, next_hop.drone_id))
             self._rx_counts[next_hop.drone_id] += 1
@@ -747,15 +484,6 @@ class FANETEnv:
                     is_control=pkt.is_control,
                 )
 
-            # Q-routing update
-            if self.routing == "q-routing" and self._q_router is not None:
-                self._q_router.update(
-                    from_id=drone.drone_id,
-                    to_id=next_hop.drone_id,
-                    reward=-1.0,
-                    next_drone=next_hop,
-                )
-
     def _select_next_hop(self, drone: Drone, pkt: Packet) -> Optional[Drone]:
         """Select the next-hop drone for *pkt* according to the routing policy.
 
@@ -766,16 +494,6 @@ class FANETEnv:
         Returns:
             A Drone object or None if no valid hop exists.
         """
-        if self.routing == "greedy":
-            return greedy_next_hop(drone, drone.neighbors, self.gs_position)
-
-        if self.routing == "q-routing" and self._q_router is not None:
-            nid = self._q_router.select_action(drone)
-            if nid is not None:
-                return drone.neighbors.get(nid)
-            return None
-
-        # Fallback
         return greedy_next_hop(drone, drone.neighbors, self.gs_position)
 
     def _expire_packet(self, pkt: Packet, holder: Optional[Drone] = None) -> None:
@@ -793,10 +511,6 @@ class FANETEnv:
             pkt.mark_dropped(DropReason.TTL_EXPIRED)
             reason = "ttl_expired"
         self.dropped.append(pkt)
-        # Source blame, plus relay blame to whoever was holding it when it died.
-        self._step_src_reward[pkt.source_id] += config.LINK_REWARD_DROPPED
-        if holder is not None:
-            self._step_relay_reward[holder.drone_id] += config.LINK_REWARD_DROPPED
         if self._logger is not None:
             self._logger.log_packet_event(
                 event="dropped",
@@ -875,25 +589,3 @@ class FANETEnv:
             if d.drone_id == drone_id:
                 return d
         raise ValueError(f"No drone with id {drone_id}")
-
-    # ------------------------------------------------------------------
-    # PPO rollout accessors (training only)
-    # ------------------------------------------------------------------
-
-    def get_link_rollouts(self) -> Dict[int, List[dict]]:
-        """Return this episode's per-drone K-link PPO transitions.
-
-        Returns:
-            Dict mapping drone_id → list of link transition dicts (empty unless
-            the env was run with ``training=True``).
-        """
-        return self._link_buffer
-
-    def get_topology_rollouts(self) -> Dict[int, List[dict]]:
-        """Return this episode's per-C-drone topology PPO transitions.
-
-        Returns:
-            Dict mapping drone_id → list of topology transition dicts (empty
-            unless the env was run with ``training=True``).
-        """
-        return self._topo_buffer

@@ -13,7 +13,6 @@ Usage:
     python main.py                   # run & save animation to episode.gif
     python main.py --no-anim         # run without animation
     python main.py --show            # run with interactive animation window
-    python main.py --routing qroute  # use Q-routing baseline instead
     python main.py --log custom.jsonl   # override the event log path
 """
 
@@ -50,9 +49,9 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--routing",
-        choices=["greedy", "qroute"],
+        choices=["greedy"],
         default="greedy",
-        help="Routing baseline: greedy (default) or qroute.",
+        help="Routing rule: greedy (default).",
     )
     parser.add_argument(
         "--steps",
@@ -120,7 +119,7 @@ def main() -> None:
     """Entry point: parse args, run episode, then run the Stage-2 analyser."""
     args = parse_args()
 
-    routing = "q-routing" if args.routing == "qroute" else "greedy"
+    routing = args.routing
     if args.steps:
         config.MAX_STEPS = args.steps
 
@@ -129,7 +128,7 @@ def main() -> None:
     )
 
     print("=" * 56)
-    print("  FANET Simulator — Phase 1")
+    print("  FANET Simulator — Phase 1A")
     print("=" * 56)
     print(f"  M-drones  : {config.NUM_M_DRONES}")
     print(f"  C-drones  : {config.NUM_C_DRONES}")

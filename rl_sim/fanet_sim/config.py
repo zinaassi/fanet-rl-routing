@@ -56,22 +56,6 @@ from fanet_sim.envs.channel import MAX_LINK_DISTANCE_M as _MAX_LINK_DISTANCE_M
 COMM_RANGE: float = _MAX_LINK_DISTANCE_M
 
 # ---------------------------------------------------------------------------
-# K-link selection policy
-# ---------------------------------------------------------------------------
-# Instead of passively keeping every reachable drone as a neighbour, each drone
-# actively keeps only its top-K candidate links. Candidates are ranked by a
-# per-drone PyTorch MLP (see fanet_sim/envs/policies.py:LinkScorePolicy):
-#   Input(5) -> Linear(16) -> ReLU -> Linear(16) -> ReLU -> Linear(1)
-# The 5 input features per candidate are link quality, distance to the
-# candidate, the candidate's distance to GS, the candidate's queue length, and
-# the candidate's number of current links. Weights are randomly initialised —
-# there is no training yet. K_LINKS is the default value; a learned policy may
-# later pick a per-drone value anywhere in [K_LINKS_MIN, K_LINKS_MAX].
-K_LINKS: int = 3                 # default active links kept per drone
-K_LINKS_MIN: int = 2             # policy lower bound on K
-K_LINKS_MAX: int = 5             # policy upper bound on K
-
-# ---------------------------------------------------------------------------
 # Energy
 # ---------------------------------------------------------------------------
 INITIAL_ENERGY: float = 207792.0  # joules  (11.1 V × 5200 mAh, from IQMR)
@@ -110,35 +94,6 @@ M_DRONE_MOBILITY: str = "straight_line"
 WAYPOINT_ARRIVAL_THRESHOLD: float = 2.0  # metres — drone is "at" its end point when this close
 
 # ---------------------------------------------------------------------------
-# C-drone topology policy (untrained PyTorch MLP; RL trains it later)
-# ---------------------------------------------------------------------------
-#  Each C-drone owns a PyTorch MLP
-# (see fanet_sim/envs/policies.py:TopologyPolicy) that maps its 8-feature local
-# state to a movement vector [dx, dy]:
-#   Input(8) -> Linear(32) -> ReLU -> Linear(32) -> ReLU -> Linear(2)
-# The 8 input features are pos_x, pos_y, vel_x, vel_y, num_neighbors,
-# mean_link_quality, mean_distance_to_neighbours, and queue_length. Weights are
-# randomly initialised — there is no training yet. The output is clamped per
-# axis to TOPOLOGY_MAX_STEP_M metres before it is applied.
-TOPOLOGY_MAX_STEP_M: float = DRONE_SPEED_MAX * TIMESTEP   # max metres per axis per step
-
-# Local reward for the topology policy — RELAY COVERAGE objective. C-drones home
-# toward MISSION (M) drones so they sit where they can relay mission traffic,
-# instead of freezing in place or clumping with each other:
-#   coverage      — + reward per M-drone currently within radio range (integer)
-#   progress      — + metres of distance REDUCED toward the nearest M-drone this
-#                   step, scaled by the max step size (≈+1 for a full-speed
-#                   approach). This is the dense per-step gradient that overcomes
-#                   the arena-size vs 3 m/step scale problem and drives movement.
-#   motion_energy — - small penalty per joule of motion energy spent moving
-# (Only M-drones count, so C-drones don't reward each other for clustering.)
-TOPOLOGY_REWARD_WEIGHTS: dict = {
-    "coverage": 1.0,
-    "progress": 3.0,
-    "motion_energy": 0.2,
-}
-
-# ---------------------------------------------------------------------------
 # Random seed (None = non-deterministic)
 # ---------------------------------------------------------------------------
 RANDOM_SEED = 42
@@ -148,31 +103,3 @@ RANDOM_SEED = 42
 # ---------------------------------------------------------------------------
 LOG_DIR: str = "logs"             # directory for per-episode JSONL files
 LOG_DRONE_STATE_EVERY_STEP: bool = True   # if False, only one snapshot at episode end
-
-# ---------------------------------------------------------------------------
-# PPO training (used by train.py only — the phase-1 simulator never trains)
-# ---------------------------------------------------------------------------
-# Two policies are trained, each drone/​C-drone owning its own weights:
-#   * the K-link selection MLP (LinkScorePolicy) on every drone, and
-#   * the topology movement MLP (TopologyPolicy) on every C-drone.
-# Both are optimised with PPO (clipped surrogate + GAE). These constants are the
-# shared hyper-parameters; train.py exposes --episodes / --steps overrides.
-TRAIN_EPISODES: int = 60          # number of training episodes
-TRAIN_MAX_STEPS: int = 300        # steps per training episode (overrides MAX_STEPS)
-
-PPO_LR: float = 3e-4              # Adam learning rate (per policy)
-PPO_GAMMA: float = 0.99          # reward discount factor
-PPO_LAMBDA: float = 0.95         # GAE smoothing parameter
-PPO_CLIP: float = 0.2            # PPO clipped-surrogate epsilon
-PPO_EPOCHS: int = 4              # optimisation passes per policy per episode
-PPO_VALUE_COEF: float = 0.5      # weight of the critic (value) loss
-PPO_ENTROPY_COEF: float = 0.01   # weight of the entropy bonus (exploration)
-
-# K-link reward: +1 when a packet that ORIGINATED at this drone is delivered to
-# the GS, -1 when one of its packets is dropped. (Only M-drones generate
-# packets, so only they receive a non-zero link reward.)
-LINK_REWARD_DELIVERED: float = 1.0
-LINK_REWARD_DROPPED: float = -1.0
-
-# Where train.py writes the trained weights (one checkpoint for all policies).
-POLICY_SAVE_PATH: str = "trained_policies.pt"
