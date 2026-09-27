@@ -50,11 +50,27 @@ FSPL formula
 ------------
     FSPL_dB(d) = 20*log10(d) + 20*log10(f) + 20*log10(4*pi/c)
     Pr_dBm     = Pt + Gt + Gr - FSPL_dB
+
+Per-transmission packet loss
+----------------------------
+Link existence is binary (does Pr clear sensitivity), but a transmission over
+an existing link can still fail. The loss probability decays exponentially in
+the link margin:
+
+    M(d)      = Pr(d) - RX_SENSITIVITY_DBM          (dB above sensitivity)
+    p_loss(d) = exp(-k * M(d))                       for M > 0
+    p_loss(d) = 1                                    for M <= 0 (no link)
+
+So p_loss is 1 exactly at the range edge, where M = 0, and falls off fast as
+the endpoints close in. With k = 0.4: ~0.46 at 200 m, ~0.042 at 100 m,
+~3.7e-3 at 50 m and ~1.4e-5 at 10 m. k is a modelling choice, not a measured
+quantity — it lives in config.CHANNEL_LOSS_K.
 """
 
 from __future__ import annotations
 
 import math
+from typing import Optional
 
 import numpy as np
 
@@ -156,6 +172,48 @@ def link_quality(dist_m: float) -> float:
     if margin >= MARGIN_FULL_QUALITY_DB:
         return 1.0
     return margin / MARGIN_FULL_QUALITY_DB
+
+
+def link_margin_db(dist_m: float) -> float:
+    """Link margin in dB: how far the received power clears sensitivity.
+
+    Args:
+        dist_m: Euclidean distance between endpoints (m).
+
+    Returns:
+        ``Pr(dist_m) - RX_SENSITIVITY_DBM``. Zero or negative means there is
+        no link. ``+inf`` for collocated endpoints.
+    """
+    return received_power_dbm(dist_m) - RX_SENSITIVITY_DBM
+
+
+def p_loss(dist_m: float, k: Optional[float] = None) -> float:
+    """Probability that a transmission over this link is lost.
+
+    ``exp(-k * M)`` where M is the link margin in dB, clamped to [0, 1]. A
+    distance with no link (margin <= 0) returns exactly 1.0: the packet cannot
+    get through. Collocated endpoints have infinite margin and return 0.0.
+
+    Args:
+        dist_m: Euclidean distance between transmitter and receiver (m).
+        k:      Decay rate per dB of margin. Defaults to
+                ``config.CHANNEL_LOSS_K``.
+
+    Returns:
+        Float in [0.0, 1.0].
+    """
+    if k is None:
+        from fanet_sim import config
+        k = config.CHANNEL_LOSS_K
+
+    margin = link_margin_db(dist_m)
+    if margin <= 0.0:
+        return 1.0
+    if margin == float("inf"):
+        return 0.0
+    # exp() of a large negative number underflows to 0.0, which is the right
+    # answer here, so no guard is needed on the upper end of the margin.
+    return min(1.0, max(0.0, math.exp(-k * margin)))
 
 
 def are_connected(pos_a: np.ndarray, pos_b: np.ndarray) -> bool:

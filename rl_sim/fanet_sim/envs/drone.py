@@ -17,11 +17,29 @@ Link selection:
     (:meth:`update_candidates`) and keeps all of them as its active
     ``neighbors`` (:meth:`update_neighbors`). Link existence is decided purely
     by the FSPL received-power test in :mod:`fanet_sim.envs.channel`.
+
+Queue:
+    One FIFO queue of at most ``config.QUEUE_CAPACITY`` packets. A packet
+    offered to a full queue is refused (:meth:`enqueue` returns False) and the
+    environment drops it with reason "queue_full". Each step the drone releases
+    at most ``config.MAX_TX_PER_STEP`` packets, oldest first
+    (:meth:`dequeue_for_send`). An M-drone's own new packets and the packets it
+    relays share that one queue and that one budget.
+
+ACK bookkeeping:
+    Every counter on a drone is built ONLY from information an ACK could carry
+    — never from the simulator's global view. Per outgoing link (keyed by
+    next-hop drone id, or the string "GS"): packets sent, acked, and the two
+    ways a send can fail. Per M-drone: packets it created, packets the GS
+    acknowledged, and packets whose TTL ran out with no GS ACK. See
+    :meth:`note_sent`, :meth:`note_hop_ack`, :meth:`note_created`,
+    :meth:`note_gs_ack` and :meth:`expire_unacked`.
 """
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional, Tuple
+from collections import defaultdict
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 
@@ -32,6 +50,9 @@ from fanet_sim.envs.channel import (
     link_quality,
 )
 from fanet_sim.envs.packet import Packet
+
+#: A next-hop key: either a drone id, or the string "GS" for the ground station.
+NextHop = Union[int, str]
 
 
 class Drone:
@@ -54,6 +75,17 @@ class Drone:
                      (identical to *candidates* — there is no link cap).
                      Populated by the env each step.
         gs_position: Ground-station position as a NumPy array.
+        link_sent:   Per outgoing link: transmissions attempted.
+        link_acked:  Per outgoing link: transmissions the next hop accepted.
+        link_lost_channel:    Per outgoing link: sends lost in the channel.
+        link_lost_queue_full: Per outgoing link: sends refused by a full queue.
+        own_queue_full_drops: Own new packets refused by this drone's OWN full
+                     queue — no link was involved, so no per-link counter moves.
+        packets_created:  Packets this drone originated (M-drones only).
+        packets_gs_acked: Own packets the GS acknowledged (M-drones only).
+        packets_lost_no_ack: Own packets whose TTL ran out with no GS ACK.
+        outstanding: Own packet_id → creation step, for packets still awaiting
+                     a GS ACK (M-drones only).
     """
 
     def __init__(
@@ -95,6 +127,19 @@ class Drone:
         self.candidates: Dict[int, "Drone"] = {}
         self.neighbors: Dict[int, "Drone"] = {}
         self.gs_position: np.ndarray = gs_position.astype(np.float64)
+
+        # --- ACK-derived counters (the drone's own view of the network) ---
+        # Keyed by next-hop: an int drone id, or the string "GS".
+        self.link_sent: Dict[NextHop, int] = defaultdict(int)
+        self.link_acked: Dict[NextHop, int] = defaultdict(int)
+        self.link_lost_channel: Dict[NextHop, int] = defaultdict(int)
+        self.link_lost_queue_full: Dict[NextHop, int] = defaultdict(int)
+        # End-to-end view, meaningful for M-drones (packet sources).
+        self.packets_created: int = 0
+        self.packets_gs_acked: int = 0
+        self.packets_lost_no_ack: int = 0
+        self.own_queue_full_drops: int = 0
+        self.outstanding: Dict[int, int] = {}
 
     # ------------------------------------------------------------------
     # Movement
@@ -215,22 +260,120 @@ class Drone:
     # Packet handling
     # ------------------------------------------------------------------
 
-    def enqueue(self, pkt: Packet) -> None:
-        """Add a packet to this drone's transmit queue.
+    def queue_is_full(self) -> bool:
+        """True if the queue cannot accept another packet."""
+        return len(self.queue) >= config.QUEUE_CAPACITY
+
+    def enqueue(self, pkt: Packet) -> bool:
+        """Try to add a packet to the tail of this drone's FIFO queue.
 
         Args:
             pkt: The Packet to buffer.
-        """
-        self.queue.append(pkt)
-
-    def dequeue_all(self) -> List[Packet]:
-        """Remove and return all packets in the queue.
 
         Returns:
-            List of Packet objects (may be empty).
+            True if the packet was accepted, False if the queue was already at
+            ``config.QUEUE_CAPACITY`` (the caller must then drop the packet
+            with reason "queue_full").
         """
-        pkts, self.queue = self.queue, []
-        return pkts
+        if self.queue_is_full():
+            return False
+        self.queue.append(pkt)
+        return True
+
+    def dequeue_for_send(self, n: Optional[int] = None) -> List[Packet]:
+        """Remove and return this step's send batch: the *n* oldest packets.
+
+        Args:
+            n: How many packets to release. Defaults to
+               ``config.MAX_TX_PER_STEP``.
+
+        Returns:
+            Up to *n* Packet objects, oldest first (may be empty).
+        """
+        if n is None:
+            n = config.MAX_TX_PER_STEP
+        n = max(0, int(n))
+        batch, self.queue = self.queue[:n], self.queue[n:]
+        return batch
+
+    # ------------------------------------------------------------------
+    # ACK bookkeeping (built only from what an ACK tells this drone)
+    # ------------------------------------------------------------------
+
+    def note_sent(self, next_hop: NextHop) -> None:
+        """Record one transmission attempt toward *next_hop*."""
+        self.link_sent[next_hop] += 1
+
+    def note_hop_ack(self, next_hop: NextHop, outcome: str) -> None:
+        """Record what the hop-by-hop ACK reported for the last send.
+
+        Args:
+            next_hop: The drone id (or "GS") the packet was sent to.
+            outcome:  ``"ok"`` if the next hop accepted the packet,
+                      ``"channel"`` if the transmission was lost in the
+                      channel, ``"queue_full"`` if the next hop's queue was
+                      full.
+
+        Raises:
+            ValueError: If *outcome* is not one of the three values above.
+        """
+        if outcome == "ok":
+            self.link_acked[next_hop] += 1
+        elif outcome == "channel":
+            self.link_lost_channel[next_hop] += 1
+        elif outcome == "queue_full":
+            self.link_lost_queue_full[next_hop] += 1
+        else:
+            raise ValueError(f"unknown hop-ACK outcome: {outcome!r}")
+
+    def note_created(self, pkt: Packet) -> None:
+        """Record that this drone originated *pkt* and now awaits its GS ACK."""
+        self.packets_created += 1
+        self.outstanding[pkt.packet_id] = pkt.created_at
+
+    def note_own_queue_full(self) -> None:
+        """Record that one of this drone's own new packets hit its full queue.
+
+        Local knowledge, not an ACK: the packet never reached a link, so none
+        of the per-link counters move.
+        """
+        self.own_queue_full_drops += 1
+
+    def note_gs_ack(self, packet_id: int) -> None:
+        """Record the end-to-end GS ACK for one of this drone's own packets.
+
+        Args:
+            packet_id: The acknowledged packet. Ignored if this drone is not
+                       waiting on it.
+        """
+        if self.outstanding.pop(packet_id, None) is not None:
+            self.packets_gs_acked += 1
+
+    def expire_unacked(self, current_step: int, ttl: Optional[int] = None) -> int:
+        """Give up on own packets whose TTL ran out with no GS ACK.
+
+        This is the source-side timer: the drone knows when it created each
+        packet and knows the TTL, so it can conclude on its own that a packet
+        is lost. No global information is used.
+
+        Args:
+            current_step: The current simulation timestep.
+            ttl:          Packet lifetime in steps. Defaults to
+                          ``config.PACKET_TTL``.
+
+        Returns:
+            How many packets were given up on during this call.
+        """
+        if ttl is None:
+            ttl = config.PACKET_TTL
+        timed_out = [
+            pid for pid, created in self.outstanding.items()
+            if current_step - created >= ttl
+        ]
+        for pid in timed_out:
+            del self.outstanding[pid]
+        self.packets_lost_no_ack += len(timed_out)
+        return len(timed_out)
 
     def consume_tx_energy(self) -> None:
         """Deduct one packet-transmission energy unit from the radio battery."""

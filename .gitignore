@@ -20,6 +20,9 @@ logs/
 # Animations produced by main.py / eval.py / demo_vis.py.
 *.gif
 
+# Generated figures and experiment output (regenerable from the scripts).
+rl_sim/out/
+
 # ---------------------------------------------------------------------------
 # Scratch / temp
 # ---------------------------------------------------------------------------

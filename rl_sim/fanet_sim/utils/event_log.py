@@ -148,7 +148,8 @@ class EventLogger:
             hop_index:     Hop count *after* this event.
             is_control:    True for routing/control/overhead traffic.
             next_hop:      ID (or "GS") of the next hop, for forwarded events.
-            drop_reason:   String reason (e.g. "no_route", "ttl_expired").
+            drop_reason:   One of "channel", "queue_full", "no_route", "ttl",
+                           "hop_limit" (see packet.DropReason).
         """
         self._write({
             "record_type": "packet_event",

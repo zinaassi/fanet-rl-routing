@@ -2,9 +2,9 @@
 main.py — Entry point for the FANET phase-1 simulator.
 
 Runs one full episode with:
-    - NUM_M_DRONES mission drones following random waypoint paths
-    - NUM_C_DRONES communication drones following random waypoint paths
-    - Greedy geographic routing as the baseline
+    - NUM_M_DRONES mission drones (create AND relay packets)
+    - NUM_C_DRONES communication drones (relay only)
+    - Greedy geographic routing
     - Raw events logged to {LOG_DIR}/episode_{id}.jsonl
     - Stage-2 metrics printed by reading that log
     - A matplotlib animation saved to episode.gif (or shown live)
@@ -73,12 +73,19 @@ def parse_args() -> argparse.Namespace:
              "Defaults to {LOG_DIR}/episode_{id}.jsonl.",
     )
     parser.add_argument(
-        "--seed",
+        "--placement-seed",
         type=int,
         default=None,
-        help="RNG seed for this run. Defaults to config.RANDOM_SEED. "
-             "Use a different seed to vary mobility / waypoint draws while "
-             "keeping all other parameters fixed.",
+        help="Seed for drone placement. Defaults to config.PLACEMENT_SEED. "
+             "Hold it fixed to re-run the same layout.",
+    )
+    parser.add_argument(
+        "--run-seed",
+        type=int,
+        default=None,
+        help="Seed for channel-loss and traffic randomness. Defaults to "
+             "config.RUN_SEED. Vary it to re-run one layout under different "
+             "randomness.",
     )
     return parser.parse_args()
 
@@ -130,11 +137,19 @@ def main() -> None:
     print("=" * 56)
     print("  FANET Simulator — Phase 1A")
     print("=" * 56)
+    print(f"  World     : {config.WIDTH:.0f} x {config.HEIGHT:.0f} m"
+          f"   GS at {config.GS_POSITION}"
+          f"   {'STATIC' if config.STATIC_MODE else 'MOBILE'}")
     print(f"  M-drones  : {config.NUM_M_DRONES}")
     print(f"  C-drones  : {config.NUM_C_DRONES}")
     print(f"  Steps     : {config.MAX_STEPS}")
     print(f"  Routing   : {routing}")
-    print(f"  Seed      : {args.seed if args.seed is not None else config.RANDOM_SEED}")
+    print(f"  Queues    : Q={config.QUEUE_CAPACITY}  N={config.MAX_TX_PER_STEP}/step")
+    placement_seed = (
+        config.PLACEMENT_SEED if args.placement_seed is None else args.placement_seed
+    )
+    run_seed = config.RUN_SEED if args.run_seed is None else args.run_seed
+    print(f"  Seeds     : placement={placement_seed}  run={run_seed}")
     print(f"  Log file  : {log_path}")
     print("  Channel   : FSPL (free-space path loss)")
     print(f"    Pt={channel.PT_DBM:.1f} dBm  "
@@ -145,13 +160,15 @@ def main() -> None:
           f"link budget = {channel.LINK_BUDGET_DB:.1f} dB")
     print(f"    => effective max link distance = "
           f"{channel.MAX_LINK_DISTANCE_M:.1f} m")
+    print(f"    p_loss = exp(-k*margin_dB), k = {config.CHANNEL_LOSS_K}")
     print("=" * 56 + "\n")
 
     env = FANETEnv(
         routing=routing,
         log_path=log_path,
         episode_id=args.episode_id,
-        seed=args.seed,
+        placement_seed=placement_seed,
+        run_seed=run_seed,
     )
     env.reset()
     print(f"Environment reset — {env.num_drones} drones created.\n")

@@ -8,12 +8,31 @@ selected non-learned routing rule runs internally.
 
 Routing rules implemented here:
     - Greedy geographic routing  (default)
+
+Each step, in order:
+    1. Move drones (skipped entirely while config.STATIC_MODE is True).
+    2. Recompute every drone's in-range neighbour set.
+    3. Retire packets whose TTL or hop limit ran out, and let each source
+       give up on its own packets that the GS never acknowledged.
+    4. Create new packets at the M-drones.
+    5. Forward packets: each drone sends at most config.MAX_TX_PER_STEP,
+       oldest first, choosing the next hop at send time.
+    6. Charge radio energy.
+
+Expiry runs BEFORE forwarding so a dead packet at the head of a queue can
+never consume that drone's send budget.
+
+Randomness comes from two independent seeds so one layout can be replayed
+under different randomness:
+    placement_seed — drone positions, speeds, end points.
+    run_seed       — channel-loss draws and traffic timing. The RANDOM routing
+                     rule draws from a third stream spawned off run_seed, so
+                     its choices never shift the channel or traffic draws.
 """
 
 from __future__ import annotations
 
 import os
-import random
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
@@ -22,7 +41,7 @@ import numpy as np
 from fanet_sim import config
 from fanet_sim.envs import channel
 from fanet_sim.envs.channel import are_connected, euclidean_distance
-from fanet_sim.envs.drone import Drone
+from fanet_sim.envs.drone import Drone, NextHop
 from fanet_sim.envs.packet import DropReason, Packet, PacketFactory
 from fanet_sim.utils.event_log import EventLogger
 from fanet_sim.utils.metrics import connectivity_sample
@@ -33,37 +52,41 @@ from fanet_sim.utils.metrics import connectivity_sample
 # ---------------------------------------------------------------------------
 
 def greedy_next_hop(
-    drone: Drone,
-    neighbors: Dict[int, Drone],
+    holder_position: np.ndarray,
+    candidates: Dict[NextHop, np.ndarray],
     gs_position: np.ndarray,
-) -> Optional[Drone]:
-    """Select the best next hop using greedy geographic forwarding.
+) -> Optional[NextHop]:
+    """Pick the next hop closest to the ground station (greedy geographic).
 
-    Forwards the packet to whichever neighbour is closest to the ground
-    station.  If no neighbour is closer to the GS than the current drone,
-    returns None (routing void).
+    The ground station counts as a candidate whenever it is in range, keyed by
+    the string ``"GS"``; being at distance 0 from itself it always wins.
+
+    Returns None — a routing void, which the caller drops as "no_route" — when
+    there are no candidates at all, or when none of them is STRICTLY closer to
+    the GS than the current holder.
 
     Args:
-        drone:       The drone currently holding the packet.
-        neighbors:   Dict of candidate next-hop drones keyed by ID.
-        gs_position: Ground-station position as a NumPy array.
+        holder_position: Position of the drone currently holding the packet.
+        candidates:      Reachable next hops, mapping key → position. Keys are
+                         drone ids, plus ``"GS"`` when the GS is in range.
+        gs_position:     Ground-station position as a NumPy array.
 
     Returns:
-        The Drone object to forward to, or None if no improvement is found.
+        The winning candidate's key, or None.
     """
-    if not neighbors:
+    if not candidates:
         return None
 
-    best: Optional[Drone] = min(
-        neighbors.values(),
-        key=lambda n: euclidean_distance(n.position, gs_position),
+    best_key = min(
+        candidates,
+        key=lambda key: euclidean_distance(candidates[key], gs_position),
     )
-    current_dist = euclidean_distance(drone.position, gs_position)
-    best_dist = euclidean_distance(best.position, gs_position)
+    best_dist = euclidean_distance(candidates[best_key], gs_position)
+    current_dist = euclidean_distance(holder_position, gs_position)
 
     if best_dist < current_dist:
-        return best
-    return None  # routing void
+        return best_key
+    return None  # routing void: no progress available
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +111,8 @@ class FANETEnv:
                           (used by the visualiser).
         tx_events:        List of (from_id, to_id) transmissions this step.
         routing:          'greedy'.
-        rng:              NumPy random generator.
+        placement_seed:   Seed for drone placement (positions, speeds).
+        run_seed:         Seed for channel-loss and traffic randomness.
     """
 
     def __init__(
@@ -96,7 +120,8 @@ class FANETEnv:
         routing: str = "greedy",
         log_path: Optional[str] = None,
         episode_id: int = 0,
-        seed: Optional[int] = None,
+        placement_seed: Optional[int] = None,
+        run_seed: Optional[int] = None,
     ) -> None:
         """Create the environment (does NOT run reset automatically).
 
@@ -107,15 +132,29 @@ class FANETEnv:
                          is used.
             episode_id:  Integer episode identifier, embedded in every log
                          record so multiple episodes can be concatenated.
-            seed:        RNG seed for this run. Defaults to config.RANDOM_SEED.
-                         Recorded in the episode-meta log record so the run
-                         is reproducible.
+            placement_seed: Seed for drone placement — positions, speeds and
+                         end points. Defaults to config.PLACEMENT_SEED. Hold it
+                         fixed to re-run the same layout.
+            run_seed:    Seed for channel-loss draws and traffic timing.
+                         Defaults to config.RUN_SEED. Vary it to re-run one
+                         layout under different randomness. The RANDOM routing
+                         rule draws from its own stream spawned off this seed,
+                         so switching routing rules does not shift the channel
+                         or traffic draws.
+
+        Both seeds are recorded in the episode-meta log record.
         """
         self.routing = routing
         self.episode_id = episode_id
-        self.seed = config.RANDOM_SEED if seed is None else seed
-        self.rng = np.random.default_rng(self.seed)
-        random.seed(self.seed)
+        self.placement_seed = (
+            config.PLACEMENT_SEED if placement_seed is None else placement_seed
+        )
+        self.run_seed = config.RUN_SEED if run_seed is None else run_seed
+        # Built in reset(); see _seed_streams().
+        self._rng_place: np.random.Generator
+        self._rng_chan: np.random.Generator
+        self._rng_route: np.random.Generator
+        self._seed_streams()
 
         self.gs_position: np.ndarray = np.array(config.GS_POSITION, dtype=np.float64)
         self._factory = PacketFactory(
@@ -156,8 +195,7 @@ class FANETEnv:
         """
         # Re-seed so reset() is reproducible regardless of how many episodes
         # have already been run with this env instance.
-        self.rng = np.random.default_rng(self.seed)
-        random.seed(self.seed)
+        self._seed_streams()
 
         self._factory.reset()
         self.step_count = 0
@@ -180,7 +218,7 @@ class FANETEnv:
 
         # Episode metadata — the seed MUST be recorded (spec §D).
         self._logger.log_episode_meta(
-            seed=self.seed,
+            seed={"placement": self.placement_seed, "run": self.run_seed},
             num_drones=len(self.drones),
             num_M=config.NUM_M_DRONES,
             num_C=config.NUM_C_DRONES,
@@ -189,6 +227,7 @@ class FANETEnv:
                 "speed_min": config.DRONE_SPEED_MIN,
                 "speed_max": config.DRONE_SPEED_MAX,
                 "m_drone_mobility": config.M_DRONE_MOBILITY,
+                "static_mode": config.STATIC_MODE,
                 "area_width": config.WIDTH,
                 "area_height": config.HEIGHT,
             },
@@ -197,6 +236,8 @@ class FANETEnv:
                 "packet_size_bytes": config.PACKET_SIZE,
                 "ttl": config.PACKET_TTL,
                 "max_hops": config.MAX_HOPS,
+                "queue_capacity": config.QUEUE_CAPACITY,
+                "max_tx_per_step": config.MAX_TX_PER_STEP,
             },
             connectivity_model_params={
                 "model": "FSPL",
@@ -207,6 +248,7 @@ class FANETEnv:
                 "rx_sensitivity_dbm": channel.RX_SENSITIVITY_DBM,
                 "link_budget_db": channel.LINK_BUDGET_DB,
                 "max_link_distance_m": channel.MAX_LINK_DISTANCE_M,
+                "channel_loss_k": config.CHANNEL_LOSS_K,
                 "timestep_s": config.TIMESTEP,
                 "routing": self.routing,
             },
@@ -216,16 +258,15 @@ class FANETEnv:
                 "arxiv": "2408.09109",
                 "section": "V.A",
                 "notes": (
-                    "IQMR-faithful: speed range (10-30 m/s), transmit power "
-                    "(1 W = 30 dBm), energy budget (11.1 V x 5200 mAh = "
-                    "207792 J), radio range (250 m), AND deployment area "
-                    "(1750x1750 m ~= 3.06 km^2 ~= IQMR's 1000 m-radius disk "
-                    "of 3.14 km^2) all match IQMR. Receiver sensitivity "
-                    "(-54 dBm) is derived from the FSPL model to reproduce "
-                    "IQMR's 250 m range at IQMR's 1 W transmit power, not "
+                    "From IQMR: speed range (10-30 m/s), transmit power "
+                    "(1 W = 30 dBm), 2.4 GHz carrier, energy budget "
+                    "(11.1 V x 5200 mAh = 207792 J) and radio range (250 m). "
+                    "Receiver sensitivity (-54 dBm) is derived from the FSPL "
+                    "model to reproduce that 250 m range at 1 W rather than "
                     "picked arbitrarily. "
-                    "Deviations: 2D instead of 3D; drone count split 36 M + "
-                    "14 C is our own (IQMR has no M/C distinction)."
+                    "NOT from IQMR: the 900x900 m arena, the 18 M + 7 C fleet "
+                    "split, and 2D instead of 3D — those are Phase-1A choices "
+                    "for this project."
                 ),
             },
         )
@@ -238,9 +279,10 @@ class FANETEnv:
     def _create_drones(self) -> List[Drone]:
         """Create and return all drones.
 
-        M-drones get a random start point and a random end point and fly the
-        straight line between them. C-drones get a random start point only;
-        they are steered each step by the topology agent.
+        Every drone is placed uniformly at random inside the arena. While
+        ``config.STATIC_MODE`` is True that position is also its end point and
+        nothing ever moves. Otherwise (Phase 1B) each M-drone additionally gets
+        a random end point and flies the straight line to it.
 
         Returns:
             List of Drone objects (M-drones first, then C-drones).
@@ -250,7 +292,7 @@ class FANETEnv:
 
         for _ in range(config.NUM_M_DRONES):
             start = self._random_point()
-            end = self._random_point()
+            end = start.copy() if config.STATIC_MODE else self._random_point()
             drones.append(Drone(
                 drone_id=drone_id,
                 drone_type="M",
@@ -273,15 +315,30 @@ class FANETEnv:
 
         return drones
 
+    def _seed_streams(self) -> None:
+        """(Re)build the three independent random streams from the two seeds.
+
+        ``_rng_place`` is driven by ``placement_seed``. ``_rng_chan`` (channel
+        loss and traffic timing) and ``_rng_route`` (the RANDOM routing rule)
+        are two independent streams spawned off ``run_seed``, so consuming
+        routing draws can never shift the channel or traffic draws.
+        """
+        self._rng_place = np.random.default_rng(self.placement_seed)
+        chan_seed, route_seed = np.random.SeedSequence(self.run_seed).spawn(2)
+        self._rng_chan = np.random.default_rng(chan_seed)
+        self._rng_route = np.random.default_rng(route_seed)
+
     def _random_point(self) -> np.ndarray:
         """Return a uniformly random (x, y) point inside the arena."""
-        return self.rng.uniform(
+        return self._rng_place.uniform(
             [0.0, 0.0], [config.WIDTH, config.HEIGHT]
         ).astype(np.float64)
 
     def _random_speed(self) -> float:
         """Return a uniformly random speed in [DRONE_SPEED_MIN, DRONE_SPEED_MAX]."""
-        return float(self.rng.uniform(config.DRONE_SPEED_MIN, config.DRONE_SPEED_MAX))
+        return float(
+            self._rng_place.uniform(config.DRONE_SPEED_MIN, config.DRONE_SPEED_MAX)
+        )
 
     def _recompute_links(self) -> None:
         """Refresh every drone's candidate pool, then its active link set.
@@ -320,10 +377,12 @@ class FANETEnv:
         self.tx_events = []
         self._rx_counts = defaultdict(int)
 
-        # 1. Move M-drones along their straight start -> end line.
-        for drone in self.drones:
-            if drone.drone_type == "M":
-                drone.step_move(config.TIMESTEP)
+        # 1. Move M-drones along their straight start -> end line. Phase 1A is
+        #    static: nothing moves, so this is skipped entirely.
+        if not config.STATIC_MODE:
+            for drone in self.drones:
+                if drone.drone_type == "M":
+                    drone.step_move(config.TIMESTEP)
 
         # 2. Recompute candidate pools and re-select active links.
         self._recompute_links()
@@ -331,14 +390,18 @@ class FANETEnv:
         # 3. Update active links for visualiser
         self._update_active_links()
 
-        # 4. Generate new packets from M-drones
+        # 4. Retire packets whose TTL or hop limit ran out, and let each source
+        #    give up on its own packets the GS never acknowledged. This runs
+        #    BEFORE forwarding so a dead packet at the head of a queue cannot
+        #    consume that drone's send budget for the step.
+        self._expire_queued_packets()
+        self._expire_unacked_at_sources()
+
+        # 5. Generate new packets from M-drones
         self._generate_packets()
 
-        # 5. Route packets
+        # 6. Route packets: at most MAX_TX_PER_STEP per drone, oldest first.
         self._route_packets()
-
-        # 6. Expire stale packets still in queues
-        self._expire_queued_packets()
 
         # 7. Radio idle/listen energy and accumulated rx energy for the step.
         for drone in self.drones:
@@ -352,12 +415,15 @@ class FANETEnv:
         # 8. Log per-step network state and per-drone state.
         self._log_step_and_drone_state()
 
-        # The episode ends when the step budget is exhausted OR every M-drone
-        # has reached its destination (there is no mission traffic left to
-        # generate or deliver once they have all arrived).
-        m_drones = [d for d in self.drones if d.drone_type == "M"]
-        all_m_arrived = bool(m_drones) and all(d.arrived for d in m_drones)
-        done = self.step_count >= config.MAX_STEPS or all_m_arrived
+        # Fixed episode length. In static mode that is the ONLY end condition:
+        # an M-drone that never moves is trivially "arrived", so the
+        # all-arrived shortcut below would end the episode on step 1.
+        done = self.step_count >= config.MAX_STEPS
+        if not config.STATIC_MODE:
+            # Phase 1B: also stop once every M-drone has reached its end point,
+            # since no mission traffic is left to generate or deliver.
+            m_drones = [d for d in self.drones if d.drone_type == "M"]
+            done = done or (bool(m_drones) and all(d.arrived for d in m_drones))
         if done:
             self.close_logger()
 
@@ -389,7 +455,13 @@ class FANETEnv:
                 self.active_links.add(link)
 
     def _generate_packets(self) -> None:
-        """Have each M-drone generate PACKET_RATE new packets."""
+        """Have each M-drone create its new packets for this step.
+
+        A new packet goes into the same queue as the relayed traffic, so it is
+        dropped with reason "queue_full" if that queue is already at capacity.
+        The source counts every packet it creates and starts waiting for the
+        GS ACK.
+        """
         t = self._sim_time()
         for drone in self.drones:
             if drone.drone_type != "M":
@@ -399,8 +471,8 @@ class FANETEnv:
                     source_id=drone.drone_id,
                     created_at=self.step_count,
                 )
-                drone.enqueue(pkt)
                 self.all_packets.append(pkt)
+                drone.note_created(pkt)
                 if self._logger is not None:
                     self._logger.log_packet_event(
                         event="generated",
@@ -411,29 +483,99 @@ class FANETEnv:
                         hop_index=0,
                         is_control=pkt.is_control,
                     )
+                if not drone.enqueue(pkt):
+                    # Own queue full: the packet dies where it was born. There
+                    # is no link involved, so no per-link counter moves.
+                    drone.note_own_queue_full()
+                    self._drop(pkt, DropReason.QUEUE_FULL, drone)
+
+    def _next_hop_candidates(self, drone: Drone) -> Dict[NextHop, np.ndarray]:
+        """Return every next hop *drone* can currently reach, key → position.
+
+        Keys are neighbour drone ids, plus the string ``"GS"`` when the ground
+        station is in range. The GS is a normal member of this set: both
+        routing rules treat it as just another neighbour.
+
+        Args:
+            drone: The drone about to send.
+
+        Returns:
+            Dict mapping next-hop key to that endpoint's position.
+        """
+        candidates: Dict[NextHop, np.ndarray] = {
+            nid: nbr.position for nid, nbr in drone.neighbors.items()
+        }
+        if are_connected(drone.position, self.gs_position):
+            candidates["GS"] = self.gs_position
+        return candidates
+
+    def _select_next_hop(
+        self,
+        drone: Drone,
+        candidates: Dict[NextHop, np.ndarray],
+    ) -> Optional[NextHop]:
+        """Choose the next hop for one packet according to the routing rule.
+
+        Called once per packet at SEND time, not when the packet arrives.
+
+        Args:
+            drone:      Current holder.
+            candidates: Reachable next hops from :meth:`_next_hop_candidates`.
+
+        Returns:
+            The chosen next-hop key, or None if the rule finds no usable hop
+            (the caller then drops the packet with reason "no_route").
+        """
+        return greedy_next_hop(drone.position, candidates, self.gs_position)
 
     def _route_packets(self) -> None:
-        """Forward every queued packet one hop using the selected routing baseline."""
+        """Forward this step's send batch from every drone.
+
+        Each drone releases at most ``config.MAX_TX_PER_STEP`` packets, oldest
+        first. All batches are taken as one snapshot before any forwarding, so
+        a packet cannot be received and re-forwarded in the same step.
+
+        Every transmission over an existing link can still fail: it is lost
+        with probability ``channel.p_loss(distance)``, which also covers the
+        last hop into the GS. A surviving packet is refused if the next hop's
+        queue is full. Either way the sender learns which of the two happened
+        from the (ideal) hop-by-hop ACK.
+        """
         t = self._sim_time()
 
-        # Collect packets from all drones before forwarding (snapshot approach)
-        # to avoid a drone receiving and re-forwarding in the same step.
+        # Snapshot every drone's send batch before forwarding anything.
         pending: List[Tuple[Drone, Packet]] = []
         for drone in self.drones:
-            for pkt in drone.dequeue_all():
+            for pkt in drone.dequeue_for_send():
                 pending.append((drone, pkt))
 
         for drone, pkt in pending:
-            if not pkt.is_alive(self.step_count):
-                self._expire_packet(pkt, drone)
+            candidates = self._next_hop_candidates(drone)
+            next_key = self._select_next_hop(drone, candidates)
+
+            if next_key is None:
+                # Routing void: no candidate at all, or none closer to the GS.
+                self._drop(pkt, DropReason.NO_ROUTE, drone)
                 continue
 
-            # Check if the drone itself can reach the GS directly
-            if are_connected(drone.position, self.gs_position):
+            # --- transmit ---
+            drone.note_sent(next_key)
+            drone.consume_tx_energy()
+            dist = euclidean_distance(drone.position, candidates[next_key])
+
+            if self._rng_chan.random() < channel.p_loss(dist):
+                drone.note_hop_ack(next_key, "channel")
+                self._drop(pkt, DropReason.CHANNEL, drone, next_hop=next_key)
+                continue
+
+            if next_key == "GS":
+                # The GS has no queue and no per-step limit: it always accepts.
                 pkt.relay_to("GS")
                 pkt.mark_delivered(self.step_count)
                 self.delivered.append(pkt)
-                drone.consume_tx_energy()
+                drone.note_hop_ack("GS", "ok")
+                # End-to-end ACK: tell the source its packet arrived.
+                self.get_drone_by_id(pkt.source_id).note_gs_ack(pkt.packet_id)
                 self.tx_events.append((drone.drone_id, "GS"))
                 if self._logger is not None:
                     self._logger.log_packet_event(
@@ -448,28 +590,16 @@ class FANETEnv:
                     )
                 continue
 
-            # Select next hop
-            next_hop = self._select_next_hop(drone, pkt)
-            if next_hop is None:
-                pkt.mark_dropped(DropReason.NO_NEXT_HOP)
-                self.dropped.append(pkt)
-                if self._logger is not None:
-                    self._logger.log_packet_event(
-                        event="dropped",
-                        time=t,
-                        packet_id=pkt.packet_id,
-                        src_drone=pkt.source_id,
-                        current_drone=drone.drone_id,
-                        hop_index=pkt.hop_count,
-                        drop_reason="no_route",
-                        is_control=pkt.is_control,
-                    )
+            next_hop = drone.neighbors[next_key]
+            if not next_hop.enqueue(pkt):
+                # Offered but refused — the hop is not taken, so hop_count
+                # stays where it was.
+                drone.note_hop_ack(next_key, "queue_full")
+                self._drop(pkt, DropReason.QUEUE_FULL, drone, next_hop=next_key)
                 continue
 
-            # Forward
-            pkt.relay_to(next_hop.drone_id)
-            next_hop.enqueue(pkt)
-            drone.consume_tx_energy()
+            pkt.relay_to(next_key)
+            drone.note_hop_ack(next_key, "ok")
             self.tx_events.append((drone.drone_id, next_hop.drone_id))
             self._rx_counts[next_hop.drone_id] += 1
             if self._logger is not None:
@@ -484,32 +614,26 @@ class FANETEnv:
                     is_control=pkt.is_control,
                 )
 
-    def _select_next_hop(self, drone: Drone, pkt: Packet) -> Optional[Drone]:
-        """Select the next-hop drone for *pkt* according to the routing policy.
+    # ------------------------------------------------------------------
+    # Drops and expiry
+    # ------------------------------------------------------------------
+
+    def _drop(
+        self,
+        pkt: Packet,
+        reason: DropReason,
+        holder: Optional[Drone] = None,
+        next_hop: Optional[NextHop] = None,
+    ) -> None:
+        """Retire *pkt* with exactly one drop *reason* and log it.
 
         Args:
-            drone: Current holder.
-            pkt:   The packet to forward.
-
-        Returns:
-            A Drone object or None if no valid hop exists.
+            pkt:      The packet being dropped.
+            reason:   The single reason it died.
+            holder:   The drone holding it (for the log record).
+            next_hop: For a send that failed, the hop it was aimed at.
         """
-        return greedy_next_hop(drone, drone.neighbors, self.gs_position)
-
-    def _expire_packet(self, pkt: Packet, holder: Optional[Drone] = None) -> None:
-        """Drop *pkt* with the appropriate reason based on its state.
-
-        Args:
-            pkt:    The packet to expire.
-            holder: The drone currently holding the packet (used for the log
-                    record). May be None if the holder is unknown.
-        """
-        if pkt.hop_count > config.MAX_HOPS:
-            pkt.mark_dropped(DropReason.MAX_HOPS)
-            reason = "max_hops"
-        else:
-            pkt.mark_dropped(DropReason.TTL_EXPIRED)
-            reason = "ttl_expired"
+        pkt.mark_dropped(reason)
         self.dropped.append(pkt)
         if self._logger is not None:
             self._logger.log_packet_event(
@@ -517,14 +641,29 @@ class FANETEnv:
                 time=self._sim_time(),
                 packet_id=pkt.packet_id,
                 src_drone=pkt.source_id,
-                current_drone=holder.drone_id if holder is not None else pkt.current_holder,
+                current_drone=(
+                    holder.drone_id if holder is not None else pkt.current_holder
+                ),
+                next_hop=next_hop,
                 hop_index=pkt.hop_count,
-                drop_reason=reason,
+                drop_reason=reason.label,
                 is_control=pkt.is_control,
             )
 
+    def _expire_packet(self, pkt: Packet, holder: Optional[Drone] = None) -> None:
+        """Drop a packet that ran out of TTL or of hops.
+
+        Args:
+            pkt:    The packet to retire.
+            holder: The drone currently holding it.
+        """
+        if pkt.hop_count >= config.MAX_HOPS:
+            self._drop(pkt, DropReason.HOP_LIMIT, holder)
+        else:
+            self._drop(pkt, DropReason.TTL, holder)
+
     def _expire_queued_packets(self) -> None:
-        """Scan every queue and drop packets that have expired this step."""
+        """Scan every queue and retire packets that can no longer be sent."""
         for drone in self.drones:
             still_alive: List[Packet] = []
             for pkt in drone.queue:
@@ -533,6 +672,17 @@ class FANETEnv:
                 else:
                     self._expire_packet(pkt, holder=drone)
             drone.queue = still_alive
+
+    def _expire_unacked_at_sources(self) -> None:
+        """Let each M-drone give up on its own packets the GS never acked.
+
+        This is the source-side timer from the ACK model: a drone knows when it
+        created each packet and knows the TTL, so it concludes on its own that
+        an unacknowledged packet is lost. It reads nothing global.
+        """
+        for drone in self.drones:
+            if drone.drone_type == "M":
+                drone.expire_unacked(self.step_count)
 
     # ------------------------------------------------------------------
     # Logging helpers

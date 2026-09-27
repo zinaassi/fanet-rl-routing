@@ -3,7 +3,7 @@ packet.py — Packet class and lifecycle tracking for the FANET simulator.
 
 Each packet is a lightweight data object that records its full history:
 where it was born, when, how many hops it has taken, and how it ended
-(delivered, dropped-TTL, dropped-hops, dropped-void).
+(delivered, or dropped for one of the five reasons in :class:`DropReason`).
 """
 
 from __future__ import annotations
@@ -13,10 +13,26 @@ from typing import List, Optional
 
 
 class DropReason(Enum):
-    """Reason a packet was dropped before delivery."""
-    TTL_EXPIRED = auto()      # packet lived too long (timestep count)
-    MAX_HOPS = auto()         # hop limit exceeded
-    NO_NEXT_HOP = auto()      # greedy routing void — no suitable neighbour
+    """The one reason a packet was dropped before delivery.
+
+    Every dropped packet carries exactly one of these. ``label`` gives the
+    string written to the event log and used as the key in every metrics
+    breakdown.
+    """
+    CHANNEL = auto()       # transmission over an existing link was lost
+    QUEUE_FULL = auto()    # the next hop's queue was full on arrival
+    NO_ROUTE = auto()      # no neighbour to forward to (routing void)
+    TTL = auto()           # packet lived longer than PACKET_TTL steps
+    HOP_LIMIT = auto()     # packet already took MAX_HOPS hops
+
+    @property
+    def label(self) -> str:
+        """Lower-case log/metrics key for this reason (e.g. ``"queue_full"``)."""
+        return self.name.lower()
+
+
+#: Every drop reason label, in the order metrics report them.
+DROP_REASON_LABELS: List[str] = [r.label for r in DropReason]
 
 
 @dataclass
@@ -65,6 +81,9 @@ class Packet:
     def is_alive(self, current_step: int) -> bool:
         """Return True if the packet has not expired, been delivered, or dropped.
 
+        A packet is allowed at most :attr:`max_hops` hops, so one that has
+        already taken that many is not alive: it has no hop left to take.
+
         Args:
             current_step: The current simulation timestep.
 
@@ -74,7 +93,7 @@ class Packet:
         if self.delivered or self.dropped:
             return False
         age = current_step - self.created_at
-        return age < self.ttl and self.hop_count <= self.max_hops
+        return age < self.ttl and self.hop_count < self.max_hops
 
     def relay_to(self, next_holder: int | str) -> None:
         """Record a hop: move the packet to *next_holder*.
