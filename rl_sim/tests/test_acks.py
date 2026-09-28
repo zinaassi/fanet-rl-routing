@@ -36,39 +36,64 @@ def test_per_link_channel_losses_match(episode: EpisodeTrace) -> None:
     """Hop-by-hop ACKs account for every channel drop, on the right link."""
     env = episode.env
     counts = drop_counts_by_reason(env)
-    acked = sum(sum(d.link_lost_channel.values()) for d in env.drones)
+    acked = sum(
+        r["lost_channel"] for d in env.drones for r in d.link_stats.values()
+    )
     assert acked == counts.get("channel", 0)
 
 
 def test_per_link_queue_full_losses_match(episode: EpisodeTrace) -> None:
-    """queue_full drops split into link refusals plus packets born into a full queue."""
+    """Every queue_full drop is charged to the link whose queue refused it."""
     env = episode.env
     counts = drop_counts_by_reason(env)
-    on_link = sum(sum(d.link_lost_queue_full.values()) for d in env.drones)
-    at_birth = sum(d.own_queue_full_drops for d in env.drones)
-    assert on_link + at_birth == counts.get("queue_full", 0)
+    on_link = sum(
+        r["dropped_queue_full"] for d in env.drones for r in d.link_stats.values()
+    )
+    assert on_link == counts.get("queue_full", 0)
+
+
+def test_per_link_expiries_match(episode: EpisodeTrace) -> None:
+    """Every ttl / hop_limit drop is accounted for exactly once.
+
+    A packet that died waiting is charged to the link queue it waited on. One
+    that arrived already out of TTL or hops never waited anywhere, so no link
+    is charged; it lands in the env's expired_on_arrival instead.
+    """
+    env = episode.env
+    counts = drop_counts_by_reason(env)
+    expired_in_queue = sum(
+        r["expired_in_queue"] for d in env.drones for r in d.link_stats.values()
+    )
+    total_expired = counts.get("ttl", 0) + counts.get("hop_limit", 0)
+
+    assert expired_in_queue + env.expired_on_arrival == total_expired
 
 
 def test_link_counters_are_internally_consistent(episode: EpisodeTrace) -> None:
-    """Per link: sent = acked + lost_channel + lost_queue_full."""
+    """Per link the books balance, both on offer and on transmission.
+
+    offered = refused + sent + expired-while-waiting + still waiting
+    sent    = acked + lost_channel
+    """
     for drone in episode.env.drones:
-        keys = (
-            set(drone.link_sent)
-            | set(drone.link_acked)
-            | set(drone.link_lost_channel)
-            | set(drone.link_lost_queue_full)
-        )
-        for key in keys:
-            assert drone.link_sent[key] == (
-                drone.link_acked[key]
-                + drone.link_lost_channel[key]
-                + drone.link_lost_queue_full[key]
-            ), f"drone {drone.drone_id} link {key} does not balance"
+        for key, row in drone.link_stats.items():
+            waiting = drone.queue_len(key)
+            assert row["offered"] == (
+                row["dropped_queue_full"]
+                + row["sent"]
+                + row["expired_in_queue"]
+                + waiting
+            ), f"drone {drone.drone_id} link {key} offer book does not balance"
+            assert row["sent"] == row["acked"] + row["lost_channel"], (
+                f"drone {drone.drone_id} link {key} send book does not balance"
+            )
 
 
 def test_acked_sends_match_accepted_transmissions(episode: EpisodeTrace) -> None:
     """Total positive ACKs equal the transmissions the simulator accepted."""
-    acked = sum(sum(d.link_acked.values()) for d in episode.env.drones)
+    acked = sum(
+        r["acked"] for d in episode.env.drones for r in d.link_stats.values()
+    )
     assert acked == episode.tx_total
 
 
@@ -90,6 +115,33 @@ def test_source_side_timer_matches_unacked_packets(episode: EpisodeTrace) -> Non
     assert sum(d.packets_lost_no_ack for d in env.drones) == expected
 
 
+def test_hop_acks_only_report_ok_or_channel() -> None:
+    """A send either arrives or is lost: the receiver never refuses it.
+
+    Uses a standalone drone — mutating the shared episode's counters here would
+    leave a link in one book and not the other.
+    """
+    import numpy as np
+    import pytest
+
+    from fanet_sim.envs.drone import Drone
+
+    drone = Drone(
+        drone_id=0,
+        drone_type="M",
+        initial_position=np.array([10.0, 10.0]),
+        speed=10.0,
+        gs_position=np.array(config.GS_POSITION, dtype=np.float64),
+    )
+    drone.note_hop_ack(1, "ok")
+    drone.note_hop_ack(1, "channel")
+    assert drone.link_stats[1]["acked"] == 1
+    assert drone.link_stats[1]["lost_channel"] == 1
+
+    with pytest.raises(ValueError, match="unknown hop-ACK outcome"):
+        drone.note_hop_ack(1, "queue_full")
+
+
 def test_source_accounting_closes(episode: EpisodeTrace) -> None:
     """Per source: created = acked + given-up-on + still waiting."""
     for drone in episode.env.drones:
@@ -103,5 +155,30 @@ def test_source_accounting_closes(episode: EpisodeTrace) -> None:
 def test_gs_link_is_counted_as_a_link(episode: EpisodeTrace) -> None:
     """Deliveries to the GS register on the sender's "GS" link, not nowhere."""
     env = episode.env
-    gs_acked = sum(d.link_acked.get("GS", 0) for d in env.drones)
+    gs_acked = sum(
+        d.link_stats.get("GS", {}).get("acked", 0) for d in env.drones
+    )
     assert gs_acked == len(env.delivered)
+
+
+def test_ack_link_books_match_the_simulator_per_link(
+    episode: EpisodeTrace,
+) -> None:
+    """Every drone's own link book equals the simulator's, field by field."""
+    from fanet_sim.envs.drone import LINK_FIELDS
+
+    env = episode.env
+    ack_rows = {
+        (d.drone_id, next_hop): dict(row)
+        for d in env.drones
+        for next_hop, row in d.link_stats.items()
+    }
+    truth_rows = {link: dict(row) for link, row in env.link_stats.items()}
+
+    assert set(ack_rows) == set(truth_rows)
+    for link in truth_rows:
+        for field in LINK_FIELDS:
+            assert ack_rows[link][field] == truth_rows[link][field], (
+                f"link {link} field {field}: ACK {ack_rows[link][field]} "
+                f"vs simulator {truth_rows[link][field]}"
+            )

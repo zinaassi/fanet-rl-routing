@@ -24,13 +24,13 @@ class EpisodeTrace:
 
     Attributes:
         env:            The environment, after the episode finished.
-        max_queue_seen: Largest queue length observed on any drone at any step.
-        max_sent_step:  Largest number of transmissions one drone attempted in
-                        a single step.
-        max_released_step: Largest batch any drone released from its queue in a
-                        single step, counted at Drone.dequeue_for_send — so it
-                        includes failed sends and "no_route" drops, not just
-                        the transmissions that went out.
+        max_queue_seen: Longest any single LINK queue got, at any step.
+        max_sent_step:  Most transmissions one drone attempted in a single step
+                        (it may send on several links at once).
+        max_released_step: Largest batch released from any ONE link queue in a
+                        single step, counted at Drone.dequeue_head.
+        multi_link_sends: How many times a drone sent on more than one link in
+                        the same step.
         positions:      Per-step snapshot of every drone position.
         tx_total:       Total accepted transmissions over the episode.
     """
@@ -39,6 +39,7 @@ class EpisodeTrace:
     max_queue_seen: int = 0
     max_sent_step: int = 0
     max_released_step: int = 0
+    multi_link_sends: int = 0
     positions: List[np.ndarray] = field(default_factory=list)
     tx_total: int = 0
 
@@ -69,7 +70,7 @@ def run_episode(
     from fanet_sim.envs.drone import Drone
 
     prev_max_steps = config.MAX_STEPS
-    real_dequeue = Drone.dequeue_for_send
+    real_dequeue = Drone.dequeue_head
     config.MAX_STEPS = steps
     try:
         env = FANETEnv(
@@ -83,14 +84,18 @@ def run_episode(
 
         # Spy on the queue release itself: this is the ONLY place packets leave
         # a queue to be sent, so it is where the per-step budget must hold.
-        released: Dict[int, int] = {}
+        # Per (drone, link) counts for this step, so the per-LINK budget and
+        # the "a drone may send on several links at once" property are both
+        # observable.
+        released: Dict[tuple, int] = {}
 
-        def spy(self: Drone, n: Optional[int] = None) -> list:
-            batch = real_dequeue(self, n)
-            released[self.drone_id] = released.get(self.drone_id, 0) + len(batch)
+        def spy(self: Drone, next_hop, n: Optional[int] = None) -> list:
+            batch = real_dequeue(self, next_hop, n)
+            key = (self.drone_id, next_hop)
+            released[key] = released.get(key, 0) + len(batch)
             return batch
 
-        Drone.dequeue_for_send = spy  # type: ignore[method-assign]
+        Drone.dequeue_head = spy  # type: ignore[method-assign]
 
         trace.positions.append(
             np.array([d.position.copy() for d in env.drones])
@@ -98,7 +103,8 @@ def run_episode(
 
         for _ in range(steps):
             before_sent = {
-                d.drone_id: sum(d.link_sent.values()) for d in env.drones
+                d.drone_id: sum(r["sent"] for r in d.link_stats.values())
+                for d in env.drones
             }
             released.clear()
             env.step()
@@ -106,11 +112,22 @@ def run_episode(
                 trace.max_released_step = max(
                     trace.max_released_step, max(released.values())
                 )
+                links_used: Dict[int, int] = {}
+                for (drone_id, _), count in released.items():
+                    if count:
+                        links_used[drone_id] = links_used.get(drone_id, 0) + 1
+                trace.multi_link_sends += sum(
+                    1 for n_links in links_used.values() if n_links > 1
+                )
 
             trace.tx_total += len(env.tx_events)
             for d in env.drones:
-                trace.max_queue_seen = max(trace.max_queue_seen, len(d.queue))
-                sent = sum(d.link_sent.values()) - before_sent[d.drone_id]
+                for queue in d.link_queues.values():
+                    trace.max_queue_seen = max(trace.max_queue_seen, len(queue))
+                sent = (
+                    sum(r["sent"] for r in d.link_stats.values())
+                    - before_sent[d.drone_id]
+                )
                 trace.max_sent_step = max(trace.max_sent_step, sent)
             trace.positions.append(
                 np.array([d.position.copy() for d in env.drones])
@@ -120,7 +137,7 @@ def run_episode(
         return trace
     finally:
         config.MAX_STEPS = prev_max_steps
-        Drone.dequeue_for_send = real_dequeue  # type: ignore[method-assign]
+        Drone.dequeue_head = real_dequeue  # type: ignore[method-assign]
 
 
 def drop_counts_by_reason(env: FANETEnv) -> Dict[str, int]:

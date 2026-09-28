@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import pytest
+
 from fanet_sim import config
 from fanet_sim.envs.packet import DROP_REASON_LABELS
 
@@ -24,9 +26,9 @@ def test_every_packet_has_exactly_one_outcome(episode: EpisodeTrace) -> None:
 def test_conservation_created_equals_delivered_dropped_and_queued(
     episode: EpisodeTrace,
 ) -> None:
-    """J: created = delivered + dropped + still sitting in queues."""
+    """J: created = delivered + dropped + still waiting in link queues."""
     env = episode.env
-    in_queues = sum(len(d.queue) for d in env.drones)
+    in_queues = sum(d.total_queued() for d in env.drones)
 
     assert len(env.all_packets) == len(env.delivered) + len(env.dropped) + in_queues
 
@@ -34,7 +36,7 @@ def test_conservation_created_equals_delivered_dropped_and_queued(
     accounted = (
         {p.packet_id for p in env.delivered}
         | {p.packet_id for p in env.dropped}
-        | {p.packet_id for d in env.drones for p in d.queue}
+        | {p.packet_id for d in env.drones for p in d.queued_packets()}
     )
     assert accounted == {p.packet_id for p in env.all_packets}
 
@@ -145,11 +147,52 @@ def test_queued_packet_past_its_ttl_is_expired_by_the_env() -> None:
     env = _env_for_expiry()
     drone = env.drones[0]
     stale = _packet(created_at=0)
-    drone.queue = [stale]
+    drone.link_queues[7] = [stale]
     env.step_count = config.PACKET_TTL
 
     env._expire_queued_packets()
 
-    assert drone.queue == []
+    assert drone.link_queues[7] == []
     assert stale.dropped and stale.drop_reason is DropReason.TTL
     assert stale in env.dropped
+    # The link it was waiting on is charged for it.
+    assert drone.link_stats[7]["expired_in_queue"] == 1
+    assert env.link_stats[(drone.drone_id, 7)]["expired_in_queue"] == 1
+
+
+def test_traffic_interval_controls_how_many_packets_exist() -> None:
+    """Halving the interval roughly doubles the packets created."""
+    import os
+
+    from .conftest import run_episode
+
+    prev = config.PACKET_INTERVAL_STEPS
+    try:
+        config.PACKET_INTERVAL_STEPS = 10
+        light = len(run_episode(steps=200, placement_seed=5, run_seed=5).env.all_packets)
+        config.PACKET_INTERVAL_STEPS = 5
+        heavy = len(run_episode(steps=200, placement_seed=5, run_seed=5).env.all_packets)
+    finally:
+        config.PACKET_INTERVAL_STEPS = prev
+
+    n_sources = config.NUM_M_DRONES
+    assert light == pytest.approx(200 / 10 * n_sources, rel=0.1)
+    assert heavy == pytest.approx(200 / 5 * n_sources, rel=0.1)
+
+
+def test_one_packet_per_interval_per_source() -> None:
+    """Each M-drone creates exactly one packet per interval, on its own offset."""
+    from .conftest import run_episode
+
+    env = run_episode(steps=120, placement_seed=5, run_seed=5).env
+    interval = config.PACKET_INTERVAL_STEPS
+
+    per_source: dict[int, list[int]] = {}
+    for pkt in env.all_packets:
+        per_source.setdefault(pkt.source_id, []).append(pkt.created_at)
+
+    for source_id, steps in per_source.items():
+        offset = env._traffic_offset[source_id]
+        assert all(s % interval == offset for s in steps)
+        assert steps == sorted(steps)
+        assert len(set(steps)) == len(steps), "two packets on one step"

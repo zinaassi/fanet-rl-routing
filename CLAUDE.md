@@ -1,46 +1,101 @@
-# CLAUDE.md — FANET Phase 1A
+# CLAUDE.md — FANET drone-network project
 
-## Project goal
+## The project
+Student project (Abed and Zena), supervised by Eran, with Prof. Reuven
+Cohen involved. We simulate a drone network that relays data to a single
+ground station (GS) and study how routing, and later drone movement,
+affect packet loss. The fleet has two kinds of drones:
+- M-drones (mission): create packets AND relay other drones' packets.
+- C-drones (communication): create no packets, only relay; in later
+  phases they can move to improve the network.
 
-Minimize per-link packet loss in a drone network that relays data to a single
-ground station (GS). The fleet is M-drones (create AND relay packets) plus
-C-drones (relay only). Phase 1A is the simulator with non-learned routing on a
-static world — no learning of any kind.
+## Goal
+Minimize TOTAL PACKET LOSS: the share of created packets that never
+reach the GS. Per-link loss and loss by cause (channel, queue_full,
+no_route, ttl, hop_limit) are secondary, used to explain the total.
 
-See `README.md` for the design, the config parameters, and the DECIDED /
-PROVISIONAL status of every value.
+## Plan (order set by the supervisor; each step starts only after the
+## previous one is approved)
+Phase 1 — STATIC world (nothing moves):
+  1a. Non-learned baselines: GREEDY and RANDOM routing.   <- CURRENT
+  1b. RL routing agent on every drone, reward = delivery rate.
+Phase 2 — DYNAMIC world (M-drones fly), only after Phase 1:
+  2a. Baselines again, with C-drone movement rules (hover, random walk,
+      move toward the busiest neighbor).
+  2b. RL routing agent alone.
+  2c. RL topology agent alone (C-drone movement), greedy routing.
+  2d. Both agents together.
+Current work is 1a only: no learning of any kind. Later RL agents will
+be written NEW; the archived RL code is not to be reused.
+
+## Current model (full details and DECIDED/PROVISIONAL status in
+## README.md at the repo root, written at Checkpoint 5)
+- World: 2D, 900x900 m, GS at (450,450), 18 M + 7 C drones, placed
+  uniformly at random. Static. Time step 100 ms. Range ~250 m (FSPL,
+  -54 dBm).
+- Link queues: one FIFO queue per outgoing link (per neighbor, plus
+  the GS link when in range). Capacity 10 per link; each link sends at
+  most 1 packet per step; a drone's links all send in the same step
+  (no collisions modeled). A packet placed in a full link queue is
+  dropped (queue_full).
+- Routing decision at enqueue time: when a packet is created or
+  arrives, the drone picks the next hop and puts it in that link's
+  queue. Arrivals within a step are processed in random (reproducible)
+  order. Arrived packets wait at least one step.
+- Channel loss = exp(-k*M), M = signal margin in dB (1 at the range
+  edge, ~0 up close).
+- Link loss = 1 - (1 - channel loss) * (1 - queue_full), where
+  queue_full = 1 if the sender's own queue for that link is full.
+- GREEDY: among neighbors strictly closer to the GS, the lowest link
+  loss; ties: lower channel loss, then closer to the GS; none closer ->
+  drop (no_route).
+- RANDOM: uniform over current neighbors, own random stream.
+- GS: receives without limit.
+- ACKs (ideal in Phase 1): GS end-to-end ACK to the source; hop-by-hop
+  ACK (ok/channel) to the sender. Drones keep per-link counters built
+  only from local knowledge and ACKs. These must always match the
+  simulator's ground truth.
+- Packets that arrive already dead are retired on arrival
+  (expired_on_arrival).
+- Loads: each M-drone creates one packet every 1000/500/200/100 ms.
+  Metrics use packets created in steps [50, 950) of 1000.
+- Seeds: separate placement, channel/traffic and routing streams;
+  greedy and random run on identical placement and traffic.
+- Neighbor knowledge: each drone knows its neighbors' positions and
+  link quality, as if from hello messages; hello messages are not
+  simulated.
+
+## Open questions (do NOT decide these; ask)
+Radio range choice; the value of k; ACK details (routed or ideal,
+capacity use, retransmissions); how to handle layouts with isolated
+M-drones; RL reward form; whether the topology agent joins the static
+phase; link-break handling and hello messages in the dynamic phase;
+a near-full load (e.g. 90 ms).
 
 ## IGNORE / LEAVE BEHIND
-
 We keep ONLY the simulator: world, drones, placement/mobility, channel,
-packets, queues, logging, metrics, analysis. Everything below is out of scope
-— do not use it, extend it, or rely on it:
-
+packets, queues, logging, metrics, analysis. Everything below is out of
+scope. Do not use it, extend it, or rely on it:
 - PPO K-link (link selection) policy and PPO topology policy
-- `train.py`, `eval.py`, any training/reward code
+- train.py, eval.py, any old training/reward code
 - Q-routing
 - any LSTM / GNN / trajectory-prediction code or plans
-- any `stage1/` folder or Dijkstra-vs-greedy study code and its results
-- the old `CLAUDE.md`, `PROJECT_STATE.md` and the old README: outdated
+- any stage1/ folder or Dijkstra-vs-greedy study code and its results
+- the old CLAUDE.md, PROJECT_STATE.md and the old README: outdated
 - anything from earlier sessions not restated in a current prompt
-
-None of it is deleted. It all lives under `archive/` (see `README.md` for the
-layout). Nothing in `rl_sim/` imports from `archive/`, and the live simulator
-does not depend on torch — keep both of those true.
+None of it is deleted; it lives under archive/. Nothing in rl_sim/
+imports from archive/, and the live simulator does not depend on torch.
+Keep both of those true.
 
 ## RULES
-
-0. Never commit to `main`. Work on a branch; commit per approved checkpoint.
-1. **Read before writing.** Before changing anything, read the code that
-   actually runs (entry point, config, env, channel, packet, metrics,
-   analysis). Do not trust docs or earlier session summaries.
-2. **Never guess.** If something is unclear, or the code differs from the
-   prompt in a way the prompt does not cover, STOP and ask. Do not quietly
-   pick an answer.
-3. **No scope creep.** Build only what was asked: no extra features, sweeps,
-   plots or refactors.
-4. Values marked [DECIDED] are fixed. Values marked [PROVISIONAL] are
-   temporary defaults and carry a `PROVISIONAL - to confirm` comment in
-   config, so they stay easy to change.
-5. **List edits and wait for OK.** Before editing any file, list what you will
-   change in it and why, then wait for approval.
+0. Never commit to main. Work on a branch; commit per approved
+   checkpoint.
+1. Read before writing. Before changing anything, read the code that
+   actually runs. Do not trust docs or earlier session summaries.
+2. Never guess. If something is unclear, or the code differs from the
+   prompt in a way the prompt does not cover, STOP and ask.
+3. No scope creep. Build only what was asked.
+4. Values marked [DECIDED] are fixed. Values marked [PROVISIONAL] carry
+   a "PROVISIONAL - to confirm" comment in config.
+5. List edits and wait for OK. Before editing any file, list what you
+   will change in it and why, then wait for approval.

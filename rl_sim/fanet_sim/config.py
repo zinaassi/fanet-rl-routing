@@ -73,11 +73,14 @@ ENERGY_PER_IDLE: float = 0.001    # joules per timestep listening (idle radio)
 # ---------------------------------------------------------------------------
 # Packets
 # ---------------------------------------------------------------------------
-# Traffic load. Item G of the Phase-1A spec replaces this per-step rate with a
-# per-M-drone creation INTERVAL (every 10 / 5 / 2 / 1 steps) plus a random start
-# offset; that lands at CHECKPOINT 4. Until then each M-drone creates
-# PACKET_RATE packets per step.
-PACKET_RATE: int = 1              # packets created per M-drone per step
+# Traffic load: each M-drone creates ONE packet every PACKET_INTERVAL_STEPS
+# steps. At TIMESTEP = 0.1 s the four loads in the Phase-1A grid are
+#     10 steps = 1000 ms    5 steps = 500 ms    2 steps = 200 ms    1 step = 100 ms
+# Each M-drone also gets a random start offset in [0, interval), so they do not
+# all create their packets on the same step.
+PACKET_INTERVAL_STEPS: int = 2    # 200 ms                                [DECIDED set]
+TRAFFIC_LOADS_MS: tuple = (1000, 500, 200, 100)   # the grid in item K
+RANDOM_TRAFFIC_OFFSETS: bool = True   # PROVISIONAL - to confirm
 
 PACKET_SIZE: int = 512            # bytes
 MAX_HOPS: int = 10                # a packet may take at most this many hops  [DECIDED]
@@ -86,11 +89,19 @@ PACKET_TTL: int = 50              # timesteps before a packet expires         [D
 # ---------------------------------------------------------------------------
 # Queues
 # ---------------------------------------------------------------------------
-# One FIFO queue per drone. An M-drone's own new packets and the packets it
-# relays share the same queue and the same per-step send budget. A packet that
-# arrives at a full queue is dropped with reason "queue_full".
-QUEUE_CAPACITY: int = 10          # max packets held per drone                [DECIDED]
-MAX_TX_PER_STEP: int = 1          # packets a drone may send per step,
+# ONE FIFO QUEUE PER OUTGOING LINK: each drone keeps one queue per current
+# neighbour, plus one for the GS link when the GS is in range. The next hop --
+# and so the queue a packet joins -- is decided when the packet is created at a
+# drone or arrives at it, not when it is sent.
+#
+# All of a drone's link queues send in the same step. There is no collision
+# model, so there is no per-drone send limit: a drone with five links may send
+# five packets in a step, one per link. Receiving is unlimited.
+#
+# A packet put into a full link queue is dropped at that drone with reason
+# "queue_full".
+QUEUE_CAPACITY: int = 10          # max packets per LINK queue                [DECIDED]
+MAX_TX_PER_STEP: int = 1          # packets each LINK queue may send per step,
                                   # oldest first                             [DECIDED]
 
 # ---------------------------------------------------------------------------
@@ -119,6 +130,45 @@ NUM_EPISODES: int = 1             # number of episodes (for testing)
 # delivered, or dropped, or time out) before the episode ends.
 WARMUP_STEPS: int = 50            # PROVISIONAL - to confirm
 DRAIN_STEPS: int = PACKET_TTL     # PROVISIONAL - to confirm
+
+
+def measurement_window() -> tuple:
+    """Return the (first, last_exclusive) creation steps that count as measured.
+
+    Returns:
+        A ``(start, stop)`` pair of step indices. A packet counts toward the
+        reported metrics when ``start <= created_at < stop``.
+    """
+    return (WARMUP_STEPS, MAX_STEPS - DRAIN_STEPS)
+
+
+def in_measurement_window(step: int) -> bool:
+    """True if a packet created at *step* counts toward the reported metrics.
+
+    Args:
+        step: The step a packet was created at.
+
+    Returns:
+        True when the step falls inside :func:`measurement_window`.
+    """
+    start, stop = measurement_window()
+    return start <= step < stop
+
+
+def is_warm(step: int) -> bool:
+    """True once the warm-up is over at simulation *step*.
+
+    Instantaneous per-step quantities — per-link transmissions and queue
+    occupancy — are measured from here on. They need no drain cut, since a
+    transmission does not need time to finish the way a packet does.
+
+    Args:
+        step: The current simulation step.
+
+    Returns:
+        True when *step* is at or past WARMUP_STEPS.
+    """
+    return step >= WARMUP_STEPS
 
 # ---------------------------------------------------------------------------
 # Ground station

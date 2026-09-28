@@ -6,12 +6,13 @@ Runs one full episode with:
     - NUM_C_DRONES communication drones (relay only)
     - Greedy geographic routing
     - Raw events logged to {LOG_DIR}/episode_{id}.jsonl
-    - Stage-2 metrics printed by reading that log
+    - The Phase-1A metrics report printed at the end
     - A matplotlib animation saved to episode.gif (or shown live)
 
 Usage:
     python main.py                   # run & save animation to episode.gif
     python main.py --no-anim         # run without animation
+    python main.py --routing random --load-ms 200 --no-anim
     python main.py --show            # run with interactive animation window
     python main.py --log custom.jsonl   # override the event log path
 """
@@ -21,13 +22,12 @@ from __future__ import annotations
 import argparse
 import os
 import time
-from pathlib import Path
 
 from fanet_sim import config
 from fanet_sim.envs import channel
 from fanet_sim.envs.fanet_env import FANETEnv
 from fanet_sim.utils.visualization import FANETVisualizer
-from scripts.analyze import analyze, print_report, read_jsonl
+from scripts.metrics_1a import compute_metrics, print_metrics_report
 
 
 def parse_args() -> argparse.Namespace:
@@ -49,9 +49,17 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--routing",
-        choices=["greedy"],
+        choices=["greedy", "random"],
         default="greedy",
-        help="Routing rule: greedy (default).",
+        help="Routing rule: greedy (default) or random.",
+    )
+    parser.add_argument(
+        "--load-ms",
+        type=int,
+        default=None,
+        choices=[1000, 500, 200, 100],
+        help="Traffic load: one packet per M-drone every this many ms. "
+             "Defaults to config.PACKET_INTERVAL_STEPS.",
     )
     parser.add_argument(
         "--steps",
@@ -129,6 +137,10 @@ def main() -> None:
     routing = args.routing
     if args.steps:
         config.MAX_STEPS = args.steps
+    if args.load_ms:
+        config.PACKET_INTERVAL_STEPS = int(
+            round(args.load_ms / 1000.0 / config.TIMESTEP)
+        )
 
     log_path = args.log or os.path.join(
         config.LOG_DIR, f"episode_{args.episode_id}.jsonl"
@@ -145,6 +157,11 @@ def main() -> None:
     print(f"  Steps     : {config.MAX_STEPS}")
     print(f"  Routing   : {routing}")
     print(f"  Queues    : Q={config.QUEUE_CAPACITY}  N={config.MAX_TX_PER_STEP}/step")
+    print(f"  Load      : 1 packet per M-drone every "
+          f"{config.PACKET_INTERVAL_STEPS} steps "
+          f"({config.PACKET_INTERVAL_STEPS * config.TIMESTEP * 1000:.0f} ms)")
+    print(f"  Metrics   : packets created in steps "
+          f"[{config.measurement_window()[0]}, {config.measurement_window()[1]})")
     placement_seed = (
         config.PLACEMENT_SEED if args.placement_seed is None else args.placement_seed
     )
@@ -187,10 +204,9 @@ def main() -> None:
     # (e.g. closed the interactive window early).
     env.close_logger()
 
-    # Stage 2 — read the raw log and report metrics.
+    # Phase-1A report: ground-truth and ACK-based views of the same run.
     print()
-    metrics = analyze(read_jsonl(Path(log_path)))
-    print_report(metrics)
+    print_metrics_report(compute_metrics(env))
 
 
 if __name__ == "__main__":

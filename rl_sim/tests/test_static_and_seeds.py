@@ -46,10 +46,7 @@ def test_same_seeds_reproduce_the_run() -> None:
     # Identical layout, and identical per-drone ACK counters.
     assert np.array_equal(a.positions[0], b.positions[0])
     for da, db in zip(a.env.drones, b.env.drones):
-        assert dict(da.link_sent) == dict(db.link_sent)
-        assert dict(da.link_acked) == dict(db.link_acked)
-        assert dict(da.link_lost_channel) == dict(db.link_lost_channel)
-        assert dict(da.link_lost_queue_full) == dict(db.link_lost_queue_full)
+        assert dict(da.link_stats) == dict(db.link_stats)
         assert da.packets_gs_acked == db.packets_gs_acked
 
     # Right down to each packet's route and fate.

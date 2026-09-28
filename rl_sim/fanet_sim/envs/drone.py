@@ -18,22 +18,38 @@ Link selection:
     ``neighbors`` (:meth:`update_neighbors`). Link existence is decided purely
     by the FSPL received-power test in :mod:`fanet_sim.envs.channel`.
 
-Queue:
-    One FIFO queue of at most ``config.QUEUE_CAPACITY`` packets. A packet
-    offered to a full queue is refused (:meth:`enqueue` returns False) and the
-    environment drops it with reason "queue_full". Each step the drone releases
-    at most ``config.MAX_TX_PER_STEP`` packets, oldest first
-    (:meth:`dequeue_for_send`). An M-drone's own new packets and the packets it
-    relays share that one queue and that one budget.
+Queues:
+    ONE FIFO QUEUE PER OUTGOING LINK — one for each current neighbour, plus one
+    for the GS link whenever the GS is in range. Each holds at most
+    ``config.QUEUE_CAPACITY`` packets and releases at most
+    ``config.MAX_TX_PER_STEP`` per step, oldest first. All of a drone's link
+    queues send in the same step: there is no collision model, so there is no
+    per-drone send limit. A packet put into a full link queue is refused
+    (:meth:`enqueue` returns False) and the environment drops it at this drone
+    with reason "queue_full".
+
+    The next hop — and therefore which queue a packet joins — is decided when
+    the packet is CREATED here or ARRIVES here, not when it is sent.
+
+    Receiving is unlimited: a drone accepts every packet that reaches it and
+    then routes it into one of its own link queues.
 
 ACK bookkeeping:
-    Every counter on a drone is built ONLY from information an ACK could carry
-    — never from the simulator's global view. Per outgoing link (keyed by
-    next-hop drone id, or the string "GS"): packets sent, acked, and the two
-    ways a send can fail. Per M-drone: packets it created, packets the GS
-    acknowledged, and packets whose TTL ran out with no GS ACK. See
-    :meth:`note_sent`, :meth:`note_hop_ack`, :meth:`note_created`,
-    :meth:`note_gs_ack` and :meth:`expire_unacked`.
+    Every counter on a drone is built ONLY from information the drone has
+    locally — a hop-by-hop ACK, an end-to-end GS ACK, or its own queues — never
+    from the simulator's global view. Per outgoing link (keyed by next-hop
+    drone id, or the string "GS"):
+
+        offered            packets this drone tried to put in that queue
+        dropped_queue_full those refused because the queue was full
+        sent               transmissions attempted
+        acked              transmissions the next hop confirmed receiving
+        lost_channel       transmissions lost in the channel
+        expired_in_queue   packets that died of TTL or hop limit while waiting
+
+    A queue-full drop needs no ACK: it happens at this drone, in this drone's
+    own queue. Per M-drone there is also the end-to-end view: packets created,
+    packets the GS acknowledged, and packets whose TTL ran out unacknowledged.
 """
 
 from __future__ import annotations
@@ -54,6 +70,24 @@ from fanet_sim.envs.packet import Packet
 #: A next-hop key: either a drone id, or the string "GS" for the ground station.
 NextHop = Union[int, str]
 
+#: What each drone tracks per outgoing link. ``offered`` is the denominator of
+#: that link's loss; ``dropped_queue_full``, ``lost_channel`` and
+#: ``expired_in_queue`` are the three ways an offered packet fails to get
+#: across.
+LINK_FIELDS = (
+    "offered",
+    "dropped_queue_full",
+    "sent",
+    "acked",
+    "lost_channel",
+    "expired_in_queue",
+)
+
+
+def _link_row() -> Dict[str, int]:
+    """Return a zeroed per-link counter row."""
+    return {field: 0 for field in LINK_FIELDS}
+
 
 class Drone:
     """A FANET drone that flies a mobility model and relays packets.
@@ -68,19 +102,19 @@ class Drone:
         end_point:   (x, y) end point (M-drones stop here).
         arrived:     True once an M-drone has reached its end point.
         energy:      Remaining energy in joules.
-        queue:       List of Packet objects this drone is holding.
+        link_queues: One FIFO packet list per outgoing link.
         candidates:  Dict mapping drone_id → Drone for every drone currently
                      in radio range.
         neighbors:   Dict mapping drone_id → Drone for every active link
                      (identical to *candidates* — there is no link cap).
                      Populated by the env each step.
         gs_position: Ground-station position as a NumPy array.
-        link_sent:   Per outgoing link: transmissions attempted.
-        link_acked:  Per outgoing link: transmissions the next hop accepted.
-        link_lost_channel:    Per outgoing link: sends lost in the channel.
-        link_lost_queue_full: Per outgoing link: sends refused by a full queue.
-        own_queue_full_drops: Own new packets refused by this drone's OWN full
-                     queue — no link was involved, so no per-link counter moves.
+        link_queues: Dict mapping next-hop key → that link's FIFO packet list.
+        link_stats:  Per outgoing link, a row of :data:`LINK_FIELDS` counts
+                     over the whole episode.
+        link_stats_measured: The same rows, counting only post-warm-up steps.
+        packets_*_measured: The same source counters, restricted to packets
+                     created inside the measurement window.
         packets_created:  Packets this drone originated (M-drones only).
         packets_gs_acked: Own packets the GS acknowledged (M-drones only).
         packets_lost_no_ack: Own packets whose TTL ran out with no GS ACK.
@@ -123,22 +157,30 @@ class Drone:
         # motion cost (Phase 4) does not get hidden inside the radio cost.
         self.energy_radio: float = config.INITIAL_ENERGY
         self.energy_motion: float = config.INITIAL_ENERGY
-        self.queue: List[Packet] = []
+        # One FIFO queue per outgoing link, created on first use. Keys are
+        # neighbour drone ids, plus "GS" for the ground-station link.
+        self.link_queues: Dict[NextHop, List[Packet]] = defaultdict(list)
         self.candidates: Dict[int, "Drone"] = {}
         self.neighbors: Dict[int, "Drone"] = {}
         self.gs_position: np.ndarray = gs_position.astype(np.float64)
 
         # --- ACK-derived counters (the drone's own view of the network) ---
-        # Keyed by next-hop: an int drone id, or the string "GS".
-        self.link_sent: Dict[NextHop, int] = defaultdict(int)
-        self.link_acked: Dict[NextHop, int] = defaultdict(int)
-        self.link_lost_channel: Dict[NextHop, int] = defaultdict(int)
-        self.link_lost_queue_full: Dict[NextHop, int] = defaultdict(int)
-        # End-to-end view, meaningful for M-drones (packet sources).
+        # Keyed by next-hop: an int drone id, or the string "GS". Each entry
+        # holds sent / acked / lost_channel / lost_queue_full.
+        # ``link_stats`` is the drone's full book; ``link_stats_measured``
+        # counts only what happened after the warm-up, and is what the reports
+        # use so the ACK view covers the same window as the ground truth.
+        self.link_stats: Dict[NextHop, Dict[str, int]] = defaultdict(_link_row)
+        self.link_stats_measured: Dict[NextHop, Dict[str, int]] = defaultdict(_link_row)
+        # End-to-end view, meaningful for M-drones (packet sources). The
+        # ``_measured`` variants count only packets created inside the
+        # measurement window.
         self.packets_created: int = 0
         self.packets_gs_acked: int = 0
         self.packets_lost_no_ack: int = 0
-        self.own_queue_full_drops: int = 0
+        self.packets_created_measured: int = 0
+        self.packets_gs_acked_measured: int = 0
+        self.packets_lost_no_ack_measured: int = 0
         self.outstanding: Dict[int, int] = {}
 
     # ------------------------------------------------------------------
@@ -260,32 +302,55 @@ class Drone:
     # Packet handling
     # ------------------------------------------------------------------
 
-    def queue_is_full(self) -> bool:
-        """True if the queue cannot accept another packet."""
-        return len(self.queue) >= config.QUEUE_CAPACITY
+    def queue_is_full(self, next_hop: NextHop) -> bool:
+        """True if this drone's queue for *next_hop* cannot accept another packet.
 
-    def enqueue(self, pkt: Packet) -> bool:
-        """Try to add a packet to the tail of this drone's FIFO queue.
+        Exact local knowledge: the queue belongs to this drone, so it needs no
+        ACK or estimate to answer.
 
         Args:
-            pkt: The Packet to buffer.
+            next_hop: Drone id, or "GS".
+        """
+        return len(self.link_queues[next_hop]) >= config.QUEUE_CAPACITY
+
+    def queue_len(self, next_hop: NextHop) -> int:
+        """Return how many packets are waiting on the link to *next_hop*."""
+        return len(self.link_queues[next_hop])
+
+    def total_queued(self) -> int:
+        """Return how many packets this drone is holding across all link queues."""
+        return sum(len(q) for q in self.link_queues.values())
+
+    def queued_packets(self) -> List[Packet]:
+        """Return every packet this drone is holding, across all link queues."""
+        return [pkt for queue in self.link_queues.values() for pkt in queue]
+
+    def enqueue(self, next_hop: NextHop, pkt: Packet) -> bool:
+        """Try to add a packet to the tail of the queue for *next_hop*.
+
+        Args:
+            next_hop: The link this packet is committed to. Chosen when the
+                      packet is created here or arrives here, and fixed from
+                      then on.
+            pkt:      The Packet to buffer.
 
         Returns:
-            True if the packet was accepted, False if the queue was already at
-            ``config.QUEUE_CAPACITY`` (the caller must then drop the packet
-            with reason "queue_full").
+            True if the packet was accepted, False if that link's queue was
+            already at ``config.QUEUE_CAPACITY`` (the caller must then drop the
+            packet with reason "queue_full").
         """
-        if self.queue_is_full():
+        if self.queue_is_full(next_hop):
             return False
-        self.queue.append(pkt)
+        self.link_queues[next_hop].append(pkt)
         return True
 
-    def dequeue_for_send(self, n: Optional[int] = None) -> List[Packet]:
-        """Remove and return this step's send batch: the *n* oldest packets.
+    def dequeue_head(self, next_hop: NextHop, n: Optional[int] = None) -> List[Packet]:
+        """Remove and return this step's send batch for ONE link.
 
         Args:
-            n: How many packets to release. Defaults to
-               ``config.MAX_TX_PER_STEP``.
+            next_hop: The link to release from.
+            n:        How many packets to release. Defaults to
+                      ``config.MAX_TX_PER_STEP``.
 
         Returns:
             Up to *n* Packet objects, oldest first (may be empty).
@@ -293,51 +358,97 @@ class Drone:
         if n is None:
             n = config.MAX_TX_PER_STEP
         n = max(0, int(n))
-        batch, self.queue = self.queue[:n], self.queue[n:]
+        queue = self.link_queues[next_hop]
+        batch, self.link_queues[next_hop] = queue[:n], queue[n:]
         return batch
 
     # ------------------------------------------------------------------
     # ACK bookkeeping (built only from what an ACK tells this drone)
     # ------------------------------------------------------------------
 
-    def note_sent(self, next_hop: NextHop) -> None:
-        """Record one transmission attempt toward *next_hop*."""
-        self.link_sent[next_hop] += 1
+    def _bump_link(self, next_hop: NextHop, field: str, measured: bool) -> None:
+        """Add one to *field* of this drone's counter row for *next_hop*.
 
-    def note_hop_ack(self, next_hop: NextHop, outcome: str) -> None:
+        Args:
+            next_hop: Drone id, or "GS".
+            field:    One of :data:`LINK_FIELDS`.
+            measured: Whether the warm-up is over, so the measured copy of the
+                      row should move too.
+        """
+        self.link_stats[next_hop][field] += 1
+        if measured:
+            self.link_stats_measured[next_hop][field] += 1
+
+    def note_offered(self, next_hop: NextHop, measured: bool = True) -> None:
+        """Record that this drone tried to put a packet on the link to *next_hop*.
+
+        This is the denominator of that link's loss.
+
+        Args:
+            next_hop: Drone id, or "GS".
+            measured: True once the warm-up is over.
+        """
+        self._bump_link(next_hop, "offered", measured)
+
+    def note_queue_full(self, next_hop: NextHop, measured: bool = True) -> None:
+        """Record that the queue for *next_hop* refused a packet.
+
+        No ACK is involved: the full queue is this drone's own.
+
+        Args:
+            next_hop: Drone id, or "GS".
+            measured: True once the warm-up is over.
+        """
+        self._bump_link(next_hop, "dropped_queue_full", measured)
+
+    def note_expired_in_queue(
+        self, next_hop: NextHop, measured: bool = True
+    ) -> None:
+        """Record that a packet died of TTL or hop limit while waiting to be sent.
+
+        Args:
+            next_hop: The link whose queue the packet was waiting on.
+            measured: True once the warm-up is over.
+        """
+        self._bump_link(next_hop, "expired_in_queue", measured)
+
+    def note_sent(self, next_hop: NextHop, measured: bool = True) -> None:
+        """Record one transmission attempt toward *next_hop*.
+
+        Args:
+            next_hop: Drone id, or "GS".
+            measured: True once the warm-up is over.
+        """
+        self._bump_link(next_hop, "sent", measured)
+
+    def note_hop_ack(
+        self, next_hop: NextHop, outcome: str, measured: bool = True
+    ) -> None:
         """Record what the hop-by-hop ACK reported for the last send.
+
+        A send either arrives or is lost in the channel — the receiver never
+        refuses it, since receiving is unlimited. Queue-full drops happen at
+        the sender and are recorded by :meth:`note_queue_full` instead.
 
         Args:
             next_hop: The drone id (or "GS") the packet was sent to.
-            outcome:  ``"ok"`` if the next hop accepted the packet,
-                      ``"channel"`` if the transmission was lost in the
-                      channel, ``"queue_full"`` if the next hop's queue was
-                      full.
+            outcome:  ``"ok"`` or ``"channel"``.
+            measured: True once the warm-up is over.
 
         Raises:
-            ValueError: If *outcome* is not one of the three values above.
+            ValueError: If *outcome* is neither of those two values.
         """
-        if outcome == "ok":
-            self.link_acked[next_hop] += 1
-        elif outcome == "channel":
-            self.link_lost_channel[next_hop] += 1
-        elif outcome == "queue_full":
-            self.link_lost_queue_full[next_hop] += 1
-        else:
+        field = {"ok": "acked", "channel": "lost_channel"}.get(outcome)
+        if field is None:
             raise ValueError(f"unknown hop-ACK outcome: {outcome!r}")
+        self._bump_link(next_hop, field, measured)
 
     def note_created(self, pkt: Packet) -> None:
         """Record that this drone originated *pkt* and now awaits its GS ACK."""
         self.packets_created += 1
+        if config.in_measurement_window(pkt.created_at):
+            self.packets_created_measured += 1
         self.outstanding[pkt.packet_id] = pkt.created_at
-
-    def note_own_queue_full(self) -> None:
-        """Record that one of this drone's own new packets hit its full queue.
-
-        Local knowledge, not an ACK: the packet never reached a link, so none
-        of the per-link counters move.
-        """
-        self.own_queue_full_drops += 1
 
     def note_gs_ack(self, packet_id: int) -> None:
         """Record the end-to-end GS ACK for one of this drone's own packets.
@@ -346,8 +457,11 @@ class Drone:
             packet_id: The acknowledged packet. Ignored if this drone is not
                        waiting on it.
         """
-        if self.outstanding.pop(packet_id, None) is not None:
+        created_at = self.outstanding.pop(packet_id, None)
+        if created_at is not None:
             self.packets_gs_acked += 1
+            if config.in_measurement_window(created_at):
+                self.packets_gs_acked_measured += 1
 
     def expire_unacked(self, current_step: int, ttl: Optional[int] = None) -> int:
         """Give up on own packets whose TTL ran out with no GS ACK.
@@ -371,7 +485,9 @@ class Drone:
             if current_step - created >= ttl
         ]
         for pid in timed_out:
-            del self.outstanding[pid]
+            created_at = self.outstanding.pop(pid)
+            if config.in_measurement_window(created_at):
+                self.packets_lost_no_ack_measured += 1
         self.packets_lost_no_ack += len(timed_out)
         return len(timed_out)
 
@@ -410,7 +526,7 @@ class Drone:
             - ``velocity``            (vx, vy) current velocity vector.
             - ``distance_to_gs``      Euclidean distance to the ground station.
             - ``residual_energy``     Remaining energy in joules.
-            - ``queue_length``        Number of packets currently buffered.
+            - ``queue_length``        Packets buffered across all link queues.
             - ``num_neighbors``       Number of drones within comm range.
             - ``neighbor_ids``        List of neighbour drone IDs.
             - ``neighbor_positions``  List of (x, y) for each neighbour.
@@ -441,7 +557,7 @@ class Drone:
             "residual_energy": self.energy_radio + self.energy_motion,
             "energy_radio": self.energy_radio,
             "energy_motion": self.energy_motion,
-            "queue_length": len(self.queue),
+            "queue_length": self.total_queued(),
             "num_neighbors": len(self.neighbors),
             "neighbor_ids": neighbor_ids,
             "neighbor_positions": neighbor_positions,
@@ -455,5 +571,5 @@ class Drone:
         return (
             f"Drone(id={self.drone_id}, type={self.drone_type}, "
             f"pos={pos}, e_radio={self.energy_radio:.0f}J, "
-            f"e_motion={self.energy_motion:.0f}J, queue={len(self.queue)})"
+            f"e_motion={self.energy_motion:.0f}J, queued={self.total_queued()})"
         )
