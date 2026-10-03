@@ -20,8 +20,14 @@ logs/
 # Animations produced by main.py / eval.py / demo_vis.py.
 *.gif
 
-# Generated figures and experiment output (regenerable from the scripts).
-rl_sim/out/
+# Experiment output. The FIGURES are committed -- they are the Phase-1a
+# results we refer to, and regenerating them takes a full 160-run grid. The
+# CSVs behind them stay out: they are large, churn on every rerun, and the
+# scripts reproduce them exactly.
+# NOTE: the directory itself must not be excluded, or git will not descend
+# into it and the negation below would never be seen.
+rl_sim/out/*
+!rl_sim/out/*.png
 
 # ---------------------------------------------------------------------------
 # Scratch / temp
