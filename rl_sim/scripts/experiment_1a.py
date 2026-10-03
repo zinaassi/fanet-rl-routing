@@ -71,7 +71,7 @@ RUN_COLUMNS = [
     "per_link_expired",
     "mean_queue_occupancy", "max_queue_occupancy",
     "mean_delay_steps", "mean_hops",
-    "isolated_M_count", "drones_in_GS_range",
+    "isolated_M_count", "drones_in_GS_range", "placement_draws",
     "views_agree",
 ]
 
@@ -205,6 +205,7 @@ def run_one(
             "mean_hops": truth["mean_hops"] or 0.0,
             "isolated_M_count": isolated_m,
             "drones_in_GS_range": in_gs_range,
+            "placement_draws": env.placement_draws,
             "views_agree": not metrics["discrepancies"],
         }
         # The five causes are shares of the same denominator, so they must add
@@ -253,6 +254,14 @@ def run_grid(placements: int) -> Tuple[List[Dict[str, Any]], Dict[Tuple[str, int
                     placement_seed=placement_seed,
                     run_seed=placement_seed,
                 )
+
+                if row["isolated_M_count"] != 0:
+                    print("\nSTOP: a run had an M-drone with no path to the GS,"
+                          " which the layout filter should have excluded.")
+                    print(f"  run: routing={routing} load={load_ms}ms "
+                          f"placement_seed={placement_seed}   "
+                          f"isolated_M_count={row['isolated_M_count']}")
+                    raise SystemExit(1)
 
                 if not row["views_agree"]:
                     print("\nSTOP: the ACK-based view disagrees with ground truth.")
@@ -766,7 +775,11 @@ def main() -> None:
     labels, node_index = placement_labels(1)
     plot_link_matrices(link_stats_p1, labels, node_index, matrix_path)
 
+    draws = [row["placement_draws"] for row in rows]
     print()
+    print(f"  placement draws to find a connected layout: "
+          f"mean {statistics.fmean(draws):.2f}, max {max(draws)}")
+    print(f"  isolated M-drones: 0 in all {len(rows)} runs")
     print(f"  views agreed in all {len(rows)} runs")
     for path in (runs_path, summary_path, paired_path,
                  line_path, heat_path, matrix_path):

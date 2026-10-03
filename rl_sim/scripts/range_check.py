@@ -6,9 +6,13 @@ count as linked when their distance is <= the range under test, and a drone is
 in direct GS range when it is <= the range from the ground station. The FSPL
 channel, the transmit power and the receiver sensitivity are not touched.
 
-Drones are placed exactly as the simulator places them — uniformly at random in
-the configured arena, using the same placement seed stream — so the layouts are
-the ones the experiment actually runs on.
+Drones are placed uniformly at random in the configured arena from the same
+placement seed stream the simulator uses.
+
+This script deliberately takes the FIRST layout each seed produces, WITHOUT the
+simulator's ``REQUIRE_CONNECTED_M`` filter. The filter exists precisely because
+some layouts strand an M-drone; measuring how often that happens is this
+script's job, so filtering here would answer its own question.
 
 For each candidate range it reports, over 100 placements:
     * % of M-drones with a path to the GS

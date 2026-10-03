@@ -33,6 +33,13 @@ be written NEW; the archived RL code is not to be reused.
 - World: 2D, 900x900 m, GS at (450,450), 18 M + 7 C drones, placed
   uniformly at random. Static. Time step 100 ms. Range ~250 m (FSPL,
   -54 dBm).
+- Layout filter: only placements where EVERY M-drone has a path to the
+  GS are used (same link rule as the simulator, paths may run through
+  any drone, C-drones included; C-drones themselves need no path). A
+  rejected layout is discarded and another drawn from the same
+  placement stream, so a seed still names one accepted layout.
+  Greedy can still hit a dead end -- a drone with a path to the GS but
+  no neighbor closer to it -- and those still drop as no_route.
 - Link queues: one FIFO queue per outgoing link (per neighbor, plus
   the GS link when in range). Capacity 10 per link; each link sends at
   most 1 packet per step; a drone's links all send in the same step
@@ -42,8 +49,8 @@ be written NEW; the archived RL code is not to be reused.
   arrives, the drone picks the next hop and puts it in that link's
   queue. Arrivals within a step are processed in random (reproducible)
   order. Arrived packets wait at least one step.
-- Channel loss = exp(-k*M), M = signal margin in dB (1 at the range
-  edge, ~0 up close).
+- Channel loss = exp(-k*M), k = 0.8, M = signal margin in dB (1 at the
+  range edge, ~0 up close).
 - Link loss = 1 - (1 - channel loss) * (1 - queue_full), where
   queue_full = 1 if the sender's own queue for that link is full.
 - GREEDY: among neighbors strictly closer to the GS, the lowest link
@@ -58,7 +65,9 @@ be written NEW; the archived RL code is not to be reused.
 - Packets that arrive already dead are retired on arrival
   (expired_on_arrival).
 - Loads: each M-drone creates one packet every 1000/500/200/100 ms.
-  Metrics use packets created in steps [50, 950) of 1000.
+  200 ms is the working load for the next phases; the experiment still
+  sweeps all four. Metrics use packets created in steps [50, 950) of
+  1000.
 - Seeds: separate placement, channel/traffic and routing streams;
   greedy and random run on identical placement and traffic.
 - Neighbor knowledge: each drone knows its neighbors' positions and
@@ -66,11 +75,10 @@ be written NEW; the archived RL code is not to be reused.
   simulated.
 
 ## Open questions (do NOT decide these; ask)
-Radio range choice; the value of k; ACK details (routed or ideal,
-capacity use, retransmissions); how to handle layouts with isolated
-M-drones; RL reward form; whether the topology agent joins the static
-phase; link-break handling and hello messages in the dynamic phase;
-a near-full load (e.g. 90 ms).
+ACK details (routed or ideal, capacity use, retransmissions); RL reward
+form; whether the topology agent joins the static phase; link-break
+handling and hello messages in the dynamic phase; a near-full load
+(e.g. 90 ms).
 
 ## IGNORE / LEAVE BEHIND
 We keep ONLY the simulator: world, drones, placement/mobility, channel,

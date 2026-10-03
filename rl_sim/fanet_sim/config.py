@@ -62,6 +62,25 @@ COMM_RANGE: float = _MAX_LINK_DISTANCE_M
 STATIC_MODE: bool = True         # no movement during a run                  [DECIDED]
 
 # ---------------------------------------------------------------------------
+# Layout filter
+# ---------------------------------------------------------------------------
+# Only accept placements in which EVERY M-drone has a path to the GS, using the
+# same link rule as the simulator (an edge wherever the FSPL test passes, i.e.
+# distance <= MAX_LINK_DISTANCE_M) and allowing paths through any drone,
+# C-drones included. C-drones themselves need no path.
+#
+# A rejected layout is discarded and another is drawn from the SAME placement
+# stream, so a given placement_seed still always yields the same accepted
+# layout. FANETEnv.placement_draws records how many draws that took.
+#
+# This removes stranded M-drones, whose packets are lost as "no_route" no
+# matter what the routing rule does. Greedy can still reach a dead end -- a
+# drone that has a path to the GS but no neighbour closer to it -- and those
+# still drop as "no_route".
+REQUIRE_CONNECTED_M: bool = True  # every M-drone must reach the GS        [DECIDED]
+MAX_PLACEMENT_DRAWS: int = 10000  # give up rather than loop forever
+
+# ---------------------------------------------------------------------------
 # Energy
 # ---------------------------------------------------------------------------
 INITIAL_ENERGY: float = 207792.0  # joules  (11.1 V × 5200 mAh, from IQMR)
@@ -78,7 +97,9 @@ ENERGY_PER_IDLE: float = 0.001    # joules per timestep listening (idle radio)
 #     10 steps = 1000 ms    5 steps = 500 ms    2 steps = 200 ms    1 step = 100 ms
 # Each M-drone also gets a random start offset in [0, interval), so they do not
 # all create their packets on the same step.
-PACKET_INTERVAL_STEPS: int = 2    # 200 ms                                [DECIDED set]
+# 200 ms is the working load for the next phases; the experiment still sweeps
+# all four.
+PACKET_INTERVAL_STEPS: int = 2    # 200 ms — the working load             [DECIDED]
 TRAFFIC_LOADS_MS: tuple = (1000, 500, 200, 100)   # the grid in item K
 RANDOM_TRAFFIC_OFFSETS: bool = True   # PROVISIONAL - to confirm
 
@@ -111,7 +132,7 @@ MAX_TX_PER_STEP: int = 1          # packets each LINK queue may send per step,
 #     p_loss = exp(-CHANNEL_LOSS_K * M),  M = received power - sensitivity, in dB
 # p_loss is 1 when there is no link (M <= 0). A lost transmission is dropped
 # with reason "channel". The same model applies to the last hop into the GS.
-CHANNEL_LOSS_K: float = 0.4       # PROVISIONAL - to confirm
+CHANNEL_LOSS_K: float = 0.8       # decay rate per dB of margin           [DECIDED]
 
 # ---------------------------------------------------------------------------
 # Simulation

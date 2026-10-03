@@ -35,6 +35,21 @@ Twenty-five drones are placed uniformly at random and **never move**:
 
 One simulation step is 100 ms, and a run is 1000 steps.
 
+**Not every random layout is used.** A layout is accepted only if **every
+M-drone has a path to the GS**, using the same link rule as the simulator and
+allowing the path to run through any drone, C-drones included. C-drones
+themselves need no path. A rejected layout is discarded and another is drawn
+from the same placement stream, so a given `placement_seed` still names one
+specific accepted layout; `FANETEnv.placement_draws` records how many draws it
+took.
+
+The filter exists because a stranded M-drone loses every packet it creates as
+`no_route`, whatever the routing rule does — that is a property of the layout,
+not of the routing, and it swamps the comparison. It does **not** remove every
+`no_route` drop: greedy can still reach a dead end, a drone that has a path to
+the GS but no neighbour closer to it. `scripts/range_check.py` deliberately
+runs **unfiltered**, since measuring how often isolation happens is its job.
+
 ### Radio and channel
 
 Link existence is decided by a free-space path loss (FSPL) model: two endpoints
@@ -50,9 +65,9 @@ channel_loss = exp(-k · M)      M = received power − sensitivity, in dB
 ```
 
 so loss is 1 exactly at the range edge (M = 0) and falls away fast as endpoints
-close in — with k = 0.4 it is about 0.46 at 200 m, 0.042 at 100 m and 1.4e-5 at
-10 m. `k` is a modelling choice, not a measurement. Run
-`scripts/plot_ploss.py` to see the curve.
+close in — with k = 0.8 it is about 0.21 at 200 m, 0.0017 at 100 m and 1.95e-10
+at 10 m. `k` is a modelling choice, not a measurement. Run
+`scripts/plot_ploss.py` to see the curve for k = 0.2, 0.4 and 0.8.
 
 ### Link queues
 
@@ -170,7 +185,9 @@ cannot be received and re-sent in the same step. A packet created in stage 3
 
 Each M-drone creates one packet every 1000, 500, 200 or 100 ms (10, 5, 2 or 1
 steps). Each gets a random start offset inside its interval, drawn once at
-reset, so they do not all create on the same step.
+reset, so they do not all create on the same step. **200 ms is the working
+load** for the next phases and is the default; the experiment still sweeps all
+four.
 
 Metrics count only packets **created in steps [50, 950)** of the 1000. The
 warm-up cut of 50 steps lets queues fill before anything is measured; the drain
@@ -205,7 +222,7 @@ All commands below run from the `rl_sim/` directory:
 cd rl_sim
 ```
 
-**Tests** — 115 of them, a few seconds:
+**Tests** — 152 of them, a few seconds:
 
 ```bash
 python -m pytest tests/ -q
@@ -260,12 +277,14 @@ defaults and carry a `PROVISIONAL - to confirm` comment in the file.
 | `NUM_M_DRONES` | 18 | Mission drones: create and relay. | DECIDED |
 | `NUM_C_DRONES` | 7 | Communication drones: relay only. | DECIDED |
 | `STATIC_MODE` | True | Nothing moves; mobility code is kept for Phase 2. | DECIDED |
+| `REQUIRE_CONNECTED_M` | True | Only accept layouts where every M-drone can reach the GS. | DECIDED |
+| `MAX_PLACEMENT_DRAWS` | 10000 | Give up rather than loop forever looking for one. | — |
 | `QUEUE_CAPACITY` | 10 | Packets per **link** queue. | DECIDED |
 | `MAX_TX_PER_STEP` | 1 | Packets each **link** queue sends per step. | DECIDED |
-| `CHANNEL_LOSS_K` | 0.4 | Decay rate `k` in `exp(-k·M)`. | PROVISIONAL |
+| `CHANNEL_LOSS_K` | 0.8 | Decay rate `k` in `exp(-k·M)`. | DECIDED |
 | `PACKET_TTL` | 50 steps | Packet lifetime. | DECIDED |
 | `MAX_HOPS` | 10 | Most hops a packet may take. | DECIDED |
-| `PACKET_INTERVAL_STEPS` | 2 (200 ms) | Steps between packets at each M-drone. | DECIDED set |
+| `PACKET_INTERVAL_STEPS` | 2 (200 ms) | Steps between packets at each M-drone; the working load. | DECIDED |
 | `TRAFFIC_LOADS_MS` | (1000, 500, 200, 100) | The four loads in the experiment grid. | DECIDED |
 | `RANDOM_TRAFFIC_OFFSETS` | True | Give each M-drone a random phase in its interval. | PROVISIONAL |
 | `PACKET_SIZE` | 512 bytes | Informational; nothing depends on it. | DECIDED |
@@ -298,7 +317,7 @@ all of it regenerates from the commands above.
 
 | File | Contents |
 |---|---|
-| `1a_runs.csv` | One row per experiment run (160): seeds, rule, load, created/delivered, total loss and its five causes as shares of created, pooled per-link loss and its three parts, queue occupancy, delay, hops, isolated M-drone count, drones in GS range, and whether the two views agreed. |
+| `1a_runs.csv` | One row per experiment run (160): seeds, rule, load, created/delivered, total loss and its five causes as shares of created, pooled per-link loss and its three parts, queue occupancy, delay, hops, isolated M-drone count (0 under the filter), drones in GS range, how many layout draws the seed needed, and whether the two views agreed. |
 | `1a_summary.csv` | Mean and standard deviation of every numeric column, per (routing, load). |
 | `1a_paired.csv` | Per load: mean and std of `greedy − random` total loss on identical seeds, and how many of the 20 placements greedy lost less on. |
 | `1a_total_loss_vs_load.png` | Total packet loss against offered load, one line per rule, mean with std error bars. |
@@ -319,10 +338,9 @@ per packet event, per-step network state and per-drone state).
   medium, which is exactly why each link gets its own queue and its own
   per-step budget, and why a drone can send on all its links at once. A real
   radio could not.
-- **The channel-loss curve is a modelling choice.** `exp(-k · M)` with k = 0.4
-  is a plausible shape, not a measured one, and k is marked PROVISIONAL. It
-  drives the results directly, so it deserves scrutiny before any conclusion
-  rests on it.
+- **The channel-loss curve is a modelling choice.** `exp(-k · M)` with k = 0.8
+  is a plausible shape, not a measured one. It drives the results directly, so
+  it deserves scrutiny before any conclusion rests on it.
 - **Ideal ACKs.** Instant, never lost, no capacity used, no retransmissions.
   Real ACKs would cost airtime and could themselves be lost.
 - **Neighbor knowledge:** each drone knows its own position (GPS), the GS
@@ -331,10 +349,12 @@ per packet event, per-step network state and per-drone state).
   messages themselves are not simulated: they are free, never lost and always
   up to date. This matters little in the static Phase 1 and will be revisited
   for the dynamic Phase 2.
-- **Isolated drones are not handled specially.** In a random 900 × 900 m layout
-  at ~250 m range, some M-drones have no path to the GS at all; every packet
-  they create is lost as `no_route`. `scripts/range_check.py` quantifies how
-  often. What to do about it is an open question.
+- **Layouts are filtered, so the results are conditional.** Only placements in
+  which every M-drone can reach the GS are simulated. At ~250 m range about
+  half of all random layouts strand at least one M-drone
+  (`scripts/range_check.py` measures this), and those layouts are excluded.
+  Every number here therefore describes a *connected* deployment, not an
+  arbitrary one.
 - **Energy is tracked but constrains nothing.** No drone ever runs out.
 
 ---
@@ -369,8 +389,9 @@ per packet event, per-step network state and per-drone state).
 │   │   ├── plot_ploss.py     The channel-loss curve.
 │   │   └── analyze.py        Older stand-alone analyser for the JSONL logs.
 │   │                         Nothing in the Phase-1a flow calls it.
-│   ├── tests/              115 tests: channel, queues, routing, conservation,
-│   │                       ACK-vs-ground-truth, static world, reproducibility.
+│   ├── tests/              152 tests: channel, queues, routing, conservation,
+│   │                       ACK-vs-ground-truth, layout filter, static world,
+│   │                       reproducibility.
 │   └── out/                Generated results (gitignored).
 │
 ├── archive/                NOT PART OF THE PROJECT. Kept for reference only.

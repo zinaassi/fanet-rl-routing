@@ -235,24 +235,73 @@ def test_random_choices_hold_during_a_real_run() -> None:
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize("routing", ["greedy", "random"])
-def test_isolated_drone_drops_as_no_route(routing: str) -> None:
-    """A holder with no usable next hop drops its packet as "no_route"."""
-    trace = run_episode(steps=120, routing=routing, placement_seed=42, run_seed=4)
-    env = trace.env
+def test_a_holder_with_no_usable_next_hop_drops_as_no_route(routing: str) -> None:
+    """A packet at a drone with nothing to forward to is dropped "no_route".
 
-    isolated = [d for d in env.drones if not d.neighbors]
-    if not isolated:
-        pytest.skip("this placement has no isolated drone")
+    Driven directly rather than hunting for such a drone in a random layout:
+    the connectivity filter removes stranded M-drones, so a run may contain no
+    "no_route" drop at all.
+    """
+    import os
 
-    reasons = {
-        pkt.drop_reason.label
-        for pkt in env.dropped
-        if pkt.drop_reason is not None
-        and pkt.source_id in {d.drone_id for d in isolated}
-        and pkt.hop_count == 0
-    }
-    assert reasons <= {"no_route", "queue_full"}
-    assert "no_route" in reasons
+    from fanet_sim.envs.packet import DropReason
+
+    env = FANETEnv(routing=routing, log_path=os.devnull)
+    env.reset()
+
+    # A drone out of GS range, with its links cleared, has nowhere to send.
+    drone = next(
+        d for d in env.drones
+        if "GS" not in env._next_hop_candidates(d)
+    )
+    drone.neighbors = {}
+    drone.candidates = {}
+    assert env._next_hop_candidates(drone) == {}
+
+    pkt = _factory_for(env).create(source_id=drone.drone_id, created_at=0)
+    env.all_packets.append(pkt)
+    env._route_into_queue(drone, pkt, measured=False)
+
+    assert pkt.dropped
+    assert pkt.drop_reason is DropReason.NO_ROUTE
+    assert drone.total_queued() == 0
+
+
+def test_greedy_dead_end_drops_as_no_route() -> None:
+    """A drone with neighbours but none closer to the GS still drops no_route.
+
+    This is the case the layout filter does NOT remove: the drone has a path to
+    the GS through the graph, but greedy's progress condition finds nothing to
+    hand the packet to.
+    """
+    import os
+
+    from fanet_sim.envs.packet import DropReason
+
+    env = FANETEnv(routing="greedy", log_path=os.devnull)
+    env.reset()
+
+    drone = next(d for d in env.drones if d.neighbors)
+    # Force every neighbour to sit further from the GS than the holder.
+    holder_dist = euclidean_distance(drone.position, env.gs_position)
+    away = env.gs_position + (drone.position - env.gs_position) * (
+        (holder_dist + 50.0) / max(holder_dist, 1e-9)
+    )
+    for neighbour in drone.neighbors.values():
+        neighbour.position = away.copy()
+
+    candidates = env._next_hop_candidates(drone)
+    assert candidates, "the drone should still have neighbours"
+    assert "GS" not in candidates or True  # GS, if in range, would qualify
+    if "GS" in candidates:
+        pytest.skip("this drone can reach the GS directly, so it is no dead end")
+
+    pkt = _factory_for(env).create(source_id=drone.drone_id, created_at=0)
+    env.all_packets.append(pkt)
+    env._route_into_queue(drone, pkt, measured=False)
+
+    assert pkt.dropped
+    assert pkt.drop_reason is DropReason.NO_ROUTE
 
 
 def test_unknown_routing_rule_is_rejected() -> None:

@@ -53,6 +53,7 @@ import os
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple
 
+import networkx as nx
 import numpy as np
 
 from fanet_sim import config
@@ -61,6 +62,7 @@ from fanet_sim.envs.channel import are_connected, euclidean_distance
 from fanet_sim.envs.drone import Drone, NextHop, _link_row
 from fanet_sim.envs.packet import DropReason, Packet, PacketFactory
 from fanet_sim.utils.event_log import EventLogger
+from fanet_sim.utils.metrics import build_graph_with_gs
 from fanet_sim.utils.metrics import connectivity_sample
 
 
@@ -206,6 +208,8 @@ class FANETEnv:
         active_links:     Set of (id_a, id_b) pairs that were active this step
                           (used by the visualiser).
         tx_events:        List of (from_id, to_id) transmissions this step.
+        placement_draws:  Layouts drawn before one passed the connectivity
+                          filter (1 = the first one did).
         link_stats:       Ground-truth per-link counters, keyed (from, to).
         link_stats_measured: The same, counting only post-warm-up steps.
         queue_samples:    Per-step link-queue occupancy, sampled after warm-up.
@@ -291,6 +295,9 @@ class FANETEnv:
         self.expired_on_arrival_measured: int = 0
         # Per-M-drone traffic phase, drawn in reset().
         self._traffic_offset: Dict[int, int] = {}
+        # How many layouts had to be drawn before one was accepted by the
+        # connectivity filter. 1 means the first draw passed.
+        self.placement_draws: int = 0
 
         # Stage-1 event logger
         if log_path is None:
@@ -354,6 +361,8 @@ class FANETEnv:
                 "speed_max": config.DRONE_SPEED_MAX,
                 "m_drone_mobility": config.M_DRONE_MOBILITY,
                 "static_mode": config.STATIC_MODE,
+                "require_connected_m": config.REQUIRE_CONNECTED_M,
+                "placement_draws": self.placement_draws,
                 "area_width": config.WIDTH,
                 "area_height": config.HEIGHT,
             },
@@ -407,7 +416,61 @@ class FANETEnv:
         return {d.drone_id: d.get_state() for d in self.drones}
 
     def _create_drones(self) -> List[Drone]:
-        """Create and return all drones.
+        """Draw layouts until one is acceptable, and return its drones.
+
+        With ``config.REQUIRE_CONNECTED_M`` set, a layout is accepted only if
+        every M-drone has a path to the GS. A rejected layout is discarded and
+        another is drawn from the SAME placement stream, so a given
+        placement_seed still always produces the same accepted layout. The
+        number of draws is recorded in :attr:`placement_draws`.
+
+        Returns:
+            List of Drone objects (M-drones first, then C-drones).
+
+        Raises:
+            RuntimeError: If no acceptable layout turns up within
+                ``config.MAX_PLACEMENT_DRAWS`` draws.
+        """
+        for draw in range(1, config.MAX_PLACEMENT_DRAWS + 1):
+            drones = self._draw_drones()
+            if not config.REQUIRE_CONNECTED_M or self._all_m_reach_gs(drones):
+                self.placement_draws = draw
+                return drones
+
+        raise RuntimeError(
+            f"no layout with every M-drone connected to the GS after "
+            f"{config.MAX_PLACEMENT_DRAWS} draws (placement_seed="
+            f"{self.placement_seed})"
+        )
+
+    def _all_m_reach_gs(self, drones: List[Drone]) -> bool:
+        """True if every M-drone has some path to the GS.
+
+        Uses the simulator's own link rule — an edge wherever
+        :func:`are_connected` passes — and allows paths through any drone,
+        C-drones included. C-drones themselves need no path.
+
+        Args:
+            drones: A candidate fleet.
+
+        Returns:
+            Whether the layout is acceptable.
+        """
+        # The link sets are what build_graph_with_gs reads, so populate them on
+        # the candidate fleet before asking.
+        for drone in drones:
+            drone.update_candidates(drones)
+        for drone in drones:
+            drone.update_neighbors()
+
+        graph, gs_label = build_graph_with_gs(drones, self.gs_position)
+        reachable = nx.node_connected_component(graph, gs_label)
+        return all(
+            d.drone_id in reachable for d in drones if d.drone_type == "M"
+        )
+
+    def _draw_drones(self) -> List[Drone]:
+        """Draw one candidate fleet from the placement stream.
 
         Every drone is placed uniformly at random inside the arena. While
         ``config.STATIC_MODE`` is True that position is also its end point and
