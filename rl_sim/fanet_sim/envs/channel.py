@@ -1,70 +1,54 @@
 """
-channel.py — Free-Space Path Loss (FSPL) channel model.
+channel.py — Packet loss versus distance, and what counts as a link.
 
-Replaces the previous distance-cutoff model. Link existence is no longer a
-fixed 250 m sphere; it is now determined by whether the received signal
-power clears the receiver sensitivity threshold.
+Loss model
+----------
+A logistic curve in DISTANCE, fitted to measured UAV-to-UAV links in
+
+    Rosati et al., "Dynamic Routing for Flying Ad Hoc Networks",
+    arXiv:1406.4399
+
+    p_loss(d) = 1 / (1 + exp(-s * (d - D50)))
+
+        d   = distance between sender and receiver, in metres
+        D50 = config.LOSS_50_DISTANCE_M, the distance where loss is 50%
+        s   = config.LOSS_SLOPE_PER_M, the measured steepness
+
+With D50 = 356 m and s = 0.025 this is the paper's
+``1 / (1 + exp(-(0.025*d - 8.9)))``:
+
+    d (m)     100     200     250     270     300     356     400     540
+    p_loss  0.0017  0.0198  0.0661  0.1044  0.1978  0.5000  0.7503  0.9900
+
+The curve never reaches 0 or 1 exactly; it only approaches them. The same
+curve governs the last hop into the ground station — the GS is just another
+endpoint.
+
+Link existence
+--------------
+A link exists while its loss stays under ``config.LINK_MAX_LOSS`` (0.99), which
+puts the edge at ~539.8 m. This is the ONE rule used everywhere: neighbour
+sets, the GS link, the connected-layout filter and the range check. Distance
+alone decides it, through the curve.
 
 Assumptions
 -----------
-* 2-D free-space propagation. No obstruction, no terrain, no multipath,
-  no fading. "Drones can see each other" means "received FSPL signal
-  >= receiver sensitivity".
-* No MAC layer, no interference model, no SNR-based bit-rate adaptation.
-  These are deferred to a later phase.
-* All drones use identical radios (same Pt, Gt, Gr, sensitivity). The GS
-  uses the same parameters too — it is treated as just another endpoint
-  for the FSPL test.
+* 2-D. No altitude, terrain or obstruction.
+* No MAC layer, no interference model, no collisions.
+* Every endpoint has the same radio, the GS included.
+* Loss depends on distance only — not on traffic, antenna orientation or
+  interference from other transmissions.
 
-Parameter choices (anchored to IQMR (Sharvari et al., 2024, arXiv:2408.09109))
------------------------------------------------------------------------------
-    PT_DBM                  =  30 dBm    1 W — matches IQMR transmit power
-    GT_DBI = GR_DBI         =   2 dBi    small omnidirectional dipole
-    F_HZ                    = 2.4 GHz    common ISM / UAV telemetry band
-    RX_SENSITIVITY_DBM      = -54 dBm    derived (not picked) — see below
-    MARGIN_FULL_QUALITY_DB  =  30 dB     link_quality saturates to 1.0
-                                          once Pr exceeds sensitivity by
-                                          this margin
-
-Derivation of sensitivity
--------------------------
-IQMR reports a radio range of 250 m at 1 W transmit power. To reproduce
-that range under our FSPL model with Pt = 30 dBm, Gt = Gr = 2 dBi,
-f = 2.4 GHz, the receiver sensitivity is fully determined:
-
-    FSPL(250 m, 2.4 GHz)  = 20*log10(250) + 20*log10(2.4e9) + 20*log10(4*pi/c)
-                          = 47.96 + 187.60 + (-147.56)
-                          = 88.00 dB
-    sensitivity required  = Pt + Gt + Gr - FSPL = 30 + 2 + 2 - 88 = -54 dBm
-
-So -54 dBm is the sensitivity that makes our FSPL link-existence test
-agree with IQMR's stated 250 m range at IQMR's 1 W transmit power. This
-is now an IQMR-derived value, not an arbitrary radio-class pick.
-
-Link budget = PT_DBM + GT_DBI + GR_DBI - RX_SENSITIVITY_DBM
-            = 30 + 2 + 2 - (-54) = 88 dB
-Effective max link distance with these parameters is ~250 m (printed at
-startup via channel.MAX_LINK_DISTANCE_M), matching IQMR's reported range.
-
-FSPL formula
-------------
-    FSPL_dB(d) = 20*log10(d) + 20*log10(f) + 20*log10(4*pi/c)
-    Pr_dBm     = Pt + Gt + Gr - FSPL_dB
-
-Per-transmission packet loss
-----------------------------
-Link existence is binary (does Pr clear sensitivity), but a transmission over
-an existing link can still fail. The loss probability decays exponentially in
-the link margin:
-
-    M(d)      = Pr(d) - RX_SENSITIVITY_DBM          (dB above sensitivity)
-    p_loss(d) = exp(-k * M(d))                       for M > 0
-    p_loss(d) = 1                                    for M <= 0 (no link)
-
-So p_loss is 1 exactly at the range edge, where M = 0, and falls off fast as
-the endpoints close in. With k = 0.4: ~0.46 at 200 m, ~0.042 at 100 m,
-~3.7e-3 at 50 m and ~1.4e-5 at 10 m. k is a modelling choice, not a measured
-quantity — it lives in config.CHANNEL_LOSS_K.
+What this replaced
+------------------
+Until Checkpoint 7 the model was free-space path loss (FSPL): transmit power
+30 dBm, 2 dBi antennas, 2.4 GHz carrier and a receiver sensitivity of -54 dBm,
+giving a hard 249.69 m range, with loss ``exp(-k * M)`` on the margin M above
+sensitivity (k = 0.8). That curve hit ~100% loss exactly at 250 m, which
+measured UAV links do not show, and 250 m is short against a 900x900 m area.
+The FSPL code is removed — nothing in the simulator needed it once link
+existence stopped being power-based. ``scripts/plot_ploss.py`` carries its own
+copy of the old formula, only so the two curves can be drawn together.
 """
 
 from __future__ import annotations
@@ -74,163 +58,143 @@ from typing import Optional
 
 import numpy as np
 
-
-# ---------------------------------------------------------------------------
-# Radio parameters — change these to retune the channel.
-# ---------------------------------------------------------------------------
-PT_DBM: float = 30.0               # transmit power (dBm) — 1 W, matches IQMR
-GT_DBI: float = 2.0                # transmit antenna gain (dBi)
-GR_DBI: float = 2.0                # receive antenna gain (dBi)
-F_HZ: float = 2.4e9                # carrier frequency (Hz)
-RX_SENSITIVITY_DBM: float = -54.0  # receiver sensitivity (dBm) — derived to give 250 m at IQMR's 1 W
-MARGIN_FULL_QUALITY_DB: float = 30.0  # margin at which link_quality saturates
-
-# Physical constant — speed of light in vacuum (m/s).
-SPEED_OF_LIGHT_M_S: float = 299_792_458.0
+from fanet_sim import config
 
 
 # ---------------------------------------------------------------------------
-# Derived constants (do not edit directly — driven by the parameters above)
+# The loss curve
 # ---------------------------------------------------------------------------
 
-# FSPL_dB(d) = 20*log10(d) + _FSPL_FREQ_CONST_DB
-_FSPL_FREQ_CONST_DB: float = (
-    20.0 * math.log10(F_HZ)
-    + 20.0 * math.log10(4.0 * math.pi / SPEED_OF_LIGHT_M_S)
-)
+def p_loss(
+    dist_m: float,
+    d50: Optional[float] = None,
+    slope: Optional[float] = None,
+) -> float:
+    """Probability that a transmission over *dist_m* metres is lost.
 
-# Total dB of path loss the link can tolerate.
-LINK_BUDGET_DB: float = PT_DBM + GT_DBI + GR_DBI - RX_SENSITIVITY_DBM
-
-# Effective max link distance (m): distance at which Pr == sensitivity exactly.
-# This is the new source of truth for "can two endpoints communicate" and
-# replaces the old config.COMM_RANGE in every link-existence test.
-MAX_LINK_DISTANCE_M: float = 10.0 ** ((LINK_BUDGET_DB - _FSPL_FREQ_CONST_DB) / 20.0)
-
-
-# ---------------------------------------------------------------------------
-# FSPL math
-# ---------------------------------------------------------------------------
-
-def fspl_db(dist_m: float) -> float:
-    """Free-space path loss in dB at distance *dist_m*.
-
-    Returns ``-inf`` for distances at or below 1e-9 m (collocated endpoints)
-    so the link is treated as unconditionally available rather than dividing
-    by zero. Callers should not pass negative distances.
+    ``1 / (1 + exp(-slope * (dist_m - d50)))`` — strictly increasing in
+    distance, and always strictly inside (0, 1).
 
     Args:
-        dist_m: Euclidean separation between transmitter and receiver (m).
+        dist_m: Distance between sender and receiver, in metres.
+        d50:    Distance at which loss is 50%. Defaults to
+                ``config.LOSS_50_DISTANCE_M``.
+        slope:  Steepness per metre. Defaults to ``config.LOSS_SLOPE_PER_M``.
 
     Returns:
-        Path loss in decibels.
+        Float in (0.0, 1.0).
     """
-    if dist_m <= 1e-9:
-        return -float("inf")
-    return 20.0 * math.log10(dist_m) + _FSPL_FREQ_CONST_DB
+    if d50 is None:
+        d50 = config.LOSS_50_DISTANCE_M
+    if slope is None:
+        slope = config.LOSS_SLOPE_PER_M
 
+    exponent = -slope * (dist_m - d50)
+    # exp() overflows for a very short link; the limit there is a loss of 0.
+    if exponent > 700.0:
+        return 0.0
+    return 1.0 / (1.0 + math.exp(exponent))
 
-def received_power_dbm(dist_m: float) -> float:
-    """Received signal power at the receiver, in dBm.
-
-    Pr = Pt + Gt + Gr - FSPL(d).
-
-    Args:
-        dist_m: Euclidean separation between transmitter and receiver (m).
-
-    Returns:
-        Received power in dBm. ``+inf`` for collocated endpoints.
-    """
-    return PT_DBM + GT_DBI + GR_DBI - fspl_db(dist_m)
-
-
-# ---------------------------------------------------------------------------
-# Link existence + quality (public API used by drone.py, env, metrics)
-# ---------------------------------------------------------------------------
 
 def link_quality(dist_m: float) -> float:
-    """Link quality in [0, 1], monotonically non-increasing in distance.
+    """Probability that a transmission over *dist_m* metres gets through.
 
-    Derived from the SNR margin above receiver sensitivity:
-
-        margin  = Pr - RX_SENSITIVITY_DBM   (in dB)
-        quality = clamp(margin / MARGIN_FULL_QUALITY_DB, 0, 1)
-
-    A quality of 0 means the link does not exist (margin <= 0).
-    A quality of 1 means the link has at least MARGIN_FULL_QUALITY_DB of
-    headroom above sensitivity.
+    Simply ``1 - p_loss``. This is what a drone reports about a link in its
+    state vector, and what "a good link" is measured against.
 
     Args:
-        dist_m: Euclidean distance between endpoints (m).
+        dist_m: Distance between endpoints, in metres.
 
     Returns:
-        Float in [0.0, 1.0].
+        Float in (0.0, 1.0); higher is better.
     """
-    margin = received_power_dbm(dist_m) - RX_SENSITIVITY_DBM
-    if margin <= 0.0:
-        return 0.0
-    if margin >= MARGIN_FULL_QUALITY_DB:
-        return 1.0
-    return margin / MARGIN_FULL_QUALITY_DB
+    return 1.0 - p_loss(dist_m)
 
 
-def link_margin_db(dist_m: float) -> float:
-    """Link margin in dB: how far the received power clears sensitivity.
+def distance_for_loss(
+    target_loss: float,
+    d50: Optional[float] = None,
+    slope: Optional[float] = None,
+) -> float:
+    """Return the distance at which loss equals *target_loss*.
+
+    The inverse of :func:`p_loss`:
+    ``d = d50 + ln(L / (1 - L)) / slope``.
 
     Args:
-        dist_m: Euclidean distance between endpoints (m).
+        target_loss: A loss strictly between 0 and 1.
+        d50:         Defaults to ``config.LOSS_50_DISTANCE_M``.
+        slope:       Defaults to ``config.LOSS_SLOPE_PER_M``.
 
     Returns:
-        ``Pr(dist_m) - RX_SENSITIVITY_DBM``. Zero or negative means there is
-        no link. ``+inf`` for collocated endpoints.
+        The distance in metres.
+
+    Raises:
+        ValueError: If *target_loss* is not strictly inside (0, 1), where the
+            curve has no finite inverse.
     """
-    return received_power_dbm(dist_m) - RX_SENSITIVITY_DBM
+    if not 0.0 < target_loss < 1.0:
+        raise ValueError(
+            f"target_loss must be strictly between 0 and 1, got {target_loss}"
+        )
+    if d50 is None:
+        d50 = config.LOSS_50_DISTANCE_M
+    if slope is None:
+        slope = config.LOSS_SLOPE_PER_M
+
+    return d50 + math.log(target_loss / (1.0 - target_loss)) / slope
 
 
-def p_loss(dist_m: float, k: Optional[float] = None) -> float:
-    """Probability that a transmission over this link is lost.
-
-    ``exp(-k * M)`` where M is the link margin in dB, clamped to [0, 1]. A
-    distance with no link (margin <= 0) returns exactly 1.0: the packet cannot
-    get through. Collocated endpoints have infinite margin and return 0.0.
+def max_link_distance(max_loss: Optional[float] = None) -> float:
+    """Return how far a link reaches: the distance where loss hits the cutoff.
 
     Args:
-        dist_m: Euclidean distance between transmitter and receiver (m).
-        k:      Decay rate per dB of margin. Defaults to
-                ``config.CHANNEL_LOSS_K``.
+        max_loss: Loss at which a link stops existing. Defaults to
+                  ``config.LINK_MAX_LOSS``.
 
     Returns:
-        Float in [0.0, 1.0].
+        The distance in metres. With the configured defaults, ~539.8 m.
     """
-    if k is None:
-        from fanet_sim import config
-        k = config.CHANNEL_LOSS_K
+    if max_loss is None:
+        max_loss = config.LINK_MAX_LOSS
+    return distance_for_loss(max_loss)
 
-    margin = link_margin_db(dist_m)
-    if margin <= 0.0:
-        return 1.0
-    if margin == float("inf"):
-        return 0.0
-    # exp() of a large negative number underflows to 0.0, which is the right
-    # answer here, so no guard is needed on the upper end of the margin.
-    return min(1.0, max(0.0, math.exp(-k * margin)))
+
+# ---------------------------------------------------------------------------
+# Link existence
+# ---------------------------------------------------------------------------
+
+def link_exists(dist_m: float, max_loss: Optional[float] = None) -> bool:
+    """True if two endpoints *dist_m* apart have a link at all.
+
+    Args:
+        dist_m:   Distance between endpoints, in metres.
+        max_loss: Loss at which a link stops existing. Defaults to
+                  ``config.LINK_MAX_LOSS``.
+
+    Returns:
+        Whether ``p_loss(dist_m) < max_loss``.
+    """
+    if max_loss is None:
+        max_loss = config.LINK_MAX_LOSS
+    return p_loss(dist_m) < max_loss
 
 
 def are_connected(pos_a: np.ndarray, pos_b: np.ndarray) -> bool:
-    """True iff the received signal between two positions clears sensitivity.
+    """True iff the two positions have a link.
 
-    This is the FSPL-based replacement for the old ``distance < COMM_RANGE``
-    test. Use this anywhere a binary link-existence answer is needed.
+    The single link-existence test used across the simulator: neighbour sets,
+    the GS link, the connected-layout filter and the range check all come
+    through here.
 
     Args:
         pos_a: Position of endpoint A as a NumPy array.
         pos_b: Position of endpoint B as a NumPy array.
 
     Returns:
-        True if Pr(d) >= RX_SENSITIVITY_DBM, else False.
+        Whether a link exists between them.
     """
-    dist = float(np.linalg.norm(pos_a - pos_b))
-    return received_power_dbm(dist) >= RX_SENSITIVITY_DBM
+    return link_exists(float(np.linalg.norm(pos_a - pos_b)))
 
 
 def euclidean_distance(pos_a: np.ndarray, pos_b: np.ndarray) -> float:

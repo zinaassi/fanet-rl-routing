@@ -1,27 +1,30 @@
 """
-range_check.py — Connectivity of the fleet at candidate radio ranges (item L).
+range_check.py — Fleet connectivity under the loss curve (Checkpoint 7, 5a).
 
-Pure geometry, and a REPORT ONLY: this script changes no config. Two drones
-count as linked when their distance is <= the range under test, and a drone is
-in direct GS range when it is <= the range from the ground station. The FSPL
-channel, the transmit power and the receiver sensitivity are not touched.
+Pure geometry, and a REPORT ONLY: this script changes no config. Distance plus
+the loss curve decide everything, exactly as the simulator does it.
 
-Drones are placed uniformly at random in the configured arena from the same
-placement seed stream the simulator uses.
+Three link cutoffs are compared: a link exists while its loss stays under
+90%, 95% or 99%. The 99% row is the simulator's own rule
+(``config.LINK_MAX_LOSS``).
 
-This script deliberately takes the FIRST layout each seed produces, WITHOUT the
-simulator's ``REQUIRE_CONNECTED_M`` filter. The filter exists precisely because
-some layouts strand an M-drone; measuring how often that happens is this
-script's job, so filtering here would answer its own question.
-
-For each candidate range it reports, over 100 placements:
+Reported per cutoff, over 100 random placements:
     * % of M-drones with a path to the GS
     * % of placements with at least one isolated M-drone
-    * mean hop count to the GS, over connected M-drones only
     * mean neighbours per drone
-    * mean drones in direct GS range
-    * the transmit power that would produce this range under the current FSPL
-      settings, Pt = 30 + 20*log10(range / 249.69) dBm
+    * mean drones linked directly to the GS
+
+And, independent of the cutoff, per layout:
+    * "good" neighbours per drone — links with under 10% loss
+    * drones with a good (under 10% loss) link straight to the GS
+    * hops on the MOST RELIABLE path from each M-drone to the GS, i.e. the
+      path maximising the end-to-end delivery probability
+      prod(1 - p_loss(edge)). Found by shortest path on -log(1 - p_loss),
+      which turns that product into a sum.
+
+Layouts are drawn the way the simulator draws them, but WITHOUT its
+connected-layout filter: how often a layout strands an M-drone is exactly what
+this script is here to measure, so filtering would answer its own question.
 
 Usage:
     python scripts/range_check.py
@@ -46,7 +49,12 @@ import numpy as np
 from fanet_sim import config
 from fanet_sim.envs import channel
 
-CANDIDATE_RANGES_M = (200.0, 230.0, 250.0, 280.0, 320.0)
+#: Link cutoffs to compare: a link exists while loss is under this.
+CUTOFFS = (0.90, 0.95, 0.99)
+
+#: A link counts as "good" while its loss is under this.
+GOOD_LINK_MAX_LOSS = 0.10
+
 DEFAULT_PLACEMENTS = 100
 GS_NODE = "GS"
 
@@ -58,7 +66,7 @@ def parse_args() -> argparse.Namespace:
         Parsed argument namespace.
     """
     parser = argparse.ArgumentParser(
-        description="Report fleet connectivity at candidate radio ranges."
+        description="Report fleet connectivity under the loss curve."
     )
     parser.add_argument(
         "--placements",
@@ -76,11 +84,11 @@ def parse_args() -> argparse.Namespace:
 
 
 def place_fleet(placement_seed: int) -> Dict[str, Any]:
-    """Place one fleet exactly as the simulator would.
+    """Place one fleet exactly as the simulator draws it, unfiltered.
 
-    Mirrors ``FANETEnv._create_drones``: M-drones first, then C-drones, each
-    drawing a uniform point and then a speed from the placement stream. The
-    speed draws are kept so the position sequence matches the simulator's.
+    Mirrors ``FANETEnv._draw_drones``: M-drones first, then C-drones, each
+    drawing a uniform point and then a speed. The speed draws are kept so the
+    position sequence matches the simulator's.
 
     Args:
         placement_seed: Seed for the placement stream.
@@ -102,7 +110,6 @@ def place_fleet(placement_seed: int) -> Dict[str, Any]:
 
     for _ in range(config.NUM_M_DRONES):
         start = draw_point()
-        # STATIC_MODE: the end point is the start point, so no extra draw.
         if not config.STATIC_MODE:
             draw_point()
         draw_speed()
@@ -117,149 +124,188 @@ def place_fleet(placement_seed: int) -> Dict[str, Any]:
     return {"positions": np.array(positions), "types": types}
 
 
-def build_graph(
-    positions: np.ndarray, range_m: float
-) -> nx.Graph:
-    """Build the link graph at *range_m*, with the GS as an extra node.
-
-    Two endpoints are linked when their distance is <= *range_m*.
+def _distance_matrix(positions: np.ndarray, gs: np.ndarray) -> np.ndarray:
+    """Return pairwise distances among drones and the GS.
 
     Args:
         positions: N x 2 array of drone positions.
-        range_m:   The range under test, in metres.
+        gs:        Ground-station position.
+
+    Returns:
+        An (N+1) x (N+1) distance matrix; index N is the GS.
+    """
+    points = np.vstack([positions, gs[None, :]])
+    diff = points[:, None, :] - points[None, :, :]
+    return np.sqrt((diff ** 2).sum(axis=-1))
+
+
+def build_graph(dists: np.ndarray, max_loss: float) -> nx.Graph:
+    """Build the link graph at one cutoff, weighted for reliability.
+
+    Each edge carries ``loss`` and ``neglog`` = -ln(1 - loss). A shortest path
+    on ``neglog`` is the path of maximum delivery probability, because summing
+    -ln(1 - loss) minimises the product of (1 - loss).
+
+    Args:
+        dists:    Distance matrix from :func:`_distance_matrix`; last index is
+                  the GS.
+        max_loss: A link exists while its loss is under this.
 
     Returns:
         A graph over drone indices plus the ``"GS"`` node.
     """
-    gs = np.array(config.GS_POSITION, dtype=np.float64)
+    size = dists.shape[0]
+    gs_index = size - 1
+
     graph = nx.Graph()
-    graph.add_nodes_from(range(len(positions)))
+    graph.add_nodes_from(range(gs_index))
     graph.add_node(GS_NODE)
 
-    for i, pos_i in enumerate(positions):
-        if float(np.linalg.norm(pos_i - gs)) <= range_m:
-            graph.add_edge(i, GS_NODE)
-        for j in range(i + 1, len(positions)):
-            if float(np.linalg.norm(pos_i - positions[j])) <= range_m:
-                graph.add_edge(i, j)
+    for i in range(size):
+        node_i = GS_NODE if i == gs_index else i
+        for j in range(i + 1, size):
+            loss = channel.p_loss(float(dists[i, j]))
+            if loss >= max_loss:
+                continue
+            node_j = GS_NODE if j == gs_index else j
+            graph.add_edge(
+                node_i, node_j,
+                loss=loss,
+                neglog=-math.log(max(1.0 - loss, 1e-300)),
+            )
     return graph
 
 
-def required_tx_power_dbm(range_m: float) -> float:
-    """Return the transmit power that yields *range_m* under the current FSPL.
-
-    Free-space loss grows as 20*log10(distance), so moving the range from the
-    current 249.69 m costs (or saves) 20*log10(ratio) dB of transmit power.
+def evaluate(max_loss: float, placements: int) -> Dict[str, Any]:
+    """Measure connectivity at one cutoff across many placements.
 
     Args:
-        range_m: The range under test, in metres.
-
-    Returns:
-        Transmit power in dBm.
-    """
-    return channel.PT_DBM + 20.0 * math.log10(
-        range_m / channel.MAX_LINK_DISTANCE_M
-    )
-
-
-def evaluate_range(range_m: float, placements: int) -> Dict[str, Any]:
-    """Measure connectivity at one candidate range across many placements.
-
-    Args:
-        range_m:    The range under test, in metres.
+        max_loss:   A link exists while its loss is under this.
         placements: How many random layouts to average over.
 
     Returns:
-        One summary record for this range.
+        One summary record.
     """
-    m_connected_fractions: List[float] = []
-    layouts_with_isolated = 0
-    hop_counts: List[float] = []
-    neighbours_per_drone: List[float] = []
-    in_gs_range: List[float] = []
-
     gs = np.array(config.GS_POSITION, dtype=np.float64)
+
+    m_connected: List[float] = []
+    layouts_with_isolated = 0
+    neighbours: List[float] = []
+    gs_linked: List[float] = []
+    good_neighbours: List[float] = []
+    good_gs_linked: List[float] = []
+    reliable_hops: List[float] = []
 
     for placement_seed in range(1, placements + 1):
         fleet = place_fleet(placement_seed)
         positions = fleet["positions"]
         types = fleet["types"]
-        graph = build_graph(positions, range_m)
+        n_drones = len(positions)
+        dists = _distance_matrix(positions, gs)
+        graph = build_graph(dists, max_loss)
 
         m_indices = [i for i, t in enumerate(types) if t == "M"]
-        hops = nx.single_source_shortest_path_length(graph, GS_NODE)
 
-        connected = [i for i in m_indices if i in hops]
-        m_connected_fractions.append(len(connected) / len(m_indices))
+        # Hops on the most reliable path, and reachability.
+        hop_lengths = nx.single_source_shortest_path_length(graph, GS_NODE)
+        best = nx.single_source_dijkstra_path(graph, GS_NODE, weight="neglog")
+
+        connected = [i for i in m_indices if i in hop_lengths]
+        m_connected.append(len(connected) / len(m_indices))
         if len(connected) < len(m_indices):
             layouts_with_isolated += 1
-        hop_counts.extend(float(hops[i]) for i in connected)
+        reliable_hops.extend(len(best[i]) - 1 for i in connected)
 
-        degrees = [graph.degree(i) for i in range(len(positions))]
-        neighbours_per_drone.append(statistics.fmean(degrees))
-
-        in_gs_range.append(
-            sum(
-                1 for pos in positions
-                if float(np.linalg.norm(pos - gs)) <= range_m
-            )
+        neighbours.append(
+            statistics.fmean(graph.degree(i) for i in range(n_drones))
         )
+        gs_linked.append(graph.degree(GS_NODE))
+
+        # Good links are a property of distance alone, not of the cutoff.
+        good = [
+            [
+                j for j in range(n_drones)
+                if j != i and channel.p_loss(float(dists[i, j])) < GOOD_LINK_MAX_LOSS
+            ]
+            for i in range(n_drones)
+        ]
+        good_neighbours.append(statistics.fmean(len(g) for g in good))
+        good_gs_linked.append(sum(
+            1 for i in range(n_drones)
+            if channel.p_loss(float(dists[i, -1])) < GOOD_LINK_MAX_LOSS
+        ))
 
     return {
-        "range_m": range_m,
+        "max_loss": max_loss,
+        "link_reach_m": channel.max_link_distance(max_loss),
         "placements": placements,
-        "pct_M_with_path_to_GS": 100.0 * statistics.fmean(m_connected_fractions),
+        "pct_M_with_path_to_GS": 100.0 * statistics.fmean(m_connected),
         "pct_placements_with_isolated_M": 100.0 * layouts_with_isolated / placements,
-        "mean_hops_to_GS": statistics.fmean(hop_counts) if hop_counts else float("nan"),
-        "mean_neighbors_per_drone": statistics.fmean(neighbours_per_drone),
-        "mean_drones_in_GS_range": statistics.fmean(in_gs_range),
-        "required_tx_power_dbm": required_tx_power_dbm(range_m),
+        "mean_neighbors_per_drone": statistics.fmean(neighbours),
+        "mean_drones_linked_to_GS": statistics.fmean(gs_linked),
+        "mean_good_neighbors_per_drone": statistics.fmean(good_neighbours),
+        "mean_drones_with_good_GS_link": statistics.fmean(good_gs_linked),
+        "mean_hops_most_reliable_path": (
+            statistics.fmean(reliable_hops) if reliable_hops else float("nan")
+        ),
     }
 
 
-def print_table(records: List[Dict[str, Any]]) -> None:
-    """Print the range-check results as a table.
+def print_tables(records: List[Dict[str, Any]]) -> None:
+    """Print the range-check results.
 
     Args:
-        records: One record per candidate range.
+        records: One record per cutoff.
     """
+    first = records[0]
     print()
-    print(f"  Range check — {records[0]['placements']} random placements, "
+    print(f"  Range check — {first['placements']} random placements, "
           f"{config.NUM_M_DRONES} M + {config.NUM_C_DRONES} C drones in "
-          f"{config.WIDTH:.0f}x{config.HEIGHT:.0f} m")
-    print("  Pure geometry: linked when distance <= range. No config changed.")
-    print("  " + "-" * 104)
-    print(f"  {'range':>7}{'% M with path':>16}{'% layouts with':>17}"
-          f"{'mean hops':>12}{'mean nbrs':>12}{'mean drones':>14}{'Pt needed':>12}")
-    print(f"  {'(m)':>7}{'to GS':>16}{'an isolated M':>17}"
-          f"{'to GS':>12}{'per drone':>12}{'in GS range':>14}{'(dBm)':>12}")
-    print("  " + "-" * 104)
+          f"{config.WIDTH:.0f}x{config.HEIGHT:.0f} m, GS at the centre")
+    print(f"  Loss curve: 1/(1+exp(-{config.LOSS_SLOPE_PER_M}*(d-"
+          f"{config.LOSS_50_DISTANCE_M:.0f})))  (Rosati et al., arXiv:1406.4399)")
+    print("  Geometry only. Layouts are UNFILTERED. No config changed.")
+
+    print()
+    print("  By link cutoff — a link exists while its loss is under the cutoff")
+    print("  " + "-" * 94)
+    print(f"  {'cutoff':>8}{'reach':>10}{'% M with':>14}{'% layouts':>16}"
+          f"{'mean nbrs':>12}{'mean drones':>14}")
+    print(f"  {'':>8}{'(m)':>10}{'path to GS':>14}{'w/ isolated M':>16}"
+          f"{'per drone':>12}{'linked to GS':>14}")
+    print("  " + "-" * 94)
     for record in records:
-        marker = "  <- current" if abs(
-            record["range_m"] - channel.MAX_LINK_DISTANCE_M
-        ) < 1.0 else ""
+        marker = ("  <- simulator's rule"
+                  if abs(record["max_loss"] - config.LINK_MAX_LOSS) < 1e-9 else "")
         print(
-            f"  {record['range_m']:>7.0f}"
-            f"{record['pct_M_with_path_to_GS']:>15.1f}%"
-            f"{record['pct_placements_with_isolated_M']:>16.1f}%"
-            f"{record['mean_hops_to_GS']:>12.2f}"
+            f"  {record['max_loss'] * 100:>7.0f}%{record['link_reach_m']:>10.1f}"
+            f"{record['pct_M_with_path_to_GS']:>13.1f}%"
+            f"{record['pct_placements_with_isolated_M']:>15.1f}%"
             f"{record['mean_neighbors_per_drone']:>12.2f}"
-            f"{record['mean_drones_in_GS_range']:>14.2f}"
-            f"{record['required_tx_power_dbm']:>12.2f}{marker}"
+            f"{record['mean_drones_linked_to_GS']:>14.2f}{marker}"
         )
-    print("  " + "-" * 104)
-    print(f"  The simulator's current effective range is "
-          f"{channel.MAX_LINK_DISTANCE_M:.2f} m at Pt = {channel.PT_DBM:.0f} dBm.")
+
+    print()
+    print("  Link quality and path length")
+    print(f"  A \"good\" link loses under {GOOD_LINK_MAX_LOSS * 100:.0f}%, "
+          f"i.e. reaches {channel.distance_for_loss(GOOD_LINK_MAX_LOSS):.0f} m")
+    print("  " + "-" * 94)
+    print(f"  {'good neighbours per drone':<42}"
+          f"{records[-1]['mean_good_neighbors_per_drone']:>8.2f}")
+    print(f"  {'drones with a good link straight to the GS':<42}"
+          f"{records[-1]['mean_drones_with_good_GS_link']:>8.2f}"
+          f"   of {config.NUM_M_DRONES + config.NUM_C_DRONES}")
+    for record in records:
+        print(f"  {'hops on the most reliable path to the GS':<42}"
+              f"{record['mean_hops_most_reliable_path']:>8.2f}"
+              f"   at the {record['max_loss'] * 100:.0f}% cutoff")
+    print("  " + "-" * 94)
 
 
 def main() -> None:
     """Run the range check and write the CSV."""
     args = parse_args()
-
-    records = [
-        evaluate_range(range_m, args.placements)
-        for range_m in CANDIDATE_RANGES_M
-    ]
+    records = [evaluate(cutoff, args.placements) for cutoff in CUTOFFS]
 
     parent = os.path.dirname(args.out)
     if parent:
@@ -269,7 +315,7 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(records)
 
-    print_table(records)
+    print_tables(records)
     print()
     print(f"  wrote {args.out}")
 

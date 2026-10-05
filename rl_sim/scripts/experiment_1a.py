@@ -71,8 +71,8 @@ RUN_COLUMNS = [
     "per_link_expired",
     "mean_queue_occupancy", "max_queue_occupancy",
     "mean_delay_steps", "mean_hops",
-    "isolated_M_count", "drones_in_GS_range", "placement_draws",
-    "views_agree",
+    "isolated_M_count", "drones_in_GS_range", "mean_neighbors_per_drone",
+    "placement_draws", "views_agree",
 ]
 
 #: The numeric columns that get a mean and std in the summary.
@@ -116,14 +116,14 @@ def parse_args() -> argparse.Namespace:
 # Layout facts (pure geometry on the run's own placement)
 # ---------------------------------------------------------------------------
 
-def layout_facts(env: FANETEnv) -> Tuple[int, int]:
-    """Count M-drones with no path to the GS, and drones in direct GS range.
+def layout_facts(env: FANETEnv) -> Tuple[int, int, float]:
+    """Describe the layout: isolation, GS reach and link density.
 
     Args:
         env: A reset environment.
 
     Returns:
-        ``(isolated_M_count, drones_in_GS_range)``.
+        ``(isolated_M_count, drones_linked_to_GS, mean_neighbors_per_drone)``.
     """
     graph, gs_label = build_graph_with_gs(env.drones, env.gs_position)
     reachable = nx.node_connected_component(graph, gs_label)
@@ -135,7 +135,8 @@ def layout_facts(env: FANETEnv) -> Tuple[int, int]:
     in_gs_range = sum(
         1 for d in env.drones if are_connected(d.position, env.gs_position)
     )
-    return isolated_m, in_gs_range
+    mean_neighbors = statistics.fmean(len(d.neighbors) for d in env.drones)
+    return isolated_m, in_gs_range, mean_neighbors
 
 
 # ---------------------------------------------------------------------------
@@ -167,7 +168,7 @@ def run_one(
             run_seed=run_seed,
         )
         env.reset()
-        isolated_m, in_gs_range = layout_facts(env)
+        isolated_m, in_gs_range, mean_neighbors = layout_facts(env)
 
         for _ in range(config.MAX_STEPS):
             env.step()
@@ -205,6 +206,7 @@ def run_one(
             "mean_hops": truth["mean_hops"] or 0.0,
             "isolated_M_count": isolated_m,
             "drones_in_GS_range": in_gs_range,
+            "mean_neighbors_per_drone": mean_neighbors,
             "placement_draws": env.placement_draws,
             "views_agree": not metrics["discrepancies"],
         }
@@ -438,6 +440,85 @@ def print_summary(summary: List[Dict[str, Any]]) -> None:
         )
 
 
+#: Where the previous model's summary is kept, for the side-by-side table.
+BASELINE_FILENAME = "1a_summary_OLD_k08.csv"
+
+#: Columns compared between the old and new channel models.
+COMPARISON_ROWS = [
+    ("total_loss", "total loss"),
+    ("loss_channel", "  channel"),
+    ("loss_queue_full", "  queue_full"),
+    ("loss_no_route", "  no_route"),
+    ("loss_ttl", "  ttl"),
+    ("loss_hop_limit", "  hop_limit"),
+]
+
+
+def load_baseline(path: str) -> Optional[List[Dict[str, Any]]]:
+    """Load the previous model's summary, if it is there.
+
+    Args:
+        path: Path to the baseline summary CSV.
+
+    Returns:
+        The rows, or None when the file is missing.
+    """
+    if not os.path.exists(path):
+        return None
+    with open(path, newline="") as handle:
+        return list(csv.DictReader(handle))
+
+
+def print_old_vs_new(
+    summary: List[Dict[str, Any]], baseline: Optional[List[Dict[str, Any]]]
+) -> None:
+    """Print the old channel model beside the new one.
+
+    Args:
+        summary:  This run's summary.
+        baseline: The previous model's summary, or None.
+    """
+    print()
+    if baseline is None:
+        print(f"  (no {BASELINE_FILENAME} found — skipping the old-vs-new table)")
+        return
+
+    print("  OLD channel model (FSPL, exp(-0.8*margin), 250 m wall)"
+          "  vs  NEW (logistic in distance)")
+    print(f"  Mean % of packets created, over the same "
+          f"{summary[0]['runs']} placements.")
+    print("  " + "-" * 92)
+    header = f"  {'':<14}"
+    for load in LOADS_MS:
+        header += f"{str(load) + ' ms':>19}"
+    print(header + "\n  " + f"{'':<14}" + "".join(
+        f"{'old':>9}{'new':>10}" for _ in LOADS_MS
+    ))
+    print("  " + "-" * 92)
+
+    for routing in ROUTING_RULES:
+        print(f"  {routing}")
+        for key, label in COMPARISON_ROWS:
+            line = f"  {label:<14}"
+            for load in LOADS_MS:
+                new_cell = next(
+                    r for r in summary
+                    if r["routing"] == routing and r["load_ms"] == load
+                )
+                old_cell = next(
+                    (r for r in baseline
+                     if r["routing"] == routing and int(r["load_ms"]) == load),
+                    None,
+                )
+                old_value = (
+                    float(old_cell[f"{key}_mean"]) * 100
+                    if old_cell is not None else float("nan")
+                )
+                line += f"{old_value:>9.1f}{new_cell[f'{key}_mean'] * 100:>10.1f}"
+            print(line)
+        print("  " + "-" * 92)
+
+
 def _pm(mean: float, std: float) -> str:
     """Format a mean and std as percentages, e.g. "64.5 (3.2)"."""
     return f"{mean * 100:.1f} ({std * 100:.1f})"
@@ -555,72 +636,151 @@ def plot_total_loss_vs_load(
     plt.close(fig)
 
 
+#: Panels measured as a share of PACKETS CREATED. These share one colour bar.
 HEATMAP_COLUMNS = [
     ("total_loss", "total\nloss"),
     ("loss_channel", "channel"),
     ("loss_queue_full", "queue\nfull"),
     ("loss_no_route", "no\nroute"),
     ("_ttl_hop", "ttl +\nhop"),
-    ("per_link_loss_pooled", "per-link\nloss"),
 ]
+
+#: Per-link loss has a different denominator — link ATTEMPTS, not packets
+#: created — so it gets its own panel and its own colour bar rather than
+#: sharing a scale with numbers it is not comparable to.
+LINK_COLUMN = ("per_link_loss_pooled", "per-link\nloss")
+
+
+def _cell_value(cell: Dict[str, Any], key: str) -> Tuple[float, float]:
+    """Return one panel cell's (mean, std) as percentages.
+
+    Args:
+        cell: A summary record.
+        key:  A column key, or the synthetic "_ttl_hop".
+
+    Returns:
+        ``(mean_pct, std_pct)``.
+    """
+    if key == "_ttl_hop":
+        return (
+            (cell["loss_ttl_mean"] + cell["loss_hop_limit_mean"]) * 100,
+            (cell["loss_ttl_std"] + cell["loss_hop_limit_std"]) * 100,
+        )
+    return cell[f"{key}_mean"] * 100, cell[f"{key}_std"] * 100
+
+
+def _draw_panel(
+    ax: plt.Axes,
+    means: np.ndarray,
+    stds: np.ndarray,
+    labels: List[str],
+    title: str,
+    show_loads: bool = True,
+) -> Any:
+    """Draw one heatmap panel with mean and std in each cell.
+
+    Args:
+        ax:         Axes to draw on.
+        means:      loads x columns of mean percentages.
+        stds:       Matching standard deviations.
+        labels:     Column labels.
+        title:      Panel title.
+        show_loads: Whether to label the rows. Off for panels that sit to the
+                    right of a colour bar, where row labels would collide with
+                    it; the rows are in the same order in every panel.
+
+    Returns:
+        The image handle, for attaching a colour bar.
+    """
+    image = ax.imshow(means, cmap="Blues", vmin=0, vmax=100, aspect="auto")
+
+    ax.set_xticks(range(len(labels)))
+    ax.set_xticklabels(labels, fontsize=9)
+    ax.set_yticks(range(means.shape[0]))
+    if show_loads:
+        ax.set_yticklabels([f"{load} ms" for load in LOADS_MS], fontsize=9)
+    else:
+        ax.set_yticklabels([])
+    ax.tick_params(colors=TEXT_SECONDARY)
+    ax.set_title(title, color=TEXT_PRIMARY, fontsize=11,
+                 fontweight="bold", pad=10)
+
+    for i in range(means.shape[0]):
+        for j in range(means.shape[1]):
+            # Keep the label readable against a dark cell.
+            ink = "#ffffff" if means[i, j] > 55 else TEXT_PRIMARY
+            ax.text(j, i - 0.10, f"{means[i, j]:.1f}", ha="center",
+                    va="center", color=ink, fontsize=10, fontweight="bold")
+            ax.text(j, i + 0.22, f"({stds[i, j]:.1f})", ha="center",
+                    va="center", color=ink, fontsize=7)
+
+    for spine in ax.spines.values():
+        spine.set_visible(False)
+    return image
 
 
 def plot_loss_heatmaps(summary: List[Dict[str, Any]], path: str) -> None:
-    """Draw one heatmap per routing rule: loads x loss components.
+    """Draw the loss heatmaps: causes per rule, then per-link loss apart.
+
+    The cause panels are shares of packets created and share one colour bar.
+    Per-link loss counts link ATTEMPTS instead, so it sits in its own panel
+    with its own bar rather than being read against a scale it does not belong
+    to.
 
     Args:
         summary: Output of :func:`summarise`.
         path:    Output PNG path.
     """
-    fig, axes = plt.subplots(1, 2, figsize=(13.5, 5.2), dpi=150)
+    fig = plt.figure(figsize=(16.0, 5.4), dpi=150)
+    grid = fig.add_gridspec(
+        1, 5, width_ratios=[len(HEATMAP_COLUMNS), len(HEATMAP_COLUMNS),
+                            0.20, 1.3, 0.20],
+        wspace=0.55,
+    )
     fig.patch.set_facecolor(SURFACE)
 
-    for ax, routing in zip(axes, ROUTING_RULES):
+    cause_axes = [fig.add_subplot(grid[0, 0]), fig.add_subplot(grid[0, 1])]
+    cause_bar_ax = fig.add_subplot(grid[0, 2])
+    link_ax = fig.add_subplot(grid[0, 3])
+    link_bar_ax = fig.add_subplot(grid[0, 4])
+
+    cause_image = None
+    for ax, routing in zip(cause_axes, ROUTING_RULES):
         means = np.zeros((len(LOADS_MS), len(HEATMAP_COLUMNS)))
         stds = np.zeros_like(means)
-
         for i, load in enumerate(LOADS_MS):
             cell = next(r for r in summary
                         if r["routing"] == routing and r["load_ms"] == load)
             for j, (key, _) in enumerate(HEATMAP_COLUMNS):
-                if key == "_ttl_hop":
-                    means[i, j] = (cell["loss_ttl_mean"]
-                                   + cell["loss_hop_limit_mean"]) * 100
-                    stds[i, j] = (cell["loss_ttl_std"]
-                                  + cell["loss_hop_limit_std"]) * 100
-                else:
-                    means[i, j] = cell[f"{key}_mean"] * 100
-                    stds[i, j] = cell[f"{key}_std"] * 100
+                means[i, j], stds[i, j] = _cell_value(cell, key)
+        cause_image = _draw_panel(
+            ax, means, stds, [label for _, label in HEATMAP_COLUMNS], routing
+        )
 
-        # One hue, light to dark: this is a magnitude scale, shared by both
-        # panels so the two rules are directly comparable.
-        image = ax.imshow(means, cmap="Blues", vmin=0, vmax=100, aspect="auto")
-
-        ax.set_xticks(range(len(HEATMAP_COLUMNS)))
-        ax.set_xticklabels([label for _, label in HEATMAP_COLUMNS], fontsize=9)
-        ax.set_yticks(range(len(LOADS_MS)))
-        ax.set_yticklabels([f"{load} ms" for load in LOADS_MS], fontsize=9)
-        ax.tick_params(colors=TEXT_SECONDARY)
-        ax.set_title(routing, color=TEXT_PRIMARY, fontsize=12,
-                     fontweight="bold", pad=10)
-
-        for i in range(len(LOADS_MS)):
-            for j in range(len(HEATMAP_COLUMNS)):
-                # Keep the label readable against a dark cell.
-                ink = "#ffffff" if means[i, j] > 55 else TEXT_PRIMARY
-                ax.text(j, i - 0.10, f"{means[i, j]:.1f}",
-                        ha="center", va="center", color=ink,
-                        fontsize=10, fontweight="bold")
-                ax.text(j, i + 0.22, f"({stds[i, j]:.1f})",
-                        ha="center", va="center", color=ink, fontsize=7)
-
-        for spine in ax.spines.values():
-            spine.set_visible(False)
-
-    bar = fig.colorbar(image, ax=axes, fraction=0.025, pad=0.02)
+    bar = fig.colorbar(cause_image, cax=cause_bar_ax)
     bar.set_label("% of packets created", color=TEXT_SECONDARY, fontsize=9)
     bar.ax.tick_params(colors=TEXT_SECONDARY, labelsize=8)
     bar.outline.set_visible(False)
+
+    # Per-link loss: one column per rule, its own denominator, its own bar.
+    link_means = np.zeros((len(LOADS_MS), len(ROUTING_RULES)))
+    link_stds = np.zeros_like(link_means)
+    for i, load in enumerate(LOADS_MS):
+        for j, routing in enumerate(ROUTING_RULES):
+            cell = next(r for r in summary
+                        if r["routing"] == routing and r["load_ms"] == load)
+            link_means[i, j], link_stds[i, j] = _cell_value(
+                cell, LINK_COLUMN[0]
+            )
+    link_image = _draw_panel(
+        link_ax, link_means, link_stds, list(ROUTING_RULES), "per-link loss",
+        show_loads=False,
+    )
+
+    link_bar = fig.colorbar(link_image, cax=link_bar_ax)
+    link_bar.set_label("% of link attempts", color=TEXT_SECONDARY, fontsize=9)
+    link_bar.ax.tick_params(colors=TEXT_SECONDARY, labelsize=8)
+    link_bar.outline.set_visible(False)
 
     n_placements = summary[0]["runs"]
     fig.suptitle(
@@ -629,7 +789,9 @@ def plot_loss_heatmaps(summary: List[Dict[str, Any]], path: str) -> None:
     )
     fig.text(0.01, 0.015,
              f"mean over {n_placements} placements; identical seeds for both "
-             f"rules; per-link loss is pooled over all links",
+             f"rules. Left panels: share of packets created. Right panel: "
+             f"share of link attempts, pooled over all links — a different "
+             f"denominator, hence its own scale.",
              color=TEXT_SECONDARY, fontsize=8)
 
     fig.savefig(path, facecolor=SURFACE, bbox_inches="tight")
@@ -765,6 +927,9 @@ def main() -> None:
 
     print_summary(summary)
     print_paired(paired)
+    print_old_vs_new(
+        summary, load_baseline(os.path.join(args.out_dir, BASELINE_FILENAME))
+    )
 
     line_path = os.path.join(args.out_dir, "1a_total_loss_vs_load.png")
     heat_path = os.path.join(args.out_dir, "1a_loss_heatmaps.png")
@@ -777,6 +942,11 @@ def main() -> None:
 
     draws = [row["placement_draws"] for row in rows]
     print()
+    print(f"  mean neighbours per drone: "
+          f"{statistics.fmean(r['mean_neighbors_per_drone'] for r in rows):.2f}")
+    print(f"  drones linked directly to the GS: "
+          f"{statistics.fmean(r['drones_in_GS_range'] for r in rows):.2f}"
+          f" of {config.NUM_M_DRONES + config.NUM_C_DRONES}")
     print(f"  placement draws to find a connected layout: "
           f"mean {statistics.fmean(draws):.2f}, max {max(draws)}")
     print(f"  isolated M-drones: 0 in all {len(rows)} runs")

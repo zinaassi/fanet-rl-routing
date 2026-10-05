@@ -238,9 +238,9 @@ def test_random_choices_hold_during_a_real_run() -> None:
 def test_a_holder_with_no_usable_next_hop_drops_as_no_route(routing: str) -> None:
     """A packet at a drone with nothing to forward to is dropped "no_route".
 
-    Driven directly rather than hunting for such a drone in a random layout:
-    the connectivity filter removes stranded M-drones, so a run may contain no
-    "no_route" drop at all.
+    The situation is CONSTRUCTED, not hunted for in a layout: with links
+    reaching ~540 m in a 900x900 m area, essentially every drone can reach the
+    GS directly, so no real placement contains such a drone.
     """
     import os
 
@@ -249,11 +249,9 @@ def test_a_holder_with_no_usable_next_hop_drops_as_no_route(routing: str) -> Non
     env = FANETEnv(routing=routing, log_path=os.devnull)
     env.reset()
 
-    # A drone out of GS range, with its links cleared, has nowhere to send.
-    drone = next(
-        d for d in env.drones
-        if "GS" not in env._next_hop_candidates(d)
-    )
+    # Strand one drone far outside everything: no neighbours, no GS link.
+    drone = env.drones[0]
+    drone.position = np.array([50_000.0, 50_000.0])
     drone.neighbors = {}
     drone.candidates = {}
     assert env._next_hop_candidates(drone) == {}
@@ -268,11 +266,11 @@ def test_a_holder_with_no_usable_next_hop_drops_as_no_route(routing: str) -> Non
 
 
 def test_greedy_dead_end_drops_as_no_route() -> None:
-    """A drone with neighbours but none closer to the GS still drops no_route.
+    """A drone with neighbours but none closer to the GS drops "no_route".
 
-    This is the case the layout filter does NOT remove: the drone has a path to
-    the GS through the graph, but greedy's progress condition finds nothing to
-    hand the packet to.
+    This is the case the layout filter does NOT remove: the drone is part of
+    the graph, but greedy's progress condition finds nothing to hand the packet
+    to. Constructed directly, since the dense network makes it rare in practice.
     """
     import os
 
@@ -281,24 +279,28 @@ def test_greedy_dead_end_drops_as_no_route() -> None:
     env = FANETEnv(routing="greedy", log_path=os.devnull)
     env.reset()
 
-    drone = next(d for d in env.drones if d.neighbors)
-    # Force every neighbour to sit further from the GS than the holder.
-    holder_dist = euclidean_distance(drone.position, env.gs_position)
-    away = env.gs_position + (drone.position - env.gs_position) * (
-        (holder_dist + 50.0) / max(holder_dist, 1e-9)
-    )
-    for neighbour in drone.neighbors.values():
-        neighbour.position = away.copy()
+    reach = channel.max_link_distance()
+    holder, neighbour = env.drones[0], env.drones[1]
 
-    candidates = env._next_hop_candidates(drone)
-    assert candidates, "the drone should still have neighbours"
-    assert "GS" not in candidates or True  # GS, if in range, would qualify
-    if "GS" in candidates:
-        pytest.skip("this drone can reach the GS directly, so it is no dead end")
+    # Holder just beyond the GS's reach, so the GS is not a candidate...
+    holder.position = env.gs_position + np.array([reach + 20.0, 0.0])
+    # ...and its one neighbour is further from the GS still, but close enough
+    # to the holder to be linked.
+    neighbour.position = holder.position + np.array([50.0, 0.0])
 
-    pkt = _factory_for(env).create(source_id=drone.drone_id, created_at=0)
+    holder.neighbors = {neighbour.drone_id: neighbour}
+    holder.candidates = dict(holder.neighbors)
+
+    candidates = env._next_hop_candidates(holder)
+    assert "GS" not in candidates, "the holder must not reach the GS directly"
+    assert neighbour.drone_id in candidates, "the holder must still have a link"
+    assert euclidean_distance(
+        neighbour.position, env.gs_position
+    ) > euclidean_distance(holder.position, env.gs_position)
+
+    pkt = _factory_for(env).create(source_id=holder.drone_id, created_at=0)
     env.all_packets.append(pkt)
-    env._route_into_queue(drone, pkt, measured=False)
+    env._route_into_queue(holder, pkt, measured=False)
 
     assert pkt.dropped
     assert pkt.drop_reason is DropReason.NO_ROUTE

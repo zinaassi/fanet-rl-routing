@@ -59,8 +59,9 @@ def build_graph_with_gs(
 ) -> Tuple[nx.Graph, str]:
     """Build the communication graph including the ground station as a node.
 
-    A drone is linked to the GS node if the FSPL received-signal test in
-    :func:`fanet_sim.envs.channel.are_connected` passes.
+    A drone is linked to the GS node if
+    :func:`fanet_sim.envs.channel.are_connected` passes — i.e. the loss over
+    that distance is below ``config.LINK_MAX_LOSS``.
 
     Args:
         drones:      All Drone objects.

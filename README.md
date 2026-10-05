@@ -50,24 +50,48 @@ not of the routing, and it swamps the comparison. It does **not** remove every
 the GS but no neighbour closer to it. `scripts/range_check.py` deliberately
 runs **unfiltered**, since measuring how often isolation happens is its job.
 
-### Radio and channel
+Since the channel model changed, **the filter no longer rejects anything**: with
+links reaching 539.8 m in a 900 × 900 m area, every random layout already
+connects every M-drone, and all 20 experiment seeds pass on their first draw.
+The filter stays in place because it costs nothing and would bite again if the
+area grew or the link reach shrank.
 
-Link existence is decided by a free-space path loss (FSPL) model: two endpoints
-can hear each other when the received power clears the receiver sensitivity of
-−54 dBm. With 30 dBm transmit power, 2 dBi antennas and a 2.4 GHz carrier, that
-works out to an effective range of **249.69 m**. The GS uses the same radio as
-the drones and is treated as just another endpoint.
+### Channel and links
 
-A link existing does not mean a transmission succeeds. Every send draws against
+Loss is a **logistic curve in distance**, fitted to measured UAV-to-UAV links in
+Rosati et al., *"Dynamic Routing for Flying Ad Hoc Networks"*
+([arXiv:1406.4399](https://arxiv.org/abs/1406.4399)):
 
 ```
-channel_loss = exp(-k · M)      M = received power − sensitivity, in dB
+p_loss(d) = 1 / (1 + exp(-s · (d − D50)))      D50 = 356 m,  s = 0.025
 ```
 
-so loss is 1 exactly at the range edge (M = 0) and falls away fast as endpoints
-close in — with k = 0.8 it is about 0.21 at 200 m, 0.0017 at 100 m and 1.95e-10
-at 10 m. `k` is a modelling choice, not a measurement. Run
-`scripts/plot_ploss.py` to see the curve for k = 0.2, 0.4 and 0.8.
+| d (m) | 100 | 200 | 250 | 270 | 300 | 356 | 400 | 540 |
+|---|---|---|---|---|---|---|---|---|
+| p_loss | 0.002 | 0.020 | 0.066 | 0.104 | 0.198 | 0.500 | 0.750 | 0.990 |
+
+The curve approaches 0 and 1 but never reaches either. The GS uses the same
+model — it is just another endpoint, and the last hop into it draws like any
+other.
+
+**A link exists while its loss stays under `LINK_MAX_LOSS` = 0.99**, which puts
+the edge at **539.8 m**. That is the single rule used everywhere: neighbour
+sets, the GS link, the connected-layout filter and the range check. Distance
+alone decides it, through the curve.
+
+Run `scripts/plot_ploss.py` to see the curve against the one it replaced.
+
+> **This replaced an earlier model** (up to Checkpoint 7): free-space path loss
+> with a −54 dBm receiver sensitivity, giving a hard 249.69 m range, and loss
+> `exp(-k · M)` on the margin above sensitivity with k = 0.8. That curve reached
+> ~100% loss exactly at 250 m, which measured UAV links do not show, and 250 m
+> is short against a 900 × 900 m area. The FSPL code is gone; only
+> `scripts/plot_ploss.py` keeps a copy of the old formula, to draw both curves
+> together.
+>
+> The change makes the network far denser: links now reach 539.8 m rather than
+> 249.69 m, so a drone has roughly **15 neighbours instead of 5**, and almost
+> every drone has a direct link to the GS.
 
 ### Link queues
 
@@ -222,7 +246,7 @@ All commands below run from the `rl_sim/` directory:
 cd rl_sim
 ```
 
-**Tests** — 152 of them, a few seconds:
+**Tests** — 158 of them, a few seconds:
 
 ```bash
 python -m pytest tests/ -q
@@ -281,7 +305,9 @@ defaults and carry a `PROVISIONAL - to confirm` comment in the file.
 | `MAX_PLACEMENT_DRAWS` | 10000 | Give up rather than loop forever looking for one. | — |
 | `QUEUE_CAPACITY` | 10 | Packets per **link** queue. | DECIDED |
 | `MAX_TX_PER_STEP` | 1 | Packets each **link** queue sends per step. | DECIDED |
-| `CHANNEL_LOSS_K` | 0.8 | Decay rate `k` in `exp(-k·M)`. | DECIDED |
+| `LOSS_50_DISTANCE_M` | 356.0 m | Distance at which loss is 50%. | PROVISIONAL |
+| `LOSS_SLOPE_PER_M` | 0.025 | Steepness of the loss curve, per metre. | PROVISIONAL |
+| `LINK_MAX_LOSS` | 0.99 | A link exists while loss is under this (→ 539.8 m). | PROVISIONAL |
 | `PACKET_TTL` | 50 steps | Packet lifetime. | DECIDED |
 | `MAX_HOPS` | 10 | Most hops a packet may take. | DECIDED |
 | `PACKET_INTERVAL_STEPS` | 2 (200 ms) | Steps between packets at each M-drone; the working load. | DECIDED |
@@ -296,17 +322,13 @@ defaults and carry a `PROVISIONAL - to confirm` comment in the file.
 | `RUN_SEED` | 42 | Default channel/traffic seed. | — |
 | `DRONE_SPEED_MIN/MAX` | 10.0 / 30.0 m/s | Drawn per drone; unused while static. | DECIDED |
 | `LOG_DIR` | `logs` | Where per-episode JSONL event logs go. | — |
-| `PT_DBM` | 30.0 dBm | Transmit power (1 W). | DECIDED |
-| `GT_DBI`, `GR_DBI` | 2.0 dBi | Antenna gains. | DECIDED |
-| `F_HZ` | 2.4 GHz | Carrier frequency. | DECIDED |
-| `RX_SENSITIVITY_DBM` | −54.0 dBm | Receiver sensitivity; sets the range. | DECIDED |
-| `MAX_LINK_DISTANCE_M` | 249.69 m | *Derived* from the four above. | derived |
 
-The radio values come from the IQMR paper (Sharvari et al., 2024,
-arXiv:2408.09109). The sensitivity is derived rather than picked, so that the
-FSPL test reproduces IQMR's stated 250 m range at its 1 W transmit power. The
-arena size, the 18 + 7 fleet split and the 2-D simplification are **our**
-choices, not IQMR's.
+`channel.max_link_distance()` derives the 539.8 m link reach from the three
+loss parameters, so there is no separate range constant to keep in step.
+
+The loss curve comes from Rosati et al. (arXiv:1406.4399). The speed range is
+from IQMR (Sharvari et al., 2024, arXiv:2408.09109). The arena size, the 18 + 7
+fleet split and the 2-D simplification are **our** choices.
 
 ---
 
@@ -323,8 +345,9 @@ all of it regenerates from the commands above.
 | `1a_total_loss_vs_load.png` | Total packet loss against offered load, one line per rule, mean with std error bars. |
 | `1a_loss_heatmaps.png` | Two heatmaps (greedy, random): rows are the four loads, columns are total loss, channel, queue_full, no_route, ttl+hop and pooled per-link loss. Mean % with std beneath, same 0–100 % scale in both panels. |
 | `1a_link_matrix_placement1.png` | Per-link loss for placement 1: eight matrices (2 rules × 4 loads), senders as rows, receivers plus GS as columns, grey where a link was never used. |
-| `range_check.csv` | One row per candidate range, with the connectivity figures and the transmit power that range would need. |
-| `ploss_vs_distance.png` | The channel-loss curve for k = 0.2, 0.4, 0.8. |
+| `range_check.csv` | One row per link cutoff (90 / 95 / 99 % loss), with reach, connectivity, neighbour counts, good-link counts and hops on the most reliable path. |
+| `ploss_vs_distance.png` | The loss curve, with the model it replaced drawn alongside. |
+| `1a_summary_OLD_k08.csv`, `1a_runs_OLD_k08.csv` | The previous channel model's results, kept so the old-vs-new table can be printed. |
 
 `main.py` also writes a JSONL event log per episode under `logs/` (one record
 per packet event, per-step network state and per-drone state).
@@ -338,9 +361,12 @@ per packet event, per-step network state and per-drone state).
   medium, which is exactly why each link gets its own queue and its own
   per-step budget, and why a drone can send on all its links at once. A real
   radio could not.
-- **The channel-loss curve is a modelling choice.** `exp(-k · M)` with k = 0.8
-  is a plausible shape, not a measured one. It drives the results directly, so
-  it deserves scrutiny before any conclusion rests on it.
+- **The loss curve is fitted, but to someone else's measurements.** The
+  logistic shape and its two parameters come from Rosati et al.'s UAV
+  experiments, not from this scenario's hardware, altitude or environment. Both
+  parameters are PROVISIONAL, and they drive the results directly.
+- **Loss depends on distance alone.** Not on traffic, antenna orientation, or
+  interference from other transmissions.
 - **Ideal ACKs.** Instant, never lost, no capacity used, no retransmissions.
   Real ACKs would cost airtime and could themselves be lost.
 - **Neighbor knowledge:** each drone knows its own position (GPS), the GS
@@ -352,9 +378,10 @@ per packet event, per-step network state and per-drone state).
 - **Layouts are filtered, so the results are conditional.** Only placements in
   which every M-drone can reach the GS are simulated. At ~250 m range about
   half of all random layouts strand at least one M-drone
-  (`scripts/range_check.py` measures this), and those layouts are excluded.
-  Every number here therefore describes a *connected* deployment, not an
-  arbitrary one.
+  (`scripts/range_check.py` measured this under the old 250 m links), and those
+  layouts are excluded. Every number here therefore describes a *connected*
+  deployment, not an arbitrary one — though under the current loss curve no
+  layout is actually rejected, so the filter is presently a no-op.
 - **Energy is tracked but constrains nothing.** No drone ever runs out.
 
 ---
@@ -375,7 +402,7 @@ per packet event, per-step network state and per-drone state).
 │   │   │   ├── fanet_env.py  The environment: step order, routing rules,
 │   │   │   │                 transmission, drops, ground-truth counters.
 │   │   │   ├── drone.py      A drone: position, link queues, ACK counters.
-│   │   │   ├── channel.py    FSPL, link existence, p_loss.
+│   │   │   ├── channel.py    The loss curve, link existence, link quality.
 │   │   │   └── packet.py     Packet lifecycle and the five drop reasons.
 │   │   └── utils/
 │   │       ├── metrics.py       Connectivity graphs (networkx).
@@ -389,7 +416,7 @@ per packet event, per-step network state and per-drone state).
 │   │   ├── plot_ploss.py     The channel-loss curve.
 │   │   └── analyze.py        Older stand-alone analyser for the JSONL logs.
 │   │                         Nothing in the Phase-1a flow calls it.
-│   ├── tests/              152 tests: channel, queues, routing, conservation,
+│   ├── tests/              158 tests: channel, queues, routing, conservation,
 │   │                       ACK-vs-ground-truth, layout filter, static world,
 │   │                       reproducibility.
 │   └── out/                Generated results (gitignored).

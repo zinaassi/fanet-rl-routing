@@ -1,30 +1,36 @@
 """
-plot_ploss.py — Plot the channel loss curve p_loss vs distance.
+plot_ploss.py — Plot the channel loss curve, new model against old.
 
-Draws one figure with the loss curve for three values of the decay rate k, so
-the shape of the model and the effect of k can be read off directly:
+Draws one figure over 0-800 m showing:
 
-    p_loss(d) = exp(-k * M(d)),   M(d) = received power - sensitivity, in dB
+  * the CURRENT model (bold): a logistic curve in distance, fitted to measured
+    UAV links in Rosati et al., "Dynamic Routing for Flying Ad Hoc Networks"
+    (arXiv:1406.4399),
+        p_loss(d) = 1 / (1 + exp(-s * (d - D50)))
+  * the model it REPLACED (dashed): free-space path loss with a receiver
+    sensitivity of -54 dBm, and loss exp(-k * margin_dB) with k = 0.8. That
+    curve hits 100% loss at 249.69 m and is undefined past it — the "wall".
 
-The curve is only defined where a link exists (M > 0); at and beyond the
-effective range, p_loss is 1 by definition. The vertical marker shows that
-range edge.
+The old model is reproduced locally, in :func:`old_model_loss` below, purely so
+the two can be compared. Nothing in the simulator uses FSPL any more.
+
+Vertical markers show the distances that matter for a 900 x 900 m area with the
+GS at its centre: the edge of "good" links, the 50% point, the link cutoff, and
+the farthest a drone can possibly be from the GS (a corner).
 
 Usage:
-    python scripts/plot_ploss.py                    # writes out/ploss_vs_distance.png
+    python scripts/plot_ploss.py
     python scripts/plot_ploss.py --out somewhere.png
-    python scripts/plot_ploss.py --k 0.2 0.4 0.8    # override the k values
 """
 
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import sys
-from typing import List
+from typing import List, Tuple
 
-# Allow "python scripts/plot_ploss.py" from the rl_sim directory: put rl_sim
-# itself on the path so "fanet_sim" imports, not just "python -m scripts...".
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import matplotlib
@@ -36,14 +42,52 @@ import numpy as np
 from fanet_sim import config
 from fanet_sim.envs import channel
 
-# Categorical series colours, in fixed order. Validated as a 3-slot
-# categorical palette (lightness band, chroma floor, CVD separation and
-# normal-vision separation all pass on the light surface).
-SERIES_COLORS = ["#2a78d6", "#eb6834", "#1baf7a"]
+# Categorical hues, validated as a 2-slot categorical palette.
+NEW_COLOR = "#2a78d6"
+OLD_COLOR = "#eb6834"
 TEXT_PRIMARY = "#1a1a19"
 TEXT_SECONDARY = "#5c5b54"
 GRID_COLOR = "#e4e3dd"
 SURFACE = "#fcfcfb"
+
+# --- the replaced model, kept only to draw it ------------------------------
+OLD_PT_DBM = 30.0
+OLD_GT_DBI = 2.0
+OLD_GR_DBI = 2.0
+OLD_F_HZ = 2.4e9
+OLD_RX_SENSITIVITY_DBM = -54.0
+OLD_K = 0.8
+_SPEED_OF_LIGHT = 299_792_458.0
+_OLD_FSPL_CONST_DB = (
+    20.0 * math.log10(OLD_F_HZ)
+    + 20.0 * math.log10(4.0 * math.pi / _SPEED_OF_LIGHT)
+)
+OLD_MAX_LINK_M = 10.0 ** (
+    (OLD_PT_DBM + OLD_GT_DBI + OLD_GR_DBI - OLD_RX_SENSITIVITY_DBM
+     - _OLD_FSPL_CONST_DB) / 20.0
+)
+
+
+def old_model_loss(dist_m: float) -> float:
+    """Loss under the REPLACED FSPL model, for comparison only.
+
+    ``exp(-0.8 * M)`` where M is the margin in dB above a -54 dBm sensitivity,
+    and 1.0 once the margin is gone (past ~249.69 m).
+
+    Args:
+        dist_m: Distance between endpoints, in metres.
+
+    Returns:
+        Float in [0.0, 1.0].
+    """
+    if dist_m <= 1e-9:
+        return 0.0
+    fspl_db = 20.0 * math.log10(dist_m) + _OLD_FSPL_CONST_DB
+    margin = (OLD_PT_DBM + OLD_GT_DBI + OLD_GR_DBI - fspl_db
+              - OLD_RX_SENSITIVITY_DBM)
+    if margin <= 0.0:
+        return 1.0
+    return min(1.0, math.exp(-OLD_K * margin))
 
 
 def parse_args() -> argparse.Namespace:
@@ -53,14 +97,7 @@ def parse_args() -> argparse.Namespace:
         Parsed argument namespace.
     """
     parser = argparse.ArgumentParser(
-        description="Plot p_loss vs distance for several k values."
-    )
-    parser.add_argument(
-        "--k",
-        type=float,
-        nargs="+",
-        default=[0.2, 0.4, 0.8],
-        help="Decay rates to draw (default: 0.2 0.4 0.8).",
+        description="Plot the channel loss curve, new model against old."
     )
     parser.add_argument(
         "--out",
@@ -71,76 +108,85 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def plot_ploss(k_values: List[float], out_path: str) -> str:
-    """Draw the loss curves and write the figure to *out_path*.
+def markers() -> List[Tuple[float, str]]:
+    """Return the vertical reference lines, as (distance, label) pairs.
+
+    Returns:
+        The distances that matter for a 900 x 900 m area with a central GS.
+    """
+    corner = math.hypot(config.WIDTH / 2.0, config.HEIGHT / 2.0)
+    return [
+        (channel.distance_for_loss(0.10), "10% loss — edge of good links"),
+        (config.LOSS_50_DISTANCE_M, "50% loss"),
+        (channel.max_link_distance(),
+         f"{config.LINK_MAX_LOSS * 100:.0f}% loss — link cutoff"),
+        (corner, "farthest point from the GS"),
+    ]
+
+
+def plot(out_path: str) -> str:
+    """Draw both curves and write the figure to *out_path*.
 
     Args:
-        k_values: Decay rates to draw, one line each.
         out_path: Where to write the PNG. Parent directories are created.
 
     Returns:
         The path written.
     """
-    max_range = channel.MAX_LINK_DISTANCE_M
-    # Sample densely near the range edge, where the curve turns hardest.
-    dists = np.linspace(1.0, max_range, 2000)
+    dists = np.linspace(0.0, 800.0, 3000)
 
-    fig, ax = plt.subplots(figsize=(8.0, 5.0), dpi=150)
+    fig, ax = plt.subplots(figsize=(10.0, 6.0), dpi=150)
     fig.patch.set_facecolor(SURFACE)
     ax.set_facecolor(SURFACE)
 
-    for i, k in enumerate(k_values):
-        color = SERIES_COLORS[i % len(SERIES_COLORS)]
-        losses = [channel.p_loss(float(d), k=k) for d in dists]
-        is_default = abs(k - config.CHANNEL_LOSS_K) < 1e-12
-        ax.plot(
-            dists,
-            losses,
-            color=color,
-            linewidth=2.4 if is_default else 2.0,
-            label=f"k = {k:g}" + ("  (default)" if is_default else ""),
-            zorder=3,
-        )
-        # Direct-label every line at one common distance, chosen where the
-        # three curves are far apart vertically — so the labels stack cleanly
-        # instead of colliding near the range edge.
-        anchor = int(np.argmin(np.abs(dists - max_range * 0.66)))
-        ax.annotate(
-            f"k = {k:g}",
-            xy=(dists[anchor], losses[anchor]),
-            xytext=(8, 6),
-            textcoords="offset points",
-            color=color,
-            fontsize=10,
-            fontweight="bold",
-            ha="left",
-            va="bottom",
-            zorder=5,
-        )
+    new_losses = [100.0 * channel.p_loss(float(d)) for d in dists]
+    old_losses = [100.0 * old_model_loss(float(d)) for d in dists]
 
-    # The range edge: beyond it there is no link and p_loss is 1 by definition.
-    ax.axvline(max_range, color=TEXT_SECONDARY, linewidth=1.0, linestyle="--", zorder=2)
-    # Set along the range line itself: the curves only reach this strip very
-    # close to p_loss = 1, so nothing collides with it.
-    ax.text(
-        max_range - 6.0,
-        0.60,
-        f"no link beyond {max_range:.0f} m",
-        color=TEXT_SECONDARY,
-        fontsize=9,
-        rotation=90,
-        ha="center",
-        va="center",
-        zorder=5,
+    ax.plot(dists, old_losses, color=OLD_COLOR, linewidth=2.0,
+            linestyle="--", label="old: exp(-0.8·margin), FSPL", zorder=3)
+    ax.plot(dists, new_losses, color=NEW_COLOR, linewidth=2.8,
+            label="new: logistic in distance", zorder=4)
+
+    ax.annotate(
+        "new", xy=(470.0, 100.0 * channel.p_loss(470.0)),
+        xytext=(10, -4), textcoords="offset points",
+        color=NEW_COLOR, fontsize=11, fontweight="bold", zorder=6,
+    )
+    ax.annotate(
+        "old", xy=(OLD_MAX_LINK_M * 0.80,
+                   100.0 * old_model_loss(OLD_MAX_LINK_M * 0.80)),
+        xytext=(-10, 6), textcoords="offset points", ha="right",
+        color=OLD_COLOR, fontsize=11, fontweight="bold", zorder=6,
     )
 
-    ax.set_xlim(0, max_range * 1.02)
-    ax.set_ylim(0, 1.02)
-    ax.set_xlabel("Distance between endpoints (m)", color=TEXT_SECONDARY, fontsize=11)
-    ax.set_ylabel("p_loss  (probability a transmission is lost)",
+    # The old model's wall: loss is 100% from here on, and no link exists.
+    ax.annotate(
+        f"old model's wall\nat {OLD_MAX_LINK_M:.0f} m",
+        xy=(OLD_MAX_LINK_M, 100.0), xytext=(OLD_MAX_LINK_M - 18, 86),
+        textcoords="data", ha="right", va="top",
+        color=OLD_COLOR, fontsize=8.5, zorder=6,
+    )
+
+    # Reference distances. The labels run ALONG their lines: a rotated label is
+    # only a few pixels wide, so it fits in the gaps between the two curves
+    # where a horizontal one would lie across them.
+    label_heights = [55.0, 80.0, 48.0, 70.0]
+    for (dist, label), height in zip(markers(), label_heights):
+        ax.axvline(dist, color=TEXT_SECONDARY, linewidth=0.9,
+                   linestyle=":", zorder=2)
+        ax.text(
+            dist - 7.0, height, f"{label}  ·  {dist:.0f} m",
+            color=TEXT_SECONDARY, fontsize=8.5, rotation=90,
+            ha="center", va="center", zorder=6,
+        )
+
+    ax.set_xlim(0, 800)
+    ax.set_ylim(0, 103)
+    ax.set_xlabel("Distance between sender and receiver (m)",
                   color=TEXT_SECONDARY, fontsize=11)
+    ax.set_ylabel("Packet loss (%)", color=TEXT_SECONDARY, fontsize=11)
     ax.set_title(
-        "Channel loss vs distance:  p_loss = exp(-k · margin_dB)",
+        "Channel loss vs distance — new logistic model against the old FSPL one",
         color=TEXT_PRIMARY, fontsize=13, fontweight="bold", pad=14, loc="left",
     )
 
@@ -152,15 +198,17 @@ def plot_ploss(k_values: List[float], out_path: str) -> str:
         ax.spines[side].set_color(GRID_COLOR)
     ax.tick_params(colors=TEXT_SECONDARY, labelsize=10)
 
-    legend = ax.legend(
-        loc="upper left", frameon=False, fontsize=10, labelcolor=TEXT_SECONDARY,
-    )
-    legend.set_zorder(6)
+    # Lower right: the only region both curves and all four markers leave clear.
+    legend = ax.legend(loc="lower right", frameon=False, fontsize=10,
+                       labelcolor=TEXT_SECONDARY)
+    legend.set_zorder(7)
 
     fig.text(
         0.01, 0.015,
-        f"FSPL channel, Pt={channel.PT_DBM:.0f} dBm, sensitivity="
-        f"{channel.RX_SENSITIVITY_DBM:.0f} dBm, f={channel.F_HZ/1e9:.1f} GHz",
+        f"new: 1/(1+exp(-{config.LOSS_SLOPE_PER_M}·(d-"
+        f"{config.LOSS_50_DISTANCE_M:.0f}))), Rosati et al. arXiv:1406.4399   |   "
+        f"link exists while loss < {config.LINK_MAX_LOSS:.2f}   |   "
+        f"area {config.WIDTH:.0f}x{config.HEIGHT:.0f} m, GS at centre",
         color=TEXT_SECONDARY, fontsize=8,
     )
 
@@ -174,21 +222,23 @@ def plot_ploss(k_values: List[float], out_path: str) -> str:
 
 
 def main() -> None:
-    """Entry point: parse args and write the figure."""
+    """Entry point: write the figure and print a table of both curves."""
     args = parse_args()
-    path = plot_ploss(args.k, args.out)
+    path = plot(args.out)
 
     print(f"wrote {path}")
     print()
-    print("  p_loss at selected distances")
-    print("  " + "-" * 52)
-    header = "  dist(m)   margin(dB)" + "".join(f"   k={k:<8g}" for k in args.k)
-    print(header)
-    for d in [10.0, 50.0, 100.0, 150.0, 200.0, 240.0, 249.0]:
-        row = f"  {d:7.0f}   {channel.link_margin_db(d):10.2f}"
-        for k in args.k:
-            row += f"   {channel.p_loss(d, k=k):<10.3g}"
-        print(row)
+    print("  loss at selected distances")
+    print("  " + "-" * 44)
+    print(f"  {'dist(m)':>8}{'new':>12}{'old':>12}")
+    for dist in [50, 100, 150, 200, 250, 270, 300, 356, 400, 450,
+                 500, 540, 636, 800]:
+        print(f"  {dist:>8}{channel.p_loss(float(dist)):>12.4f}"
+              f"{old_model_loss(float(dist)):>12.4f}")
+    print("  " + "-" * 44)
+    print(f"  link cutoff (loss < {config.LINK_MAX_LOSS:.2f}): "
+          f"{channel.max_link_distance():.1f} m"
+          f"   (old model: {OLD_MAX_LINK_M:.1f} m)")
 
 
 if __name__ == "__main__":

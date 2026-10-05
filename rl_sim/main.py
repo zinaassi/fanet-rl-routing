@@ -168,16 +168,15 @@ def main() -> None:
     run_seed = config.RUN_SEED if args.run_seed is None else args.run_seed
     print(f"  Seeds     : placement={placement_seed}  run={run_seed}")
     print(f"  Log file  : {log_path}")
-    print("  Channel   : FSPL (free-space path loss)")
-    print(f"    Pt={channel.PT_DBM:.1f} dBm  "
-          f"Gt={channel.GT_DBI:.1f} dBi  "
-          f"Gr={channel.GR_DBI:.1f} dBi  "
-          f"f={channel.F_HZ/1e9:.2f} GHz")
-    print(f"    sensitivity = {channel.RX_SENSITIVITY_DBM:.1f} dBm  "
-          f"link budget = {channel.LINK_BUDGET_DB:.1f} dB")
-    print(f"    => effective max link distance = "
-          f"{channel.MAX_LINK_DISTANCE_M:.1f} m")
-    print(f"    p_loss = exp(-k*margin_dB), k = {config.CHANNEL_LOSS_K}")
+    print("  Channel   : logistic loss vs distance "
+          "(Rosati et al., arXiv:1406.4399)")
+    print(f"    p_loss(d) = 1 / (1 + exp(-{config.LOSS_SLOPE_PER_M} "
+          f"* (d - {config.LOSS_50_DISTANCE_M:.0f})))")
+    print(f"    50% loss at {config.LOSS_50_DISTANCE_M:.0f} m   "
+          f"10% at {channel.distance_for_loss(0.10):.0f} m   "
+          f"1% at {channel.distance_for_loss(0.01):.0f} m")
+    print(f"    link exists while loss < {config.LINK_MAX_LOSS:.2f}  "
+          f"=> reaches {channel.max_link_distance():.1f} m")
     print("=" * 56 + "\n")
 
     env = FANETEnv(

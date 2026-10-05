@@ -16,7 +16,7 @@ Link selection:
     There is no link cap. Each step a drone gathers every in-range *candidate*
     (:meth:`update_candidates`) and keeps all of them as its active
     ``neighbors`` (:meth:`update_neighbors`). Link existence is decided purely
-    by the FSPL received-power test in :mod:`fanet_sim.envs.channel`.
+    by the loss curve in :mod:`fanet_sim.envs.channel`.
 
 Queues:
     ONE FIFO QUEUE PER OUTGOING LINK — one for each current neighbour, plus one
@@ -273,9 +273,9 @@ class Drone:
     def update_candidates(self, all_drones: List["Drone"]) -> None:
         """Recompute the pool of in-range candidate links.
 
-        A drone is a candidate if the FSPL received-signal test in
-        :func:`fanet_sim.envs.channel.are_connected` passes — i.e. the
-        received power at the receiver clears RX_SENSITIVITY_DBM. This is the
+        A drone is a candidate if :func:`fanet_sim.envs.channel.are_connected`
+        passes — i.e. the loss over that distance is below
+        ``config.LINK_MAX_LOSS``. This is the
         passive "who can I hear" set; the active top-K links are then chosen
         from it by :meth:`update_neighbors`.
 
@@ -531,7 +531,7 @@ class Drone:
             - ``neighbor_ids``        List of neighbour drone IDs.
             - ``neighbor_positions``  List of (x, y) for each neighbour.
             - ``neighbor_distances``  List of distances to each neighbour.
-            - ``link_quality``        Dict {neighbour_id: float 0-1}.
+            - ``link_quality``        Dict {neighbour_id: P(a send gets through)}.
             - ``is_connected_to_gs``  Bool — can this drone reach GS in one hop?
         """
         neighbor_ids: List[int] = []

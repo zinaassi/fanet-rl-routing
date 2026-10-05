@@ -13,6 +13,7 @@ import networkx as nx
 import pytest
 
 from fanet_sim import config
+from fanet_sim.envs import channel
 from fanet_sim.envs.channel import are_connected
 from fanet_sim.envs.fanet_env import FANETEnv
 from fanet_sim.utils.metrics import build_graph_with_gs
@@ -78,11 +79,40 @@ def test_no_drone_is_left_without_any_neighbour(seed: int) -> None:
         assert has_link, f"M-drone {drone.drone_id} has nowhere to send"
 
 
-def test_the_filter_actually_rejects_some_layouts() -> None:
-    """Guard: if no seed ever needed a second draw, the filter is untested."""
+def test_no_layout_is_rejected_at_the_current_link_reach() -> None:
+    """At ~540 m reach, every layout already connects every M-drone.
+
+    This records a fact about the current parameters rather than a property of
+    the filter: links are long enough relative to the 900x900 m area that the
+    filter never has to reject anything, so every seed passes on its first
+    draw. If this ever starts failing, the reach or the area changed and the
+    filter has started to bite — which is fine, but worth noticing.
+    """
     draws = [_env(seed).placement_draws for seed in range(1, 21)]
-    assert all(d >= 1 for d in draws)
-    assert max(draws) > 1, "no layout was ever rejected — filter not exercised"
+    assert draws == [1] * 20, f"some layout was rejected: {draws}"
+
+
+def test_the_filter_rejects_layouts_when_links_are_short() -> None:
+    """The filter mechanism still works — shown by shortening the links.
+
+    With the reach cut to ~250 m (the old model's range) some random layouts
+    DO strand an M-drone, so the filter has to draw again. This exercises the
+    rejection path, which the current parameters never reach.
+    """
+    previous = config.LINK_MAX_LOSS
+    try:
+        # Loss of 6.6% is reached at 250 m, so links stop there.
+        config.LINK_MAX_LOSS = channel.p_loss(250.0)
+        assert channel.max_link_distance() == pytest.approx(250.0, abs=0.5)
+
+        draws = [_env(seed).placement_draws for seed in range(1, 21)]
+        assert max(draws) > 1, "shortening the links rejected nothing"
+        # And whatever was accepted is still fully connected.
+        for seed in range(1, 6):
+            env = _env(seed)
+            assert _m_drones_reaching_gs(env) == config.NUM_M_DRONES
+    finally:
+        config.LINK_MAX_LOSS = previous
 
 
 @pytest.mark.parametrize("seed", SEEDS)

@@ -379,15 +379,12 @@ class FANETEnv:
                 "drain_steps": config.DRAIN_STEPS,
             },
             connectivity_model_params={
-                "model": "FSPL",
-                "pt_dbm": channel.PT_DBM,
-                "gt_dbi": channel.GT_DBI,
-                "gr_dbi": channel.GR_DBI,
-                "f_hz": channel.F_HZ,
-                "rx_sensitivity_dbm": channel.RX_SENSITIVITY_DBM,
-                "link_budget_db": channel.LINK_BUDGET_DB,
-                "max_link_distance_m": channel.MAX_LINK_DISTANCE_M,
-                "channel_loss_k": config.CHANNEL_LOSS_K,
+                "model": "logistic_distance",
+                "reference": "Rosati et al., arXiv:1406.4399",
+                "loss_50_distance_m": config.LOSS_50_DISTANCE_M,
+                "loss_slope_per_m": config.LOSS_SLOPE_PER_M,
+                "link_max_loss": config.LINK_MAX_LOSS,
+                "max_link_distance_m": channel.max_link_distance(),
                 "timestep_s": config.TIMESTEP,
                 "routing": self.routing,
             },
@@ -397,15 +394,14 @@ class FANETEnv:
                 "arxiv": "2408.09109",
                 "section": "V.A",
                 "notes": (
-                    "From IQMR: speed range (10-30 m/s), transmit power "
-                    "(1 W = 30 dBm), 2.4 GHz carrier, energy budget "
-                    "(11.1 V x 5200 mAh = 207792 J) and radio range (250 m). "
-                    "Receiver sensitivity (-54 dBm) is derived from the FSPL "
-                    "model to reproduce that 250 m range at 1 W rather than "
-                    "picked arbitrarily. "
-                    "NOT from IQMR: the 900x900 m arena, the 18 M + 7 C fleet "
-                    "split, and 2D instead of 3D — those are Phase-1A choices "
-                    "for this project."
+                    "From IQMR: speed range (10-30 m/s) and the energy budget "
+                    "(11.1 V x 5200 mAh = 207792 J). "
+                    "NOT from IQMR: the channel, which since Checkpoint 7 is "
+                    "the logistic loss curve of Rosati et al. "
+                    "(arXiv:1406.4399) rather than an FSPL power budget; the "
+                    "900x900 m arena; the 18 M + 7 C fleet split; and 2D "
+                    "instead of 3D — those are Phase-1A choices for this "
+                    "project."
                 ),
             },
         )
@@ -447,7 +443,8 @@ class FANETEnv:
         """True if every M-drone has some path to the GS.
 
         Uses the simulator's own link rule — an edge wherever
-        :func:`are_connected` passes — and allows paths through any drone,
+        :func:`are_connected` passes, i.e. loss below ``config.LINK_MAX_LOSS``
+        — and allows paths through any drone,
         C-drones included. C-drones themselves need no path.
 
         Args:

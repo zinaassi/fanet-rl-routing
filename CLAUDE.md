@@ -31,8 +31,7 @@ be written NEW; the archived RL code is not to be reused.
 ## Current model (full details and DECIDED/PROVISIONAL status in
 ## README.md at the repo root, written at Checkpoint 5)
 - World: 2D, 900x900 m, GS at (450,450), 18 M + 7 C drones, placed
-  uniformly at random. Static. Time step 100 ms. Range ~250 m (FSPL,
-  -54 dBm).
+  uniformly at random. Static. Time step 100 ms.
 - Layout filter: only placements where EVERY M-drone has a path to the
   GS are used (same link rule as the simulator, paths may run through
   any drone, C-drones included; C-drones themselves need no path). A
@@ -49,8 +48,24 @@ be written NEW; the archived RL code is not to be reused.
   arrives, the drone picks the next hop and puts it in that link's
   queue. Arrivals within a step are processed in random (reproducible)
   order. Arrived packets wait at least one step.
-- Channel loss = exp(-k*M), k = 0.8, M = signal margin in dB (1 at the
-  range edge, ~0 up close).
+- Channel loss: a logistic curve in DISTANCE, fitted to measured UAV
+  links in Rosati et al., "Dynamic Routing for Flying Ad Hoc Networks"
+  (arXiv:1406.4399):
+      p_loss(d) = 1 / (1 + exp(-s*(d - D50)))
+  with D50 = 356 m and s = 0.025 (both PROVISIONAL). Loss is ~0.2% at
+  100 m, 6.6% at 250 m, 50% at 356 m, 99% at 540 m. The same curve
+  covers the last hop into the GS.
+  REPLACED the earlier FSPL model (-54 dBm sensitivity, a hard 249.69 m
+  range, loss exp(-k*M) with k = 0.8), which hit ~100% loss right at
+  250 m. The FSPL code is gone; scripts/plot_ploss.py keeps a local copy
+  of the old curve only to draw the two together.
+- Link existence: a link exists while p_loss < LINK_MAX_LOSS = 0.99
+  (PROVISIONAL), i.e. out to ~539.8 m. ONE rule everywhere: neighbors,
+  the GS link, the connected-layout filter and the range check.
+  Consequence at these values: with ~540 m links in a 900x900 m area the
+  network is dense -- ~15 neighbors per drone, and almost every drone
+  links straight to the GS -- so the layout filter currently rejects
+  nothing.
 - Link loss = 1 - (1 - channel loss) * (1 - queue_full), where
   queue_full = 1 if the sender's own queue for that link is full.
 - GREEDY: among neighbors strictly closer to the GS, the lowest link
