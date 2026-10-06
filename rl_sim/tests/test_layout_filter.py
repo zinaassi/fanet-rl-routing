@@ -8,6 +8,7 @@ so a seed still names one specific accepted layout.
 from __future__ import annotations
 
 import os
+import statistics
 
 import networkx as nx
 import pytest
@@ -39,8 +40,8 @@ def _env(placement_seed: int, run_seed: int = 1) -> FANETEnv:
 def _m_drones_reaching_gs(env: FANETEnv) -> int:
     """Count M-drones with any path to the GS, derived independently.
 
-    Rebuilds the graph from raw positions with the FSPL link test, rather than
-    reusing the env's own acceptance check.
+    Rebuilds the graph from raw positions with the loss-curve link test, rather
+    than reusing the env's own acceptance check.
     """
     graph = nx.Graph()
     graph.add_nodes_from(d.drone_id for d in env.drones)
@@ -79,17 +80,19 @@ def test_no_drone_is_left_without_any_neighbour(seed: int) -> None:
         assert has_link, f"M-drone {drone.drone_id} has nowhere to send"
 
 
-def test_no_layout_is_rejected_at_the_current_link_reach() -> None:
-    """At ~540 m reach, every layout already connects every M-drone.
+def test_the_experiment_seeds_need_few_draws() -> None:
+    """The 20 experiment seeds all connect on their first draw.
 
-    This records a fact about the current parameters rather than a property of
-    the filter: links are long enough relative to the 900x900 m area that the
-    filter never has to reject anything, so every seed passes on its first
-    draw. If this ever starts failing, the reach or the area changed and the
-    filter has started to bite — which is fine, but worth noticing.
+    This records a fact about the current parameters, not a property of the
+    filter. At the configured 0.5 cutoff (356 m reach) the range check puts
+    the strand rate near 2% of layouts, so a rejection among 20 seeds is
+    possible — it just does not happen with these ones. The assertion is
+    deliberately loose: it catches the reach collapsing without failing the
+    moment one seed needs a redraw.
     """
     draws = [_env(seed).placement_draws for seed in range(1, 21)]
-    assert draws == [1] * 20, f"some layout was rejected: {draws}"
+    assert all(d >= 1 for d in draws)
+    assert statistics.fmean(draws) < 1.5, f"layouts are being rejected often: {draws}"
 
 
 def test_the_filter_rejects_layouts_when_links_are_short() -> None:

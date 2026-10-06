@@ -50,11 +50,10 @@ not of the routing, and it swamps the comparison. It does **not** remove every
 the GS but no neighbour closer to it. `scripts/range_check.py` deliberately
 runs **unfiltered**, since measuring how often isolation happens is its job.
 
-Since the channel model changed, **the filter no longer rejects anything**: with
-links reaching 539.8 m in a 900 × 900 m area, every random layout already
-connects every M-drone, and all 20 experiment seeds pass on their first draw.
-The filter stays in place because it costs nothing and would bite again if the
-area grew or the link reach shrank.
+At the current 356 m reach the range check puts the strand rate near **2 % of
+random layouts**, and all 20 experiment seeds happen to connect on their first
+draw. The filter is therefore rarely invoked, but not inert — unlike at the
+earlier 0.99 cutoff, where nothing was ever rejected.
 
 ### Channel and links
 
@@ -74,10 +73,16 @@ The curve approaches 0 and 1 but never reaches either. The GS uses the same
 model — it is just another endpoint, and the last hop into it draws like any
 other.
 
-**A link exists while its loss stays under `LINK_MAX_LOSS` = 0.99**, which puts
-the edge at **539.8 m**. That is the single rule used everywhere: neighbour
-sets, the GS link, the connected-layout filter and the range check. Distance
-alone decides it, through the curve.
+**A link exists while its loss stays under `LINK_MAX_LOSS` = 0.5**, which puts
+the edge at exactly **356 m** — the curve's midpoint. The justification: a
+drone lists a neighbour only if at least half of its hello messages get
+through to it. That is the single rule used everywhere: neighbour sets, the GS
+link, the connected-layout filter and the range check. Distance alone decides
+it, through the curve.
+
+At this cutoff, across the 20 experiment layouts, a drone has about **7.9
+neighbours** and **12.2 of 25** drones hold a direct link to the GS. The range
+check, which samples 100 layouts and does not filter them, gives 8.6 and 12.4.
 
 Run `scripts/plot_ploss.py` to see the curve against the one it replaced.
 
@@ -89,9 +94,12 @@ Run `scripts/plot_ploss.py` to see the curve against the one it replaced.
 > `scripts/plot_ploss.py` keeps a copy of the old formula, to draw both curves
 > together.
 >
-> The change makes the network far denser: links now reach 539.8 m rather than
-> 249.69 m, so a drone has roughly **15 neighbours instead of 5**, and almost
-> every drone has a direct link to the GS.
+> The cutoff was first set to 0.99, which reached 539.8 m and made the network
+> very dense (~15 neighbours per drone). That reach was a side effect of the
+> cutoff rather than a deliberate choice, and it handed the RANDOM rule a pile
+> of links losing over 90% of what was sent on them. It is now 0.5.
+> `scripts/link_cutoff_sensitivity.py` measures how much the cutoff moves the
+> results.
 
 ### Link queues
 
@@ -127,7 +135,7 @@ current holder. Among those, minimise
 
 ```
 link_loss    = 1 − (1 − channel_loss) · (1 − queue_full)
-channel_loss = exp(-k · M) for that link's distance
+channel_loss = p_loss(that link's distance)   — the logistic curve above
 queue_full   = 1 if the holder's OWN queue for that link is at capacity, else 0
 ```
 
@@ -246,7 +254,7 @@ All commands below run from the `rl_sim/` directory:
 cd rl_sim
 ```
 
-**Tests** — 158 of them, a few seconds:
+**Tests** — 162 of them, a few seconds:
 
 ```bash
 python -m pytest tests/ -q
@@ -278,6 +286,28 @@ python scripts/experiment_1a.py --placements 5      # quicker smoke run
 python scripts/range_check.py
 ```
 
+**The link-cutoff sensitivity study** — how much `LINK_MAX_LOSS` moves the
+results, at the working load:
+
+```bash
+python scripts/link_cutoff_sensitivity.py
+```
+
+**Everything at once.** After changing anything in `config.py`, rebuild every
+figure and table from the new settings in one go. Each script runs in a fresh
+process, and the run stops at the first failure or any `views_agree` mismatch:
+
+```bash
+python scripts/regenerate_all.py
+```
+
+Every figure footer and every CSV's first line carries a **settings stamp** —
+the loss curve, the link cutoff and reach, the world, the queue limits, the
+load, the placement count, the measurement window and the git commit — all
+read from `config.py`. A figure or table found on its own can therefore be
+traced back to the model version that produced it. CSVs written this way have
+a leading `#` line, so read them with `scripts.stamp.read_stamped_csv`.
+
 **The channel-loss curve**:
 
 ```bash
@@ -307,7 +337,7 @@ defaults and carry a `PROVISIONAL - to confirm` comment in the file.
 | `MAX_TX_PER_STEP` | 1 | Packets each **link** queue sends per step. | DECIDED |
 | `LOSS_50_DISTANCE_M` | 356.0 m | Distance at which loss is 50%. | PROVISIONAL |
 | `LOSS_SLOPE_PER_M` | 0.025 | Steepness of the loss curve, per metre. | PROVISIONAL |
-| `LINK_MAX_LOSS` | 0.99 | A link exists while loss is under this (→ 539.8 m). | PROVISIONAL |
+| `LINK_MAX_LOSS` | 0.5 | A link exists while loss is under this (→ 356 m): at least half the hello messages get through. | PROVISIONAL |
 | `PACKET_TTL` | 50 steps | Packet lifetime. | DECIDED |
 | `MAX_HOPS` | 10 | Most hops a packet may take. | DECIDED |
 | `PACKET_INTERVAL_STEPS` | 2 (200 ms) | Steps between packets at each M-drone; the working load. | DECIDED |
@@ -323,8 +353,8 @@ defaults and carry a `PROVISIONAL - to confirm` comment in the file.
 | `DRONE_SPEED_MIN/MAX` | 10.0 / 30.0 m/s | Drawn per drone; unused while static. | DECIDED |
 | `LOG_DIR` | `logs` | Where per-episode JSONL event logs go. | — |
 
-`channel.max_link_distance()` derives the 539.8 m link reach from the three
-loss parameters, so there is no separate range constant to keep in step.
+`channel.max_link_distance()` derives the 356 m link reach from the three loss
+parameters, so there is no separate range constant to keep in step.
 
 The loss curve comes from Rosati et al. (arXiv:1406.4399). The speed range is
 from IQMR (Sharvari et al., 2024, arXiv:2408.09109). The arena size, the 18 + 7
@@ -334,27 +364,58 @@ fleet split and the 2-D simplification are **our** choices.
 
 ## 4. Outputs
 
-Everything written by the scripts lands in `rl_sim/out/`, which is gitignored —
-all of it regenerates from the commands above.
+Everything written by the scripts lands in `rl_sim/out/`. The figures and the
+small result tables are committed, so the numbers quoted here can be checked
+without rerunning anything; the big per-run CSVs are gitignored and regenerate
+from the commands above.
 
 | File | Contents |
 |---|---|
-| `1a_runs.csv` | One row per experiment run (160): seeds, rule, load, created/delivered, total loss and its five causes as shares of created, pooled per-link loss and its three parts, queue occupancy, delay, hops, isolated M-drone count (0 under the filter), drones in GS range, how many layout draws the seed needed, and whether the two views agreed. |
+| `1a_runs.csv` | *(gitignored)* One row per experiment run (160): seeds, rule, load, created/delivered, total loss and its five causes as shares of created, pooled per-link loss and its three parts, queue occupancy, delay, hops, isolated M-drone count (0 under the filter), drones in GS range, how many layout draws the seed needed, and whether the two views agreed. |
 | `1a_summary.csv` | Mean and standard deviation of every numeric column, per (routing, load). |
 | `1a_paired.csv` | Per load: mean and std of `greedy − random` total loss on identical seeds, and how many of the 20 placements greedy lost less on. |
 | `1a_total_loss_vs_load.png` | Total packet loss against offered load, one line per rule, mean with std error bars. |
-| `1a_loss_heatmaps.png` | Two heatmaps (greedy, random): rows are the four loads, columns are total loss, channel, queue_full, no_route, ttl+hop and pooled per-link loss. Mean % with std beneath, same 0–100 % scale in both panels. |
+| `1a_loss_heatmaps.png` | Three panels: loss causes for greedy and for random, sharing a "% of packets created" scale, then per-link loss on its own "% of link attempts" scale. Mean % with std beneath. |
 | `1a_link_matrix_placement1.png` | Per-link loss for placement 1: eight matrices (2 rules × 4 loads), senders as rows, receivers plus GS as columns, grey where a link was never used. |
-| `range_check.csv` | One row per link cutoff (90 / 95 / 99 % loss), with reach, connectivity, neighbour counts, good-link counts and hops on the most reliable path. |
+| `range_check.csv` | One row per link cutoff (20 / 50 / 90 / 95 / 99 % loss), with reach, connectivity, neighbour counts, good-link counts and hops on the most reliable path. |
 | `ploss_vs_distance.png` | The loss curve, with the model it replaced drawn alongside. |
-| `1a_summary_OLD_k08.csv`, `1a_runs_OLD_k08.csv` | The previous channel model's results, kept so the old-vs-new table can be printed. |
+| `1a_summary_OLD_k08.csv` | The previous channel model's summary (FSPL, k = 0.8), regenerated from commit `84a2072` so the old-vs-new table can be printed. Committed. |
+| `link_cutoff_sensitivity.csv` | Total loss and its causes, hops, neighbours, GS links and placement draws at link cutoffs 0.99 / 0.5 / 0.2, both rules, at the 200 ms load. |
 
 `main.py` also writes a JSONL event log per episode under `logs/` (one record
 per packet event, per-step network state and per-drone state).
 
 ---
 
-## 5. Assumptions and limitations
+## 5. Observed baseline behaviour
+
+Recorded from the runs, without interpretation.
+
+**Greedy concentrates congestion into a few drones near the GS — a funnel.**
+Greedy sends toward whichever qualifying neighbour has the lowest link loss,
+so traffic converges on the drones closest to the ground station. Each drone
+sends at most one packet per link per step and each link queue holds ten, so a
+drone fed by many neighbours cannot drain as fast as it fills.
+
+Measured over 10 placements at the 200 ms load:
+
+| | |
+|---|---|
+| drones with any `queue_full` drop at all | **2.5 of 25** |
+| share of all `queue_full` drops at the 3 worst drones | **100 %** |
+| the single worst drone sits | **72 m** from the GS, with **11.1** neighbours |
+
+On one placement the worst drone was offered 2 952 packets and refused 1 916
+of them (64.9 %) for want of queue space, while 22 of the 25 drones refused
+none. Across the grid, `queue_full` is greedy's largest loss cause at the
+heavier loads, reaching 52.7 % of packets created at 100 ms.
+
+Random shows no such concentration: its `queue_full` is 0.0 % at every load,
+and its mean link-queue occupancy stays near 0.0 of 10.
+
+---
+
+## 6. Assumptions and limitations
 
 - **2-D.** No altitude. The real scenario is three-dimensional.
 - **No MAC layer, no interference, no collisions.** Nothing contends for the
@@ -376,17 +437,16 @@ per packet event, per-step network state and per-drone state).
   up to date. This matters little in the static Phase 1 and will be revisited
   for the dynamic Phase 2.
 - **Layouts are filtered, so the results are conditional.** Only placements in
-  which every M-drone can reach the GS are simulated. At ~250 m range about
-  half of all random layouts strand at least one M-drone
-  (`scripts/range_check.py` measured this under the old 250 m links), and those
-  layouts are excluded. Every number here therefore describes a *connected*
+  which every M-drone can reach the GS are simulated. At the current 356 m
+  reach about 2% of random layouts strand at least one M-drone
+  (`scripts/range_check.py` measures this), and those layouts are excluded. Every number here therefore describes a *connected*
   deployment, not an arbitrary one — though under the current loss curve no
   layout is actually rejected, so the filter is presently a no-op.
 - **Energy is tracked but constrains nothing.** No drone ever runs out.
 
 ---
 
-## 6. Folder structure
+## 7. Folder structure
 
 ```
 .
@@ -412,11 +472,15 @@ per packet event, per-step network state and per-drone state).
 │   │   ├── metrics_1a.py     Both views of one run, and the check that they
 │   │   │                     agree. Used by main.py and the experiment.
 │   │   ├── experiment_1a.py  The 160-run grid, its CSVs and figures.
-│   │   ├── range_check.py    Connectivity at candidate radio ranges.
-│   │   ├── plot_ploss.py     The channel-loss curve.
+│   │   ├── range_check.py    Connectivity at candidate link cutoffs.
+│   │   ├── link_cutoff_sensitivity.py
+│   │   │                     How much LINK_MAX_LOSS moves the results.
+│   │   ├── plot_ploss.py     The channel-loss curve, new against old.
+│   │   ├── regenerate_all.py Rebuild every output from the current config.
+│   │   ├── stamp.py          The settings stamp on every figure and CSV.
 │   │   └── analyze.py        Older stand-alone analyser for the JSONL logs.
 │   │                         Nothing in the Phase-1a flow calls it.
-│   ├── tests/              158 tests: channel, queues, routing, conservation,
+│   ├── tests/              162 tests: channel, queues, routing, conservation,
 │   │                       ACK-vs-ground-truth, layout filter, static world,
 │   │                       reproducibility.
 │   └── out/                Generated results (gitignored).

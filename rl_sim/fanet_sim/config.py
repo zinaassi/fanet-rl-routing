@@ -141,9 +141,17 @@ LOSS_50_DISTANCE_M: float = 356.0  # distance where p_loss = 0.5  PROVISIONAL - 
 LOSS_SLOPE_PER_M: float = 0.025    # measured steepness           PROVISIONAL - to confirm
 
 # A link exists while its loss is below this. One rule everywhere: neighbour
-# sets, the GS link, the connected-layout filter and the range check. At the
-# values above this puts the edge at ~539.8 m.
-LINK_MAX_LOSS: float = 0.99        # PROVISIONAL - to confirm
+# sets, the GS link, the connected-layout filter and the range check.
+#
+# At 0.5 a drone lists a neighbour only when at least half of its hello
+# messages get through to it. That puts the edge at exactly LOSS_50_DISTANCE_M,
+# 356 m.
+#
+# This was 0.99 (edge ~539.8 m) when the loss curve was introduced. That reach
+# was a side effect of the cutoff rather than a choice: it made the network
+# very dense (~15 neighbours per drone) and handed the RANDOM rule a pile of
+# links losing over 90% of what was sent on them.
+LINK_MAX_LOSS: float = 0.5         # PROVISIONAL - to confirm
 
 # ---------------------------------------------------------------------------
 # Simulation

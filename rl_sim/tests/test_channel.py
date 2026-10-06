@@ -113,10 +113,31 @@ def test_distance_for_loss_rejects_impossible_targets(bad: float) -> None:
 
 
 def test_max_link_distance_is_where_loss_hits_the_cutoff() -> None:
-    """The link edge sits at the configured maximum loss, ~539.8 m."""
+    """The link edge sits exactly at the configured maximum loss.
+
+    Derived from the cutoff rather than pinned to one distance, so changing
+    LINK_MAX_LOSS moves the edge instead of breaking the test.
+    """
     edge = channel.max_link_distance()
     assert channel.p_loss(edge) == pytest.approx(config.LINK_MAX_LOSS, abs=1e-9)
-    assert edge == pytest.approx(539.8, abs=0.1)
+
+
+@pytest.mark.parametrize("cutoff,reach", [(0.99, 539.8), (0.5, 356.0), (0.2, 300.5)])
+def test_the_reach_of_each_candidate_cutoff(cutoff: float, reach: float) -> None:
+    """The three cutoffs in the sensitivity study reach the distances expected."""
+    assert channel.max_link_distance(cutoff) == pytest.approx(reach, abs=0.1)
+
+
+def test_a_half_loss_cutoff_reaches_exactly_the_curve_midpoint() -> None:
+    """At the configured 0.5 cutoff the edge is D50 itself.
+
+    A drone lists a neighbour only when at least half its hello messages get
+    through, which by construction is the 50% point of the curve.
+    """
+    assert config.LINK_MAX_LOSS == 0.5, "this test documents the configured cutoff"
+    assert channel.max_link_distance() == pytest.approx(
+        config.LOSS_50_DISTANCE_M, abs=1e-9
+    )
 
 
 def test_a_link_exists_exactly_while_loss_is_under_the_cutoff() -> None:

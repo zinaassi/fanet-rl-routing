@@ -51,6 +51,12 @@ from fanet_sim.envs.channel import are_connected
 from fanet_sim.envs.fanet_env import FANETEnv
 from fanet_sim.utils.metrics import build_graph_with_gs
 from scripts.metrics_1a import compute_metrics
+from scripts.stamp import (
+    csv_comment,
+    read_stamped_csv,
+    settings_stamp,
+    stamp_lines,
+)
 
 # ---------------------------------------------------------------------------
 # Grid
@@ -298,6 +304,10 @@ def write_runs_csv(rows: List[Dict[str, Any]], path: str) -> None:
         path: Output CSV path.
     """
     with open(path, "w", newline="") as handle:
+        handle.write(csv_comment(
+            loads_ms=LOADS_MS,
+            placements=len({r["placement_seed"] for r in rows}),
+        ))
         writer = csv.DictWriter(handle, fieldnames=RUN_COLUMNS)
         writer.writeheader()
         for row in rows:
@@ -346,6 +356,8 @@ def write_summary_csv(summary: List[Dict[str, Any]], path: str) -> None:
         path:    Output CSV path.
     """
     with open(path, "w", newline="") as handle:
+        handle.write(csv_comment(loads_ms=LOADS_MS,
+                                 placements=summary[0]["runs"]))
         writer = csv.DictWriter(handle, fieldnames=list(summary[0]))
         writer.writeheader()
         writer.writerows(summary)
@@ -397,6 +409,8 @@ def write_paired_csv(records: List[Dict[str, Any]], path: str) -> None:
         path:    Output CSV path.
     """
     with open(path, "w", newline="") as handle:
+        handle.write(csv_comment(loads_ms=LOADS_MS,
+                                 placements=records[0]["placements"]))
         writer = csv.DictWriter(handle, fieldnames=list(records[0]))
         writer.writeheader()
         writer.writerows(records)
@@ -465,8 +479,7 @@ def load_baseline(path: str) -> Optional[List[Dict[str, Any]]]:
     """
     if not os.path.exists(path):
         return None
-    with open(path, newline="") as handle:
-        return list(csv.DictReader(handle))
+    return read_stamped_csv(path)
 
 
 def print_old_vs_new(
@@ -624,14 +637,12 @@ def plot_total_loss_vs_load(
                        labelcolor=TEXT_SECONDARY)
     legend.set_zorder(6)
 
-    n_placements = summary[0]["runs"]
-    fig.text(0.01, 0.015,
-             f"mean +/- std over {n_placements} placements; "
-             f"{config.MAX_STEPS} steps; window "
-             f"[{config.measurement_window()[0]}, {config.measurement_window()[1]})",
-             color=TEXT_SECONDARY, fontsize=8)
+    fig.text(0.01, 0.012,
+             stamp_lines(width=112, loads_ms=LOADS_MS,
+                         placements=summary[0]["runs"]),
+             color=TEXT_SECONDARY, fontsize=7.5, va="bottom")
 
-    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    fig.tight_layout(rect=(0, 0.07, 1, 1))
     fig.savefig(path, facecolor=SURFACE)
     plt.close(fig)
 
@@ -731,11 +742,13 @@ def plot_loss_heatmaps(summary: List[Dict[str, Any]], path: str) -> None:
         summary: Output of :func:`summarise`.
         path:    Output PNG path.
     """
-    fig = plt.figure(figsize=(16.0, 5.4), dpi=150)
+    fig = plt.figure(figsize=(16.0, 6.0), dpi=150)
+    # Leave room under the axes for the caption and the settings stamp, so
+    # neither lands on the column labels.
     grid = fig.add_gridspec(
         1, 5, width_ratios=[len(HEATMAP_COLUMNS), len(HEATMAP_COLUMNS),
                             0.20, 1.3, 0.20],
-        wspace=0.55,
+        wspace=0.55, bottom=0.20, top=0.88,
     )
     fig.patch.set_facecolor(SURFACE)
 
@@ -782,19 +795,21 @@ def plot_loss_heatmaps(summary: List[Dict[str, Any]], path: str) -> None:
     link_bar.ax.tick_params(colors=TEXT_SECONDARY, labelsize=8)
     link_bar.outline.set_visible(False)
 
-    n_placements = summary[0]["runs"]
     fig.suptitle(
         "Loss and its causes, by load and routing rule  —  mean % (std)",
         color=TEXT_PRIMARY, fontsize=13, fontweight="bold", x=0.01, ha="left",
     )
-    fig.text(0.01, 0.015,
-             f"mean over {n_placements} placements; identical seeds for both "
-             f"rules. Left panels: share of packets created. Right panel: "
-             f"share of link attempts, pooled over all links — a different "
-             f"denominator, hence its own scale.",
+    fig.text(0.01, 0.085,
+             "Identical seeds for both rules. Left panels: share of packets "
+             "created. Right panel: share of link attempts, pooled over all "
+             "links — a different denominator, hence its own scale.",
              color=TEXT_SECONDARY, fontsize=8)
+    fig.text(0.01, 0.02,
+             stamp_lines(width=150, loads_ms=LOADS_MS,
+                         placements=summary[0]["runs"]),
+             color=TEXT_SECONDARY, fontsize=7.5, va="bottom")
 
-    fig.savefig(path, facecolor=SURFACE, bbox_inches="tight")
+    fig.savefig(path, facecolor=SURFACE)
     plt.close(fig)
 
 
@@ -874,6 +889,9 @@ def plot_link_matrices(
         "Per-link loss, placement_seed 1  —  gray = link not used",
         color=TEXT_PRIMARY, fontsize=13, fontweight="bold", x=0.01, ha="left",
     )
+    fig.text(0.01, 0.012, stamp_lines(width=150, loads_ms=LOADS_MS,
+                                      placements=1),
+             color=TEXT_SECONDARY, fontsize=7.5, va="bottom")
     fig.savefig(path, facecolor=SURFACE, bbox_inches="tight")
     plt.close(fig)
 
@@ -951,6 +969,7 @@ def main() -> None:
           f"mean {statistics.fmean(draws):.2f}, max {max(draws)}")
     print(f"  isolated M-drones: 0 in all {len(rows)} runs")
     print(f"  views agreed in all {len(rows)} runs")
+    print(f"  {settings_stamp(loads_ms=LOADS_MS, placements=args.placements)}")
     for path in (runs_path, summary_path, paired_path,
                  line_path, heat_path, matrix_path):
         print(f"  wrote {path}")

@@ -26,10 +26,11 @@ endpoint.
 
 Link existence
 --------------
-A link exists while its loss stays under ``config.LINK_MAX_LOSS`` (0.99), which
-puts the edge at ~539.8 m. This is the ONE rule used everywhere: neighbour
-sets, the GS link, the connected-layout filter and the range check. Distance
-alone decides it, through the curve.
+A link exists while its loss stays under ``config.LINK_MAX_LOSS``, which puts
+the edge at ``max_link_distance()``. Currently that cutoff is 0.5 and the edge
+is 356 m — see config.py, which is the single source of truth. This is the ONE
+rule used everywhere: neighbour sets, the GS link, the connected-layout filter
+and the range check. Distance alone decides it, through the curve.
 
 Assumptions
 -----------
@@ -153,7 +154,8 @@ def max_link_distance(max_loss: Optional[float] = None) -> float:
                   ``config.LINK_MAX_LOSS``.
 
     Returns:
-        The distance in metres. With the configured defaults, ~539.8 m.
+        The distance in metres. At the configured cutoff of 0.5 this is 356 m,
+        the curve's midpoint.
     """
     if max_loss is None:
         max_loss = config.LINK_MAX_LOSS

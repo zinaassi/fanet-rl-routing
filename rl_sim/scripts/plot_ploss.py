@@ -41,6 +41,7 @@ import numpy as np
 
 from fanet_sim import config
 from fanet_sim.envs import channel
+from scripts.stamp import stamp_lines
 
 # Categorical hues, validated as a 2-slot categorical palette.
 NEW_COLOR = "#2a78d6"
@@ -115,13 +116,33 @@ def markers() -> List[Tuple[float, str]]:
         The distances that matter for a 900 x 900 m area with a central GS.
     """
     corner = math.hypot(config.WIDTH / 2.0, config.HEIGHT / 2.0)
-    return [
+    wanted = [
         (channel.distance_for_loss(0.10), "10% loss — edge of good links"),
         (config.LOSS_50_DISTANCE_M, "50% loss"),
         (channel.max_link_distance(),
          f"{config.LINK_MAX_LOSS * 100:.0f}% loss — link cutoff"),
         (corner, "farthest point from the GS"),
     ]
+
+    # Two markers can land on the same distance — at a 0.5 cutoff the link edge
+    # IS the 50% point — so merge them rather than draw two labels on top of
+    # each other.
+    merged: List[Tuple[float, str]] = []
+    for dist, label in sorted(wanted):
+        if merged and abs(dist - merged[-1][0]) < 1.0:
+            previous_dist, previous_label = merged.pop()
+            # One label often contains the other ("50% loss" inside
+            # "50% loss — link cutoff"); keep the more informative one.
+            if previous_label in label:
+                combined = label
+            elif label in previous_label:
+                combined = previous_label
+            else:
+                combined = f"{previous_label} = {label}"
+            merged.append((previous_dist, combined))
+        else:
+            merged.append((dist, label))
+    return merged
 
 
 def plot(out_path: str) -> str:
@@ -170,8 +191,11 @@ def plot(out_path: str) -> str:
     # Reference distances. The labels run ALONG their lines: a rotated label is
     # only a few pixels wide, so it fits in the gaps between the two curves
     # where a horizontal one would lie across them.
-    label_heights = [55.0, 80.0, 48.0, 70.0]
-    for (dist, label), height in zip(markers(), label_heights):
+    # All labels run along their own line at mid-height: rotated text is only a
+    # few pixels wide, and the markers are far enough apart horizontally that
+    # they cannot collide. Mid-height also keeps the longest label on-axes.
+    for dist, label in markers():
+        height = 50.0
         ax.axvline(dist, color=TEXT_SECONDARY, linewidth=0.9,
                    linestyle=":", zorder=2)
         ax.text(
@@ -203,19 +227,13 @@ def plot(out_path: str) -> str:
                        labelcolor=TEXT_SECONDARY)
     legend.set_zorder(7)
 
-    fig.text(
-        0.01, 0.015,
-        f"new: 1/(1+exp(-{config.LOSS_SLOPE_PER_M}·(d-"
-        f"{config.LOSS_50_DISTANCE_M:.0f}))), Rosati et al. arXiv:1406.4399   |   "
-        f"link exists while loss < {config.LINK_MAX_LOSS:.2f}   |   "
-        f"area {config.WIDTH:.0f}x{config.HEIGHT:.0f} m, GS at centre",
-        color=TEXT_SECONDARY, fontsize=8,
-    )
+    fig.text(0.01, 0.012, stamp_lines(width=112),
+             color=TEXT_SECONDARY, fontsize=7.5, va="bottom")
 
     parent = os.path.dirname(out_path)
     if parent:
         os.makedirs(parent, exist_ok=True)
-    fig.tight_layout(rect=(0, 0.03, 1, 1))
+    fig.tight_layout(rect=(0, 0.06, 1, 1))
     fig.savefig(out_path, facecolor=SURFACE)
     plt.close(fig)
     return out_path

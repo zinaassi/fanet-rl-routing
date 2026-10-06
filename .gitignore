@@ -20,14 +20,19 @@ logs/
 # Animations produced by main.py / eval.py / demo_vis.py.
 *.gif
 
-# Experiment output. The FIGURES are committed -- they are the Phase-1a
-# results we refer to, and regenerating them takes a full 160-run grid. The
-# CSVs behind them stay out: they are large, churn on every rerun, and the
-# scripts reproduce them exactly.
+# Experiment output. The FIGURES and the SMALL RESULT TABLES are committed:
+# they are the Phase-1a results we refer to, and regenerating them takes a
+# full 160-run grid. The big per-run CSV stays out -- it is ~40 KB, churns on
+# every rerun, and the summary tables are derived from it.
 # NOTE: the directory itself must not be excluded, or git will not descend
-# into it and the negation below would never be seen.
+# into it and the negations below would never be seen.
 rl_sim/out/*
 !rl_sim/out/*.png
+!rl_sim/out/1a_summary.csv
+!rl_sim/out/1a_summary_OLD_k08.csv
+!rl_sim/out/1a_paired.csv
+!rl_sim/out/link_cutoff_sensitivity.csv
+!rl_sim/out/range_check.csv
 
 # ---------------------------------------------------------------------------
 # Scratch / temp

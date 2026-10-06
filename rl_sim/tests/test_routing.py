@@ -238,9 +238,9 @@ def test_random_choices_hold_during_a_real_run() -> None:
 def test_a_holder_with_no_usable_next_hop_drops_as_no_route(routing: str) -> None:
     """A packet at a drone with nothing to forward to is dropped "no_route".
 
-    The situation is CONSTRUCTED, not hunted for in a layout: with links
-    reaching ~540 m in a 900x900 m area, essentially every drone can reach the
-    GS directly, so no real placement contains such a drone.
+    The situation is CONSTRUCTED, not hunted for in a layout: at the configured
+    link reach most drones can reach the GS directly or within a hop or two, so
+    a real placement rarely contains such a drone.
     """
     import os
 

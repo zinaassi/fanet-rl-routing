@@ -59,13 +59,15 @@ be written NEW; the archived RL code is not to be reused.
   range, loss exp(-k*M) with k = 0.8), which hit ~100% loss right at
   250 m. The FSPL code is gone; scripts/plot_ploss.py keeps a local copy
   of the old curve only to draw the two together.
-- Link existence: a link exists while p_loss < LINK_MAX_LOSS = 0.99
-  (PROVISIONAL), i.e. out to ~539.8 m. ONE rule everywhere: neighbors,
-  the GS link, the connected-layout filter and the range check.
-  Consequence at these values: with ~540 m links in a 900x900 m area the
-  network is dense -- ~15 neighbors per drone, and almost every drone
-  links straight to the GS -- so the layout filter currently rejects
-  nothing.
+- Link existence: a link exists while p_loss < LINK_MAX_LOSS = 0.5
+  (PROVISIONAL), i.e. out to exactly 356 m. Justification: a drone lists
+  a neighbor only when at least half of its hello messages get through.
+  ONE rule everywhere: neighbors, the GS link, the connected-layout
+  filter and the range check.
+  This was 0.99 (~539.8 m) when the curve was introduced at Checkpoint
+  7; that reach was a side effect of the cutoff, not a choice, and it
+  made the network very dense. At 0.5 a drone has ~8.6 neighbors and
+  ~12 of 25 drones link straight to the GS.
 - Link loss = 1 - (1 - channel loss) * (1 - queue_full), where
   queue_full = 1 if the sender's own queue for that link is full.
 - GREEDY: among neighbors strictly closer to the GS, the lowest link
@@ -109,6 +111,13 @@ scope. Do not use it, extend it, or rely on it:
 None of it is deleted; it lives under archive/. Nothing in rl_sim/
 imports from archive/, and the live simulator does not depend on torch.
 Keep both of those true.
+
+## Keeping results consistent
+Every figure and CSV carries a settings stamp (curve, cutoff, reach, world,
+queues, load, placements, window, git commit) read from config.py. After
+changing anything in config.py, rerun `python scripts/regenerate_all.py` so
+every output comes from one config -- a stale figure beside a fresh table is
+worse than neither.
 
 ## RULES
 0. Never commit to main. Work on a branch; commit per approved

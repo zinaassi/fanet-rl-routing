@@ -1,0 +1,6 @@
+# D50=356 m  |  slope=0.025/m  |  LINK_MAX_LOSS=0.5  |  reach=356 m  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=1000/500/200/100 ms  |  placements=20  |  window=[50,950) of 1000  |  commit=bd7cb3e-dirty
+load_ms,placements,mean_greedy_minus_random,std_greedy_minus_random,placements_greedy_lower
+1000,20,-0.6687037037037037,0.10343088514631334,20
+500,20,-0.5122993827160494,0.10683970288203408,20
+200,20,-0.25248765432098763,0.06235753816404012,20
+100,20,-0.11937654320987656,0.04915773923315363,20

@@ -4,9 +4,9 @@ range_check.py — Fleet connectivity under the loss curve (Checkpoint 7, 5a).
 Pure geometry, and a REPORT ONLY: this script changes no config. Distance plus
 the loss curve decide everything, exactly as the simulator does it.
 
-Three link cutoffs are compared: a link exists while its loss stays under
-90%, 95% or 99%. The 99% row is the simulator's own rule
-(``config.LINK_MAX_LOSS``).
+Several link cutoffs are compared: a link exists while its loss stays under
+the cutoff. The row matching ``config.LINK_MAX_LOSS`` is the simulator's own
+rule and is marked as such.
 
 Reported per cutoff, over 100 random placements:
     * % of M-drones with a path to the GS
@@ -48,9 +48,12 @@ import numpy as np
 
 from fanet_sim import config
 from fanet_sim.envs import channel
+from scripts.stamp import csv_comment, settings_stamp
 
-#: Link cutoffs to compare: a link exists while loss is under this.
-CUTOFFS = (0.90, 0.95, 0.99)
+#: Link cutoffs to compare: a link exists while loss is under this. Covers the
+#: configured value, the two the supervisor asked for, and the ends of the
+#: range used by scripts/link_cutoff_sensitivity.py.
+CUTOFFS = (0.20, 0.50, 0.90, 0.95, 0.99)
 
 #: A link counts as "good" while its loss is under this.
 GOOD_LINK_MAX_LOSS = 0.10
@@ -311,11 +314,14 @@ def main() -> None:
     if parent:
         os.makedirs(parent, exist_ok=True)
     with open(args.out, "w", newline="") as handle:
+        handle.write(csv_comment(placements=args.placements))
         writer = csv.DictWriter(handle, fieldnames=list(records[0]))
         writer.writeheader()
         writer.writerows(records)
 
     print_tables(records)
+    print()
+    print(f"  {settings_stamp(placements=args.placements)}")
     print()
     print(f"  wrote {args.out}")
 
