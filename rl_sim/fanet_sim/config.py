@@ -226,6 +226,37 @@ M_DRONE_MOBILITY: str = "straight_line"
 WAYPOINT_ARRIVAL_THRESHOLD: float = 2.0  # metres — drone is "at" its end point when this close
 
 # ---------------------------------------------------------------------------
+# Phase 1b routing agents (rl_sim/agents/ only)
+# ---------------------------------------------------------------------------
+# Two learned-ish rules sit beside greedy and random. Both pick among the
+# current neighbours plus the GS when in range, EXCLUDING the drone the packet
+# just came from. Both are driven by a per-link delivery rate each drone keeps
+# from end-to-end ACKs: the mean of the last DELIVERY_RATE_WINDOW resolved
+# outcomes on that link, seeded at 1 - channel_loss before any outcome.
+#
+# The simulator itself knows nothing about these: fanet_sim/ stays torch-free
+# and the router is injected into FANETEnv.
+DELIVERY_RATE_WINDOW: int = 50     # resolved outcomes kept per link  PROVISIONAL - to confirm
+
+# "rate": score = delivery_rate * (1 - queue_full), with this much uniform
+# exploration — in training AND at test, so its numbers carry that noise.
+EPSILON_RATE: float = 0.05         # PROVISIONAL - to confirm
+
+# "rl": a 3 -> RL_HIDDEN -> RL_HIDDEN -> 1 network with ReLU and a sigmoid
+# output, shared by every drone, scoring each option from three local inputs
+# (delivery_rate, own queue fill, channel loss).
+RL_HIDDEN: int = 32                # PROVISIONAL - to confirm
+RL_EPSILON_TRAIN: float = 0.1      # exploration while training    PROVISIONAL - to confirm
+RL_EPSILON_EVAL: float = 0.0       # none while evaluating                   [DECIDED]
+RL_LEARNING_RATE: float = 1e-3     # Adam                          PROVISIONAL - to confirm
+RL_BATCH_SIZE: int = 32            # examples before one gradient step  PROVISIONAL - to confirm
+
+# The agent's exploration stream is derived from run_seed through its OWN
+# SeedSequence, NOT by spawning a third stream off the existing two — spawning
+# a third would change _rng_chan and silently move every Phase 1a result.
+AGENT_STREAM_TAG: int = 0xA6E17    # arbitrary, fixed                        [DECIDED]
+
+# ---------------------------------------------------------------------------
 # Random seeds
 # ---------------------------------------------------------------------------
 # Two independent seeds, so one layout can be re-run with different randomness:

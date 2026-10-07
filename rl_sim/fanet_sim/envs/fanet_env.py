@@ -183,8 +183,13 @@ def random_next_hop(
     return keys[int(rng.integers(len(keys)))]
 
 
-#: The routing rules this environment can run.
-ROUTING_RULES = ("greedy", "random")
+#: The routing rules this environment can run. "rate" and "rl" live in
+#: rl_sim/agents/ and must be supplied as a *router* object: the simulator
+#: stays torch-free and never imports that package.
+ROUTING_RULES = ("greedy", "random", "rate", "rl")
+
+#: Rules that need an injected router.
+ROUTER_RULES = ("rate", "rl")
 
 
 # ---------------------------------------------------------------------------
@@ -226,11 +231,22 @@ class FANETEnv:
         episode_id: int = 0,
         placement_seed: Optional[int] = None,
         run_seed: Optional[int] = None,
+        router: Optional[object] = None,
     ) -> None:
         """Create the environment (does NOT run reset automatically).
 
         Args:
-            routing:     Routing rule to use: 'greedy' or 'random'.
+            routing:     Routing rule: 'greedy', 'random', 'rate' or 'rl'.
+            router:      For 'rate' and 'rl', the object that chooses hops and
+                         learns. It lives in rl_sim/agents/ and is injected so
+                         the simulator never imports that package. It must
+                         provide five hooks:
+
+                             select_next_hop(drone, candidates, pkt, came_from)
+                             on_sent(drone_id, next_hop, packet_id)
+                             on_delivered(pkt)
+                             on_step_end(step)
+                             on_reset()
             log_path:    Path to write the Stage-1 JSONL event log. If None,
                          a default of ``{config.LOG_DIR}/episode_{id}.jsonl``
                          is used.
@@ -252,7 +268,14 @@ class FANETEnv:
             raise ValueError(
                 f"unknown routing rule {routing!r}; expected one of {ROUTING_RULES}"
             )
+        if routing in ROUTER_RULES and router is None:
+            raise ValueError(
+                f"routing {routing!r} needs a router object; build one with "
+                f"agents.make_router({routing!r}, run_seed=...) and pass it as "
+                f"router="
+            )
         self.routing = routing
+        self.router = router
         self.episode_id = episode_id
         self.placement_seed = (
             config.PLACEMENT_SEED if placement_seed is None else placement_seed
@@ -342,6 +365,9 @@ class FANETEnv:
         if self._logger is not None:
             self._logger.close()
         self._logger = EventLogger(self.log_path, episode_id=self.episode_id)
+
+        if self.router is not None:
+            self.router.on_reset()  # type: ignore[union-attr]
 
         self.drones = self._create_drones()
         self._assign_traffic_offsets()
@@ -627,6 +653,13 @@ class FANETEnv:
             if rx_n:
                 drone.consume_rx_energy(rx_n)
 
+        # The routing rule settles packets whose TTL ran out this step, and
+        # learns from them. Called before step_count advances, so a deadline
+        # of created_at + TTL resolves on the same step the simulator expires
+        # the packet.
+        if self.router is not None:
+            self.router.on_step_end(self.step_count)  # type: ignore[union-attr]
+
         self.step_count += 1
 
         # 8. Log per-step network state and per-drone state.
@@ -736,6 +769,7 @@ class FANETEnv:
         self,
         drone: Drone,
         candidates: Dict[NextHop, np.ndarray],
+        pkt: Optional[Packet] = None,
     ) -> Optional[NextHop]:
         """Choose the link a packet should join, according to the routing rule.
 
@@ -745,11 +779,24 @@ class FANETEnv:
         Args:
             drone:      The drone routing the packet.
             candidates: Reachable next hops from :meth:`_next_hop_candidates`.
+            pkt:        The packet being routed. Only the injected rules need
+                        it — for the loop guard and to key their decision.
 
         Returns:
             The chosen next-hop key, or None if the rule finds no usable hop
             (the caller then drops the packet with reason "no_route").
         """
+        if self.routing in ROUTER_RULES:
+            # The drone this packet just arrived from, so the rule can avoid
+            # bouncing it straight back. path is [source, hop1, ...], and the
+            # last entry is this drone.
+            came_from = (
+                pkt.path[-2] if pkt is not None and len(pkt.path) >= 2 else None
+            )
+            return self.router.select_next_hop(  # type: ignore[union-attr]
+                drone, candidates, pkt, came_from
+            )
+
         if self.routing == "random":
             return random_next_hop(candidates, self._rng_route)
 
@@ -789,7 +836,7 @@ class FANETEnv:
             return
 
         candidates = self._next_hop_candidates(drone)
-        next_key = self._select_next_hop(drone, candidates)
+        next_key = self._select_next_hop(drone, candidates, pkt)
 
         if next_key is None:
             # Routing void: no candidate at all, or none closer to the GS.
@@ -848,6 +895,10 @@ class FANETEnv:
 
             drone.note_sent(next_key, measured)
             self._note_link(drone.drone_id, next_key, "sent", measured)
+            if self.router is not None:
+                self.router.on_sent(  # type: ignore[union-attr]
+                    drone.drone_id, next_key, pkt.packet_id
+                )
             drone.consume_tx_energy()
 
             dist = euclidean_distance(drone.position, target_pos)
@@ -865,8 +916,11 @@ class FANETEnv:
                 pkt.relay_to("GS")
                 pkt.mark_delivered(self.step_count)
                 self.delivered.append(pkt)
-                # End-to-end ACK: tell the source its packet arrived.
+                # End-to-end ACK: tell the source its packet arrived, and
+                # walk it back along the path for the routing rule.
                 self.get_drone_by_id(pkt.source_id).note_gs_ack(pkt.packet_id)
+                if self.router is not None:
+                    self.router.on_delivered(pkt)  # type: ignore[union-attr]
                 if self._logger is not None:
                     self._logger.log_packet_event(
                         event="delivered",

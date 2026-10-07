@@ -17,8 +17,8 @@ no_route, ttl, hop_limit) are secondary, used to explain the total.
 ## Plan (order set by the supervisor; each step starts only after the
 ## previous one is approved)
 Phase 1 — STATIC world (nothing moves):
-  1a. Non-learned baselines: GREEDY and RANDOM routing.   <- CURRENT
-  1b. RL routing agent on every drone, reward = delivery rate.
+  1a. Non-learned baselines: GREEDY and RANDOM routing.   done
+  1b. RL routing agent on every drone, reward = delivery rate. <- CURRENT
 Phase 2 — DYNAMIC world (M-drones fly), only after Phase 1:
   2a. Baselines again, with C-drone movement rules (hover, random walk,
       move toward the busiest neighbor).
@@ -90,9 +90,26 @@ be written NEW; the archived RL code is not to be reused.
 - Neighbor knowledge: each drone knows its neighbors' positions and
   link quality, as if from hello messages; hello messages are not
   simulated.
+- Phase 1b adds two routing rules beside greedy/random: "rate"
+  (delivery_rate * (1 - queue_full), epsilon 0.05 in training AND at
+  test) and "rl" (a shared 3->32->32->1 network scoring each option
+  from 3 local inputs: delivery_rate, own queue fill, channel loss;
+  epsilon 0.1 training, 0 at test). Options are the current neighbors
+  plus the GS when in range, EXCLUDING the drone the packet came from
+  (loop guard); none left -> drop no_route.
+  An end-to-end ACK walks back along the packet's path when it reaches
+  the GS; a packet unacked by created_at + TTL is recorded lost by
+  every drone that decided on it. Per-link delivery rate = mean of the
+  last 50 resolved outcomes, seeded at 1 - channel_loss. A decision
+  refused by a full queue is a training example but does NOT move the
+  delivery rate: it was never sent.
+  These rules do NOT use the hop-by-hop ACK. The simulator's ACK
+  counters and the views_agree check stay as measurement tools only.
 
 ## Open questions (do NOT decide these; ask)
-ACK details (routed or ideal, capacity use, retransmissions); RL reward
+Pooling every drone's training examples into ONE shared network is an
+ASSUMPTION pending supervisor confirmation; each drone still decides
+from its own local inputs only. Also: ACK details (routed or ideal, capacity use, retransmissions); RL reward
 form; whether the topology agent joins the static phase; link-break
 handling and hello messages in the dynamic phase; a near-full load
 (e.g. 90 ms).
@@ -109,8 +126,10 @@ scope. Do not use it, extend it, or rely on it:
 - the old CLAUDE.md, PROJECT_STATE.md and the old README: outdated
 - anything from earlier sessions not restated in a current prompt
 None of it is deleted; it lives under archive/. Nothing in rl_sim/
-imports from archive/, and the live simulator does not depend on torch.
-Keep both of those true.
+imports from archive/. torch is allowed ONLY in rl_sim/agents/:
+fanet_sim/ stays torch-free and never imports agents/ -- the router is
+injected into FANETEnv and called through five hooks. Keep all of that
+true.
 
 ## Keeping results consistent
 Every figure and CSV carries a settings stamp (curve, cutoff, reach, world,
