@@ -11,6 +11,14 @@ Order:
     2. range_check.py               connectivity at several link cutoffs
     3. experiment_1a.py             the grid, its CSVs and its three figures
     4. link_cutoff_sensitivity.py   how much the cutoff moves the results
+    5. evaluate_1b.py               Phase 1b on the held-back TEST layouts
+    6. plot_1b.py                   the learning curve and validation causes
+
+Phase-1b TRAINING is NOT part of the default run: it takes tens of minutes
+and overwrites the saved models. Pass ``--with-training`` to include it,
+which inserts train_1b.py before the two 1b steps. Without it, those two
+read the models and the log already in out/ — and are skipped if neither is
+there yet, so a fresh clone can still regenerate everything else.
 
 A step fails the run if it exits non-zero, or if its output ever says the ACK
 view disagreed with ground truth.
@@ -58,33 +66,69 @@ def parse_args() -> argparse.Namespace:
         help="Override the placement count for the scripts that take one. "
              "Leave unset to use each script's default.",
     )
+    parser.add_argument(
+        "--with-training", action="store_true",
+        help="Also retrain the Phase-1b agent (tens of minutes, and it "
+             "overwrites the saved models).",
+    )
+    parser.add_argument(
+        "--init-seeds", type=int, nargs="+", default=[0, 1, 2],
+        help="Phase-1b network initialisation seeds (default 0 1 2).",
+    )
     return parser.parse_args()
 
 
-def steps(placements: int | None) -> List[Sequence[str]]:
+def steps(
+    placements: int | None,
+    with_training: bool = False,
+    init_seeds: Sequence[int] = (0, 1, 2),
+) -> List[Sequence[str]]:
     """Return the commands to run, in order.
 
     Args:
-        placements: Placement override, or None for each script's default.
+        placements:    Placement override, or None for each script's default.
+        with_training: Whether to retrain the Phase-1b agent first.
+        init_seeds:    Phase-1b network initialisation seeds.
 
     Returns:
         One argv list per step.
     """
     scripts_dir = os.path.dirname(os.path.abspath(__file__))
+    out_dir = os.path.join(os.path.dirname(scripts_dir), "out")
 
-    def script(name: str, takes_placements: bool) -> Sequence[str]:
+    def script(name: str, takes_placements: bool = False) -> Sequence[str]:
         """Build one step's argv."""
         argv = [sys.executable, "-u", os.path.join(scripts_dir, name)]
         if takes_placements and placements is not None:
             argv += ["--placements", str(placements)]
         return argv
 
-    return [
-        script("plot_ploss.py", takes_placements=False),
+    seed_args = [str(seed) for seed in init_seeds]
+    plan: List[Sequence[str]] = [
+        script("plot_ploss.py"),
         script("range_check.py", takes_placements=True),
         script("experiment_1a.py", takes_placements=True),
         script("link_cutoff_sensitivity.py", takes_placements=True),
     ]
+
+    if with_training:
+        plan.append(list(script("train_1b.py")) + ["--init-seeds", *seed_args])
+
+    # Without training, the 1b steps need what a previous run left behind.
+    models = [os.path.join(out_dir, "models", f"rl_seed{seed}.pt")
+              for seed in init_seeds]
+    if with_training or all(os.path.exists(path) for path in models):
+        plan.append(list(script("evaluate_1b.py")) + ["--init-seeds", *seed_args])
+    else:
+        print("  (skipping evaluate_1b.py: no trained models in out/models/ — "
+              "run with --with-training)")
+
+    if with_training or os.path.exists(os.path.join(out_dir, "1b_training_log.csv")):
+        plan.append(script("plot_1b.py"))
+    else:
+        print("  (skipping plot_1b.py: no out/1b_training_log.csv yet)")
+
+    return plan
 
 
 def run_step(argv: Sequence[str], repo_root: str) -> str:
@@ -132,7 +176,7 @@ def main() -> None:
 
     started = time.perf_counter()
     checked = 0
-    for argv in steps(args.placements):
+    for argv in steps(args.placements, args.with_training, args.init_seeds):
         output = run_step(argv, repo_root)
         if AGREEMENT_MARKER in output:
             checked += 1

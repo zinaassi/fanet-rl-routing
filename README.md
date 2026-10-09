@@ -254,7 +254,7 @@ All commands below run from the `rl_sim/` directory:
 cd rl_sim
 ```
 
-**Tests** — 162 of them, a few seconds:
+**Tests** — 202 of them, about a minute:
 
 ```bash
 python -m pytest tests/ -q
@@ -381,6 +381,14 @@ from the commands above.
 | `ploss_vs_distance.png` | The loss curve, with the model it replaced drawn alongside. |
 | `1a_summary_OLD_k08.csv` | The previous channel model's summary (FSPL, k = 0.8), regenerated from commit `84a2072` so the old-vs-new table can be printed. Committed. |
 | `link_cutoff_sensitivity.csv` | Total loss and its causes, hops, neighbours, GS links and placement draws at link cutoffs 0.99 / 0.5 / 0.2, both rules, at the 200 ms load. |
+| `1b_training_log.csv` | Phase 1b: one row per training run (its total loss and BCE) and per evaluation (validation and train-check total loss, plus the validation loss by cause), with the reference rules measured on the same validation layouts. |
+| `1b_learning_curve.png` | Total loss against training runs — validation, train-check, the faint per-run training loss, and dashed reference lines; below it, the BCE per run. |
+| `1b_validation_causes.png` | Where the validation loss goes at each evaluation: channel, queue_full, no_route, ttl+hop. |
+| `1b_test_runs.csv` | One row per (rule, load, TEST layout), with total loss and its causes. |
+| `1b_comparison_total_loss.png` | Total loss on the 20 TEST layouts for random, greedy, rate and rl, at 200 ms and 500 ms, every layout a dot. |
+| `1b_loss_by_cause.png` | Stacked bars at 200 ms on the TEST layouts for greedy, rate and rl. |
+| `1b_paired.csv` | Per load: `rl − greedy` and `rl − rate` total loss on identical layouts — mean, std, and how many of the 20 rl lost less on. |
+| `out/models/` | *(gitignored)* The best-validation network per init seed. |
 
 `main.py` also writes a JSONL event log per episode under `logs/` (one record
 per packet event, per-step network state and per-drone state).
@@ -415,7 +423,117 @@ and its mean link-queue occupancy stays near 0.0 of 10.
 
 ---
 
-## 6. Assumptions and limitations
+## 6. Phase 1b — the learned routing rules
+
+Phase 1b adds two more rules beside greedy and random, in a new package
+`rl_sim/agents/`. **PyTorch is allowed only there.** `fanet_sim/` stays
+torch-free and never imports `agents/`: a router object is injected into
+`FANETEnv` and called through five hooks. A test blocks both `torch` and
+`agents` and imports the simulator to keep that true.
+
+### What each drone learns
+
+When a packet reaches the GS, an **end-to-end ACK walks back along its path**,
+so every drone that forwarded it credits the link it used. A packet that is
+not acknowledged by `created_at + TTL` is recorded as lost by every drone that
+decided on it — each knows the creation step and the TTL from the packet
+header, so that is a local decision, not an announcement. These ACKs are ideal
+in this phase: instant, never lost, no capacity used.
+
+From those outcomes each drone keeps a **per-link delivery rate**: the mean of
+the last `DELIVERY_RATE_WINDOW` = 50 resolved packets it *sent* on that link,
+starting at `1 − channel_loss` before anything has resolved. A decision refused
+by a full queue becomes a training example but does **not** move the rate — it
+was never sent.
+
+> Decisions are stored as they are made, not reconstructed from `Packet.path`.
+> The path records only hops that *succeeded*, since a send lost in the channel
+> never reaches `relay_to`. For a lost packet the decision that matters most —
+> the one whose transmission failed — is therefore absent from the path, and
+> reading it back would discard exactly the examples the network most needs.
+
+### The two rules
+
+Both choose among the current neighbours plus the GS when in range, **excluding
+the drone the packet just came from** (the loop guard). Nothing left means a
+`no_route` drop.
+
+**`rate`** — no network:
+
+```
+score = delivery_rate × (1 − queue_full)
+```
+
+Highest score wins; ties go to the lower channel loss. With probability
+`EPSILON_RATE` = 0.05 it picks uniformly instead, so links it never chooses
+still get measured. **That exploration is on at test time too**, so `rate`'s
+reported numbers carry noise that greedy's do not.
+
+**`rl`** — one small network, `3 → 32 → 32 → 1` with ReLU and a sigmoid output,
+**shared by every drone**. It scores one option from three local inputs — that
+link's delivery rate, the fill of the deciding drone's own queue for it, and
+its channel loss — and estimates the chance a packet sent that way reaches the
+GS. Highest output wins. While training it explores with probability 0.1; at
+evaluation there is none, though the delivery rates keep updating, since those
+are observations rather than learning.
+
+Every decision becomes one training example once its packet resolves: target 1
+if the GS acknowledged it, 0 if the deadline passed. Examples accumulate across
+steps; once at least 32 have gathered, one Adam step is taken on their binary
+cross-entropy. No replay buffer, no target network.
+
+> **Assumption, pending supervisor confirmation.** Pooling every drone's
+> examples into one shared network is our choice, not a given. Each drone still
+> *decides* from its own local inputs only — nothing in a decision reads another
+> drone's state — but the weights those decisions share are trained on
+> everyone's experience at once.
+
+### How it is trained and tested
+
+All at the 200 ms working load, with the layouts split so nothing is measured
+on what it was fitted to:
+
+| Set | Seeds | Used for |
+|---|---|---|
+| training | 101–300, cycled | one layout per run, 1000 steps, learning on |
+| validation | 301–310 | choosing the kept model; never trained on |
+| train-check | 101–110 | the overfitting comparison only |
+| test | 1–20 | used **once**, at the very end |
+
+Every 10 training runs the network is frozen and measured on the validation and
+train-check layouts. The best validation model is kept under `out/models/`
+(gitignored). Training stops after 300 runs, or early when validation has not
+improved by 0.5 points over five evaluations. The whole thing is repeated for
+network init seeds 0, 1 and 2.
+
+Evaluations run in parallel — the network is frozen and the layouts are
+independent — and a test asserts a worker pool returns exactly the sequential
+numbers.
+
+The test layouts are also measured at **500 ms**, a load nothing was trained on,
+as a generalisation check.
+
+```bash
+cd rl_sim
+python scripts/train_1b.py --init-seeds 0 1 2     # tens of minutes
+python scripts/evaluate_1b.py                     # the held-back TEST layouts
+python scripts/plot_1b.py                         # learning curve + causes
+```
+
+`regenerate_all.py` runs `evaluate_1b.py` and `plot_1b.py` by default and skips
+them when no trained model is present; `--with-training` retrains first.
+
+### Seeding
+
+The agent's exploration stream comes from its **own** `SeedSequence([run_seed,
+tag])`, not from spawning a third stream off the environment's two. Spawning
+would have shifted the channel stream and moved every Phase-1a result with it.
+A test reproduces greedy and random at seed 1 against the committed
+`out/1a_runs.csv` to 1e-12.
+
+---
+
+## 7. Assumptions and limitations
 
 - **2-D.** No altitude. The real scenario is three-dimensional.
 - **No MAC layer, no interference, no collisions.** Nothing contends for the
@@ -443,10 +561,18 @@ and its mean link-queue occupancy stays near 0.0 of 10.
   deployment, not an arbitrary one — though under the current loss curve no
   layout is actually rejected, so the filter is presently a no-op.
 - **Energy is tracked but constrains nothing.** No drone ever runs out.
+- **The Phase-1b network is shared, and trained on pooled experience.** Each
+  drone decides from its own local inputs, but one set of weights is fitted to
+  every drone's examples at once. That is an assumption, not a result.
+- **`rate` explores at test time.** Its 5% exploration is on in evaluation as
+  well as training, so its reported numbers carry noise that greedy's and
+  `rl`'s do not.
+- **The Phase-1b ACKs are ideal.** Instant, never lost, no capacity used — the
+  return path costs nothing, which a real network could not offer.
 
 ---
 
-## 7. Folder structure
+## 8. Folder structure
 
 ```
 .
@@ -476,13 +602,20 @@ and its mean link-queue occupancy stays near 0.0 of 10.
 │   │   ├── link_cutoff_sensitivity.py
 │   │   │                     How much LINK_MAX_LOSS moves the results.
 │   │   ├── plot_ploss.py     The channel-loss curve, new against old.
+│   │   ├── train_1b.py       Phase-1b training protocol.
+│   │   ├── evaluate_1b.py    Phase 1b on the held-back TEST layouts.
+│   │   ├── plot_1b.py        The learning curve and validation causes.
 │   │   ├── regenerate_all.py Rebuild every output from the current config.
 │   │   ├── stamp.py          The settings stamp on every figure and CSV.
 │   │   └── analyze.py        Older stand-alone analyser for the JSONL logs.
 │   │                         Nothing in the Phase-1a flow calls it.
-│   ├── tests/              162 tests: channel, queues, routing, conservation,
+│   ├── agents/             PHASE 1B. The only place torch is allowed.
+│   │   ├── tracker.py        Delivery rates, decisions, ACKs and deadlines.
+│   │   ├── rate_router.py    The shared base, and the "rate" rule.
+│   │   └── rl_router.py      The network, the "rl" rule, and its learning.
+│   ├── tests/              202 tests: channel, queues, routing, conservation,
 │   │                       ACK-vs-ground-truth, layout filter, static world,
-│   │                       reproducibility.
+│   │                       reproducibility, and the Phase-1b agents.
 │   └── out/                Generated results (gitignored).
 │
 ├── archive/                NOT PART OF THE PROJECT. Kept for reference only.
