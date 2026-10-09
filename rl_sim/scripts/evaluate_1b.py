@@ -52,7 +52,7 @@ from scripts.train_1b import TEST_SEEDS, run_once
 LOADS_MS = (200, 500)
 MAIN_LOAD_MS = 200
 RULES = ("random", "greedy", "rate", "rl")
-CAUSES = ("channel", "queue_full", "no_route", "ttl_hop")
+CAUSES = ("channel", "queue_full", "no_route", "dead_end", "ttl_hop")
 
 RULE_COLORS = {
     "random": "#e34948",
@@ -64,6 +64,7 @@ CAUSE_COLORS = {
     "channel": "#2a78d6",
     "queue_full": "#eb6834",
     "no_route": "#1baf7a",
+    "dead_end": "#e87ba4",
     "ttl_hop": "#eda100",
 }
 TEXT_PRIMARY = "#1a1a19"
@@ -88,6 +89,9 @@ def parse_args() -> argparse.Namespace:
                         help="Which trained models to evaluate (default 0 1 2).")
     parser.add_argument("--out-dir", type=str, default="out",
                         help="Where the models live and the outputs go.")
+    parser.add_argument("--suffix", type=str, default="",
+                        help="Appended to every output filename, so runs under "
+                             "different loop guards do not overwrite each other.")
     parser.add_argument("--workers", type=int, default=min(20, os.cpu_count() or 1),
                         help="Parallel workers; 1 runs sequentially.")
     return parser.parse_args()
@@ -151,7 +155,8 @@ def run_grid(
 
     states: Dict[int, Dict[str, Any]] = {}
     for init_seed in init_seeds:
-        path = os.path.join(out_dir, "models", f"rl_seed{init_seed}.pt")
+        path = os.path.join(out_dir, "models", config.LOOP_GUARD,
+                            f"rl_seed{init_seed}.pt")
         if not os.path.exists(path):
             print(f"STOP: no trained model at {path}. Run train_1b.py first.")
             raise SystemExit(1)
@@ -377,7 +382,8 @@ def print_tables(
           "mean % of packets created")
     print("  " + "-" * 84)
     print(f"  {'load':>8}{'rule':>9}{'total':>9}{'channel':>10}"
-          f"{'queue_full':>12}{'no_route':>10}{'ttl+hop':>10}{'std':>9}")
+          f"{'queue_full':>12}{'no_route':>10}{'dead_end':>11}"
+          f"{'ttl+hop':>10}{'std':>9}")
     print("  " + "-" * 84)
     for load_ms in LOADS_MS:
         for rule in RULES:
@@ -387,7 +393,8 @@ def print_tables(
             print(f"  {load_ms:>5} ms{rule:>9}"
                   f"{statistics.fmean(totals)*100:>8.2f}%"
                   f"{causes[0]*100:>9.2f}%{causes[1]*100:>11.2f}%"
-                  f"{causes[2]*100:>9.2f}%{causes[3]*100:>9.2f}%"
+                  f"{causes[2]*100:>9.2f}%{causes[3]*100:>10.2f}%"
+                  f"{causes[4]*100:>9.2f}%"
                   f"{statistics.stdev(totals)*100:>8.2f}")
         print("  " + "-" * 84)
 
@@ -413,7 +420,7 @@ def main() -> None:
     rows = run_grid(args.init_seeds, args.out_dir, args.workers)
     paired = paired_table(rows)
 
-    runs_path = os.path.join(args.out_dir, "1b_test_runs.csv")
+    runs_path = os.path.join(args.out_dir, f"1b_test_runs{args.suffix}.csv")
     with open(runs_path, "w", newline="") as handle:
         handle.write(csv_comment(loads_ms=list(LOADS_MS),
                                  placements=len(TEST_SEEDS),
@@ -423,7 +430,7 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(rows)
 
-    paired_path = os.path.join(args.out_dir, "1b_paired.csv")
+    paired_path = os.path.join(args.out_dir, f"1b_paired{args.suffix}.csv")
     with open(paired_path, "w", newline="") as handle:
         handle.write(csv_comment(loads_ms=list(LOADS_MS),
                                  placements=len(TEST_SEEDS),
@@ -432,8 +439,8 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(paired)
 
-    comparison_path = os.path.join(args.out_dir, "1b_comparison_total_loss.png")
-    causes_path = os.path.join(args.out_dir, "1b_loss_by_cause.png")
+    comparison_path = os.path.join(args.out_dir, f"1b_comparison_total_loss{args.suffix}.png")
+    causes_path = os.path.join(args.out_dir, f"1b_loss_by_cause{args.suffix}.png")
     plot_comparison(rows, comparison_path)
     plot_loss_by_cause(rows, causes_path)
 

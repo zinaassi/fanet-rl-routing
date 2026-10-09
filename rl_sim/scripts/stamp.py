@@ -71,6 +71,7 @@ def settings_stamp(
         f"slope={config.LOSS_SLOPE_PER_M}/m",
         f"LINK_MAX_LOSS={config.LINK_MAX_LOSS}",
         f"reach={channel.max_link_distance():.0f} m",
+        f"loop_guard={config.LOOP_GUARD}",
         f"area={config.WIDTH:.0f}x{config.HEIGHT:.0f} m",
         f"{config.NUM_M_DRONES}M+{config.NUM_C_DRONES}C",
         f"Q={config.QUEUE_CAPACITY}/link",

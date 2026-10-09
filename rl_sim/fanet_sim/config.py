@@ -226,6 +226,28 @@ M_DRONE_MOBILITY: str = "straight_line"
 WAYPOINT_ARRIVAL_THRESHOLD: float = 2.0  # metres — drone is "at" its end point when this close
 
 # ---------------------------------------------------------------------------
+# Loop guard
+# ---------------------------------------------------------------------------
+# A DESIGN ASSUMPTION ABOUT THE NETWORK, not about any one routing rule: the
+# packet header carries the list of drones it has already visited, so every
+# drone can refuse to send it somewhere it has been. With 25 drones that list
+# costs about 4 bytes. The idea is BGP's AS_PATH loop prevention.
+#
+#   "path"     options exclude EVERY drone already in the packet's path. The
+#              GS is never excluded. Applies to greedy, random, rate and rl
+#              alike, in training (including exploration picks) and at test.
+#   "previous" the earlier behaviour: rate and rl exclude only the drone the
+#              packet just came from, greedy and random exclude nothing. Kept
+#              as the baseline the Phase-1b results were measured under.
+#
+# Under "path", a packet whose every neighbour has already been visited (and
+# which cannot reach the GS) is dropped with reason "dead_end" -- distinct
+# from "no_route", which means there was nowhere to send it in the first
+# place. Under "previous" those cases stay "no_route".
+LOOP_GUARD: str = "path"           # PROVISIONAL - to confirm
+LOOP_GUARD_MODES: tuple = ("path", "previous")
+
+# ---------------------------------------------------------------------------
 # Phase 1b routing agents (rl_sim/agents/ only)
 # ---------------------------------------------------------------------------
 # Two learned-ish rules sit beside greedy and random. Both pick among the

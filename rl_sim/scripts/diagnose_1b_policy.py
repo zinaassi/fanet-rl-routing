@@ -256,7 +256,8 @@ def main() -> None:
 
     import torch
 
-    path = os.path.join(args.out_dir, "models", f"rl_seed{args.init_seed}.pt")
+    path = os.path.join(args.out_dir, "models", config.LOOP_GUARD,
+                        f"rl_seed{args.init_seed}.pt")
     if not os.path.exists(path):
         print(f"STOP: no trained model at {path}")
         raise SystemExit(1)

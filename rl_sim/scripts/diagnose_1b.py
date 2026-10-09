@@ -53,7 +53,7 @@ from scripts.train_1b import TEST_SEEDS
 
 LOAD_MS = 200
 THRESHOLDS = (0.10, 0.20, 0.40)
-CAUSES = ("channel", "queue_full", "no_route", "ttl_hop")
+CAUSES = ("channel", "queue_full", "no_route", "dead_end", "ttl_hop")
 
 
 def parse_args() -> argparse.Namespace:
@@ -172,6 +172,7 @@ def profile_run(
             "channel": by_reason["channel"],
             "queue_full": by_reason["queue_full"],
             "no_route": by_reason["no_route"],
+            "dead_end": by_reason["dead_end"],
             "ttl_hop": by_reason["ttl"] + by_reason["hop_limit"],
             "mean_hops": truth["mean_hops"] or 0.0,
             "placement_draws": env.placement_draws,
@@ -259,7 +260,7 @@ def main() -> None:
 
     import torch
 
-    model_path = os.path.join(args.out_dir, "models",
+    model_path = os.path.join(args.out_dir, "models", config.LOOP_GUARD,
                               f"rl_seed{args.init_seed}.pt")
     if not os.path.exists(model_path):
         print(f"STOP: no trained model at {model_path}")
@@ -314,7 +315,8 @@ def main() -> None:
     print("     be redrawn and are NOT guaranteed identical across rows.")
     print("  " + "-" * 92)
     print(f"  {'cutoff':>8}{'reach':>9}{'rule':>7}{'total':>9}{'channel':>10}"
-          f"{'queue_full':>12}{'no_route':>10}{'ttl+hop':>10}{'draws':>9}")
+          f"{'queue_full':>12}{'no_route':>10}{'dead_end':>11}"
+          f"{'ttl+hop':>10}{'draws':>9}")
     print("  " + "-" * 92)
     for cutoff in (config.LINK_MAX_LOSS, 0.3, 0.2):
         for rule in ("rate", "rl"):
@@ -324,7 +326,9 @@ def main() -> None:
             print(f"  {cutoff*100:>7.0f}%{channel.max_link_distance(cutoff):>9.1f}"
                   f"{rule:>7}{values['total_loss']*100:>8.2f}%"
                   f"{values['channel']*100:>9.2f}%{values['queue_full']*100:>11.2f}%"
-                  f"{values['no_route']*100:>9.2f}%{values['ttl_hop']*100:>9.2f}%"
+                  f"{values['no_route']*100:>9.2f}%"
+                  f"{values['dead_end']*100:>10.2f}%"
+                  f"{values['ttl_hop']*100:>9.2f}%"
                   f"{values['placement_draws']:>9.2f}{marker}")
         print("  " + "-" * 92)
 

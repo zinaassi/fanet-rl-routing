@@ -46,8 +46,8 @@ from scripts.train_1b import TEST_SEEDS
 
 LOAD_MS = 200
 AGE_THRESHOLD = 40          # steps; with TTL 50 this leaves under 1 s
-ENDINGS = ("delivered", "channel", "queue_full", "no_route", "ttl",
-           "hop_limit", "in flight")
+ENDINGS = ("delivered", "channel", "queue_full", "no_route", "dead_end",
+           "ttl", "hop_limit", "in flight")
 
 
 def parse_args() -> argparse.Namespace:
@@ -201,7 +201,8 @@ def main() -> None:
 
     import torch
 
-    path = os.path.join(args.out_dir, "models", f"rl_seed{args.init_seed}.pt")
+    path = os.path.join(args.out_dir, "models", config.LOOP_GUARD,
+                        f"rl_seed{args.init_seed}.pt")
     if not os.path.exists(path):
         print(f"STOP: no trained model at {path}")
         raise SystemExit(1)

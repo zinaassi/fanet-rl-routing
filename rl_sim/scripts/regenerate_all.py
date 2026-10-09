@@ -39,6 +39,7 @@ from typing import List, Sequence
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from fanet_sim import config
 from scripts.stamp import settings_stamp
 
 #: Phrases that mean a run must not be trusted, whatever its exit code.
@@ -115,13 +116,14 @@ def steps(
         plan.append(list(script("train_1b.py")) + ["--init-seeds", *seed_args])
 
     # Without training, the 1b steps need what a previous run left behind.
-    models = [os.path.join(out_dir, "models", f"rl_seed{seed}.pt")
+    models = [os.path.join(out_dir, "models", config.LOOP_GUARD,
+                           f"rl_seed{seed}.pt")
               for seed in init_seeds]
     if with_training or all(os.path.exists(path) for path in models):
         plan.append(list(script("evaluate_1b.py")) + ["--init-seeds", *seed_args])
     else:
-        print("  (skipping evaluate_1b.py: no trained models in out/models/ — "
-              "run with --with-training)")
+        print(f"  (skipping evaluate_1b.py: no trained models in "
+              f"out/models/{config.LOOP_GUARD}/ — run with --with-training)")
 
     if with_training or os.path.exists(os.path.join(out_dir, "1b_training_log.csv")):
         plan.append(script("plot_1b.py"))

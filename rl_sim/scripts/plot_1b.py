@@ -14,7 +14,8 @@ Reads ``out/1b_training_log.csv`` and draws:
 
     out/1b_validation_causes.png
         where the loss goes on the validation layouts at each evaluation:
-        channel, queue_full, no_route and ttl+hop, as a share of packets
+        channel, queue_full, no_route, dead_end and ttl+hop, as a share
+        of packets
         created.
 
 Both carry the settings stamp.
@@ -52,6 +53,7 @@ CAUSE_COLORS = {
     "channel": "#2a78d6",
     "queue_full": "#eb6834",
     "no_route": "#1baf7a",
+    "dead_end": "#e87ba4",
     "ttl_hop": "#eda100",
 }
 TEXT_PRIMARY = "#1a1a19"
@@ -70,6 +72,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--log", type=str,
                         default=os.path.join("out", "1b_training_log.csv"),
                         help="The training log to read.")
+    parser.add_argument("--suffix", type=str, default="",
+                        help="Appended to every output filename.")
     parser.add_argument("--out-dir", type=str, default="out",
                         help="Where the figures go.")
     return parser.parse_args()
@@ -102,6 +106,7 @@ def load_log(path: str) -> Dict[str, Any]:
                 "channel": float(row["validation_channel"]),
                 "queue_full": float(row["validation_queue_full"]),
                 "no_route": float(row["validation_no_route"]),
+                "dead_end": float(row.get("validation_dead_end") or 0.0),
                 "ttl_hop": float(row["validation_ttl_hop"]),
             }
             continue
@@ -120,6 +125,7 @@ def load_log(path: str) -> Dict[str, Any]:
                 "channel": float(row["validation_channel"]),
                 "queue_full": float(row["validation_queue_full"]),
                 "no_route": float(row["validation_no_route"]),
+                "dead_end": float(row.get("validation_dead_end") or 0.0),
                 "ttl_hop": float(row["validation_ttl_hop"]),
             })
     return {"train": train, "evaluation": evaluation, "references": references}
@@ -296,7 +302,7 @@ def best_evaluation(evaluation: Dict[int, List[Dict[str, Any]]]) -> Dict[str, An
     seeds = sorted(evaluation)
     shortest = min(len(rows) for rows in evaluation.values())
     keys = ("validation", "train_check", "channel", "queue_full",
-            "no_route", "ttl_hop")
+            "no_route", "dead_end", "ttl_hop")
 
     best: Optional[Dict[str, Any]] = None
     for position in range(shortest):
@@ -326,10 +332,10 @@ def print_cause_comparison(log: Dict[str, Any]) -> None:
     plural = "s" if best["init_seeds"] > 1 else ""
     print(f"  best rl checkpoint: run {best['run_index']}"
           f"  ({best['init_seeds']} init seed{plural})")
-    print("  " + "-" * 74)
+    print("  " + "-" * 85)
     print(f"  {'rule':<10}{'total':>10}{'channel':>12}{'queue_full':>13}"
-          f"{'no_route':>11}{'ttl+hop':>11}")
-    print("  " + "-" * 74)
+          f"{'no_route':>11}{'dead_end':>11}{'ttl+hop':>11}")
+    print("  " + "-" * 85)
 
     for rule in ("random", "greedy", "rate"):
         if rule not in references:
@@ -337,12 +343,16 @@ def print_cause_comparison(log: Dict[str, Any]) -> None:
         values = references[rule]
         print(f"  {rule:<10}{values['total_loss']*100:>9.2f}%"
               f"{values['channel']*100:>11.2f}%{values['queue_full']*100:>12.2f}%"
-              f"{values['no_route']*100:>10.2f}%{values['ttl_hop']*100:>10.2f}%")
+              f"{values['no_route']*100:>10.2f}%"
+              f"{values['dead_end']*100:>10.2f}%"
+              f"{values['ttl_hop']*100:>10.2f}%")
 
     print(f"  {'rl (best)':<10}{best['validation']*100:>9.2f}%"
           f"{best['channel']*100:>11.2f}%{best['queue_full']*100:>12.2f}%"
-          f"{best['no_route']*100:>10.2f}%{best['ttl_hop']*100:>10.2f}%")
-    print("  " + "-" * 74)
+          f"{best['no_route']*100:>10.2f}%"
+          f"{best['dead_end']*100:>10.2f}%"
+          f"{best['ttl_hop']*100:>10.2f}%")
+    print("  " + "-" * 85)
 
     if "rate" in references:
         rate = references["rate"]
@@ -350,6 +360,7 @@ def print_cause_comparison(log: Dict[str, Any]) -> None:
               f"{(best['channel']-rate['channel'])*100:>+11.2f}"
               f"{(best['queue_full']-rate['queue_full'])*100:>+12.2f}"
               f"{(best['no_route']-rate['no_route'])*100:>+10.2f}"
+              f"{(best['dead_end']-rate['dead_end'])*100:>+10.2f}"
               f"{(best['ttl_hop']-rate['ttl_hop'])*100:>+10.2f}")
     if "greedy" in references:
         greedy = references["greedy"]
@@ -357,8 +368,9 @@ def print_cause_comparison(log: Dict[str, Any]) -> None:
               f"{(best['channel']-greedy['channel'])*100:>+11.2f}"
               f"{(best['queue_full']-greedy['queue_full'])*100:>+12.2f}"
               f"{(best['no_route']-greedy['no_route'])*100:>+10.2f}"
+              f"{(best['dead_end']-greedy['dead_end'])*100:>+10.2f}"
               f"{(best['ttl_hop']-greedy['ttl_hop'])*100:>+10.2f}")
-    print("  " + "-" * 74)
+    print("  " + "-" * 85)
 
 
 def main() -> None:
@@ -369,8 +381,10 @@ def main() -> None:
         raise SystemExit(f"{args.log} has no evaluation rows yet")
 
     os.makedirs(args.out_dir, exist_ok=True)
-    curve = os.path.join(args.out_dir, "1b_learning_curve.png")
-    causes = os.path.join(args.out_dir, "1b_validation_causes.png")
+    curve = os.path.join(args.out_dir,
+                         f"1b_learning_curve{args.suffix}.png")
+    causes = os.path.join(args.out_dir,
+                          f"1b_validation_causes{args.suffix}.png")
     plot_learning_curve(log, curve)
     plot_validation_causes(log, causes)
     print_cause_comparison(log)

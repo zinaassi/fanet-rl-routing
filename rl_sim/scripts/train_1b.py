@@ -70,7 +70,7 @@ LOG_COLUMNS = [
     "train_total_loss", "train_bce",
     "validation_total_loss", "train_check_total_loss",
     "validation_channel", "validation_queue_full",
-    "validation_no_route", "validation_ttl_hop",
+    "validation_no_route", "validation_dead_end", "validation_ttl_hop",
 ]
 
 
@@ -89,6 +89,8 @@ def parse_args() -> argparse.Namespace:
                         help="Parallel evaluation workers; 1 runs them sequentially.")
     parser.add_argument("--out-dir", type=str, default="out",
                         help="Where the log and models go.")
+    parser.add_argument("--log-name", type=str, default="1b_training_log.csv",
+                        help="Name of the training log inside --out-dir.")
     return parser.parse_args()
 
 
@@ -148,7 +150,10 @@ def run_once(
             "channel": by_reason["channel"],
             "queue_full": by_reason["queue_full"],
             "no_route": by_reason["no_route"],
+            "dead_end": by_reason["dead_end"],
             "ttl_hop": by_reason["ttl"] + by_reason["hop_limit"],
+            # Mean hops of the DELIVERED packets, for the loop-guard tables.
+            "mean_hops": truth["mean_hops"],
             "views_agree": not metrics["discrepancies"],
             "discrepancies": metrics["discrepancies"],
         }
@@ -214,7 +219,8 @@ def evaluate(
 
     return {
         key: statistics.fmean(r[key] for r in results)
-        for key in ("total_loss", "channel", "queue_full", "no_route", "ttl_hop")
+        for key in ("total_loss", "channel", "queue_full", "no_route",
+                    "dead_end", "ttl_hop")
     }
 
 
@@ -238,7 +244,7 @@ def train_one_seed(
     """
     from agents import make_router
 
-    models_dir = os.path.join(out_dir, "models")
+    models_dir = os.path.join(out_dir, "models", config.LOOP_GUARD)
     os.makedirs(models_dir, exist_ok=True)
 
     router = make_router("rl", run_seed=TRAIN_SEEDS[0],
@@ -264,7 +270,8 @@ def train_one_seed(
             "train_bce": result.get("bce"),
             "validation_total_loss": None, "train_check_total_loss": None,
             "validation_channel": None, "validation_queue_full": None,
-            "validation_no_route": None, "validation_ttl_hop": None,
+            "validation_no_route": None, "validation_dead_end": None,
+            "validation_ttl_hop": None,
         })
 
         if run_index % EVALUATE_EVERY:
@@ -283,6 +290,7 @@ def train_one_seed(
             "validation_channel": validation["channel"],
             "validation_queue_full": validation["queue_full"],
             "validation_no_route": validation["no_route"],
+            "validation_dead_end": validation["dead_end"],
             "validation_ttl_hop": validation["ttl_hop"],
         })
 
@@ -324,7 +332,8 @@ def main() -> None:
     args = parse_args()
     os.makedirs(args.out_dir, exist_ok=True)
 
-    print(f"Phase-1b training at {LOAD_MS} ms")
+    print(f"Phase-1b training at {LOAD_MS} ms, "
+          f"loop guard = {config.LOOP_GUARD!r}")
     print(f"  {settings_stamp(loads_ms=[LOAD_MS])}")
     print(f"  train {len(TRAIN_SEEDS)} layouts | validation {len(VALIDATION_SEEDS)}"
           f" | train-check {len(TRAIN_CHECK_SEEDS)} | workers {args.workers}")
@@ -349,10 +358,11 @@ def main() -> None:
             "validation_channel": values["channel"],
             "validation_queue_full": values["queue_full"],
             "validation_no_route": values["no_route"],
+            "validation_dead_end": values["dead_end"],
             "validation_ttl_hop": values["ttl_hop"],
         })
 
-    path = os.path.join(args.out_dir, "1b_training_log.csv")
+    path = os.path.join(args.out_dir, args.log_name)
     with open(path, "w", newline="") as handle:
         handle.write(csv_comment(loads_ms=[LOAD_MS],
                                  placements=len(VALIDATION_SEEDS),

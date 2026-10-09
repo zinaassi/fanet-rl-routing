@@ -12,7 +12,8 @@ affect packet loss. The fleet has two kinds of drones:
 ## Goal
 Minimize TOTAL PACKET LOSS: the share of created packets that never
 reach the GS. Per-link loss and loss by cause (channel, queue_full,
-no_route, ttl, hop_limit) are secondary, used to explain the total.
+no_route, dead_end, ttl, hop_limit) are secondary, used to explain the
+total.
 
 ## Plan (order set by the supervisor; each step starts only after the
 ## previous one is approved)
@@ -70,6 +71,24 @@ be written NEW; the archived RL code is not to be reused.
   ~12 of 25 drones link straight to the GS.
 - Link loss = 1 - (1 - channel loss) * (1 - queue_full), where
   queue_full = 1 if the sender's own queue for that link is full.
+- Loop guard, a design assumption of the NETWORK (not of a routing
+  rule): the packet header carries the list of drones it has visited,
+  and no drone may forward a packet to a drone already on that list. It
+  applies to EVERY routing rule. Cheap (~4 bytes with 25 drones and at
+  most 10 hops) and standard practice: a BGP route carries its AS_PATH
+  and a router drops any route already containing its own AS number.
+  config.LOOP_GUARD (PROVISIONAL) selects:
+    "path"     -- the whole visited list. THE DEFAULT.
+    "previous" -- only the drone the packet just came from. What Phase
+                  1a and Phase 1b up to CHECKPOINT 11 ran; kept so
+                  those results stay reproducible.
+  The GS is never excluded under either setting.
+  A packet that has links but whose every reachable neighbor is already
+  on its path drops as dead_end -- distinct from no_route, which means
+  it had no candidate at all.
+  GREEDY is unaffected: it only moves strictly closer to the GS, so it
+  cannot revisit a drone. Identical results under both settings, which
+  tests/test_loop_guard.py checks. RANDOM, rate and rl all change.
 - GREEDY: among neighbors strictly closer to the GS, the lowest link
   loss; ties: lower channel loss, then closer to the GS; none closer ->
   drop (no_route).
@@ -95,8 +114,8 @@ be written NEW; the archived RL code is not to be reused.
   test) and "rl" (a shared 3->32->32->1 network scoring each option
   from 3 local inputs: delivery_rate, own queue fill, channel loss;
   epsilon 0.1 training, 0 at test). Options are the current neighbors
-  plus the GS when in range, EXCLUDING the drone the packet came from
-  (loop guard); none left -> drop no_route.
+  plus the GS when in range, minus what the loop guard above excludes;
+  no candidate at all -> no_route, all candidates guarded -> dead_end.
   An end-to-end ACK walks back along the packet's path when it reaches
   the GS; a packet unacked by created_at + TTL is recorded lost by
   every drone that decided on it. Per-link delivery rate = mean of the
@@ -107,6 +126,8 @@ be written NEW; the archived RL code is not to be reused.
   counters and the views_agree check stay as measurement tools only.
 
 ## Open questions (do NOT decide these; ask)
+Whether LOOP_GUARD stays "path" (the header-carried visited list) is
+pending supervisor confirmation; "previous" is kept as the baseline.
 Pooling every drone's training examples into ONE shared network is an
 ASSUMPTION pending supervisor confirmation; each drone still decides
 from its own local inputs only. Also: ACK details (routed or ideal, capacity use, retransmissions); RL reward

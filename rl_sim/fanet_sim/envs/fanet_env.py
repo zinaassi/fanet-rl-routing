@@ -264,6 +264,11 @@ class FANETEnv:
 
         Both seeds are recorded in the episode-meta log record.
         """
+        if config.LOOP_GUARD not in config.LOOP_GUARD_MODES:
+            raise ValueError(
+                f"unknown LOOP_GUARD {config.LOOP_GUARD!r}; expected one of "
+                f"{config.LOOP_GUARD_MODES}"
+            )
         if routing not in ROUTING_RULES:
             raise ValueError(
                 f"unknown routing rule {routing!r}; expected one of {ROUTING_RULES}"
@@ -388,6 +393,7 @@ class FANETEnv:
                 "m_drone_mobility": config.M_DRONE_MOBILITY,
                 "static_mode": config.STATIC_MODE,
                 "require_connected_m": config.REQUIRE_CONNECTED_M,
+                "loop_guard": config.LOOP_GUARD,
                 "placement_draws": self.placement_draws,
                 "area_width": config.WIDTH,
                 "area_height": config.HEIGHT,
@@ -765,6 +771,37 @@ class FANETEnv:
             candidates["GS"] = self.gs_position
         return candidates
 
+    def _allowed_candidates(
+        self, drone: Drone, pkt: Packet
+    ) -> Dict[NextHop, np.ndarray]:
+        """Return the next hops the loop guard permits for this packet.
+
+        Under ``config.LOOP_GUARD == "path"`` every drone already in the
+        packet's path is removed — the header carries that list, so the
+        decision stays local. The GS is never removed: it is the destination,
+        and a packet reaching it stops.
+
+        Under ``"previous"`` nothing is removed here; "rate" and "rl" drop the
+        immediately preceding hop themselves and greedy and random drop
+        nothing, which is the behaviour Phase 1b was measured under.
+
+        Args:
+            drone: The drone routing the packet.
+            pkt:   The packet being routed.
+
+        Returns:
+            The permitted next hops, key → position.
+        """
+        candidates = self._next_hop_candidates(drone)
+        if config.LOOP_GUARD != "path":
+            return candidates
+
+        visited = set(pkt.path)
+        return {
+            key: position for key, position in candidates.items()
+            if key == "GS" or key not in visited
+        }
+
     def _select_next_hop(
         self,
         drone: Drone,
@@ -835,11 +872,21 @@ class FANETEnv:
             self._expire_packet(pkt, holder=drone)
             return
 
-        candidates = self._next_hop_candidates(drone)
-        next_key = self._select_next_hop(drone, candidates, pkt)
+        reachable = self._next_hop_candidates(drone)
+        if not reachable:
+            # Nowhere to send it at all.
+            self._drop(pkt, DropReason.NO_ROUTE, drone)
+            return
 
+        candidates = self._allowed_candidates(drone, pkt)
+        if not candidates:
+            # There were options, and the loop guard took the last one.
+            self._drop(pkt, DropReason.DEAD_END, drone)
+            return
+
+        next_key = self._select_next_hop(drone, candidates, pkt)
         if next_key is None:
-            # Routing void: no candidate at all, or none closer to the GS.
+            # The rule found nothing usable — for greedy, nothing closer.
             self._drop(pkt, DropReason.NO_ROUTE, drone)
             return
 

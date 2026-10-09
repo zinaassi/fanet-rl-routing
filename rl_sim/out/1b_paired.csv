@@ -1,6 +1,6 @@
-# D50=356 m  |  slope=0.025/m  |  LINK_MAX_LOSS=0.5  |  reach=356 m  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200/500 ms  |  placements=20  |  window=[50,950) of 1000  |  commit=c0cc4c3-dirty  |  phase 1b paired comparison
+# D50=356 m  |  slope=0.025/m  |  LINK_MAX_LOSS=0.5  |  reach=356 m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200/500 ms  |  placements=20  |  window=[50,950) of 1000  |  commit=0187e94-dirty  |  phase 1b paired comparison
 load_ms,comparison,layouts,mean_difference,std_difference,layouts_rl_lower
-200,rl - greedy,20,-0.28553909465020577,0.10613284191186899,20
-200,rl - rate,20,-0.008594650205761317,0.04521948401616038,12
-500,rl - greedy,20,-0.10512860082304527,0.1250198293036035,15
-500,rl - rate,20,-0.0729835390946502,0.03580886981938176,19
+200,rl - greedy,20,-0.30197325102880657,0.09837549230188686,20
+200,rl - rate,20,-0.012442386831275718,0.04089113660033891,14
+500,rl - greedy,20,-0.1396553497942387,0.11316487221967186,17
+500,rl - rate,20,-0.08109053497942387,0.030669038611068403,20

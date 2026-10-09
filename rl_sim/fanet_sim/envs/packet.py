@@ -21,7 +21,9 @@ class DropReason(Enum):
     """
     CHANNEL = auto()       # transmission over an existing link was lost
     QUEUE_FULL = auto()    # the next hop's queue was full on arrival
-    NO_ROUTE = auto()      # no neighbour to forward to (routing void)
+    NO_ROUTE = auto()      # nowhere to send it at all (routing void)
+    DEAD_END = auto()      # the loop guard left nothing: every neighbour was
+                           # already visited and the GS is out of range
     TTL = auto()           # packet lived longer than PACKET_TTL steps
     HOP_LIMIT = auto()     # packet already took MAX_HOPS hops
 

@@ -7,7 +7,8 @@ involved.
 
 **Goal: minimize total packet loss** — the share of packets created that never
 reach the GS. Per-link loss and the breakdown by cause (channel, queue_full,
-no_route, ttl, hop_limit) are secondary; they exist to explain the total.
+no_route, dead_end, ttl, hop_limit) are secondary; they exist to explain the
+total.
 
 The plan, in the order set by the supervisor, each step starting only after the
 previous one is approved:
@@ -149,6 +150,46 @@ still has room. If no neighbour is strictly closer, the packet is dropped
 **RANDOM.** Uniform over all current neighbours, GS included when in range. No
 progress condition, no regard for queues. It draws from its own random stream,
 so switching rules never shifts the channel or traffic draws.
+
+### The loop guard
+
+**The packet header carries the list of drones the packet has visited, and no
+drone may forward a packet to a drone already on that list.** This is a property
+of the *network*, not of a routing rule: it applies to greedy, random and both
+Phase-1b rules alike, and a rule cannot opt out of it.
+
+It is cheap. With 25 drones an id fits in 5 bits and a packet takes at most
+`MAX_HOPS` = 10 hops, so the whole visited list is about 4 bytes beside a
+512-byte payload. The same idea runs the Internet's inter-domain routing: a BGP
+route carries its AS_PATH and a router discards any route whose path already
+contains its own AS number.
+
+A packet that still has a link but whose every reachable neighbour is already on
+its path has nowhere legal to go. It is dropped, with its own reason:
+
+| Reason | Meaning |
+|---|---|
+| `no_route` | No candidate at all. Greedy's progress condition found nothing closer, or the drone had no link. |
+| `dead_end` | Candidates existed, but the loop guard excluded every one of them. |
+
+The two are kept apart because they say different things: `no_route` is a
+property of the layout and the rule, `dead_end` is the price of the guard.
+
+`config.LOOP_GUARD` selects the rule (PROVISIONAL):
+
+- `"path"` — the whole visited list. **The default.**
+- `"previous"` — only the drone the packet just came from. This is what Phase 1a
+  and Phase 1b up to CHECKPOINT 11 ran, and it is kept so those results stay
+  reproducible. Under it a packet can cycle, and does: see section 6.
+
+The GS is never excluded, under either setting. It is the destination, not a hop
+to avoid.
+
+Greedy is **unaffected** by the choice: it only ever hands a packet to a drone
+strictly closer to the GS, so distance to the GS falls at every hop and it can
+never return to a drone it has already visited. Its results are identical under
+both settings, and `tests/test_loop_guard.py` checks that rather than assuming
+it.
 
 ### Ground station
 
@@ -338,6 +379,7 @@ defaults and carry a `PROVISIONAL - to confirm` comment in the file.
 | `LOSS_50_DISTANCE_M` | 356.0 m | Distance at which loss is 50%. | PROVISIONAL |
 | `LOSS_SLOPE_PER_M` | 0.025 | Steepness of the loss curve, per metre. | PROVISIONAL |
 | `LINK_MAX_LOSS` | 0.5 | A link exists while loss is under this (→ 356 m): at least half the hello messages get through. | PROVISIONAL |
+| `LOOP_GUARD` | `"path"` | Which previously visited drones a packet may not be sent back to: `"path"` (all of them) or `"previous"` (only the last). Applies to every routing rule. | PROVISIONAL |
 | `PACKET_TTL` | 50 steps | Packet lifetime. | DECIDED |
 | `MAX_HOPS` | 10 | Most hops a packet may take. | DECIDED |
 | `PACKET_INTERVAL_STEPS` | 2 (200 ms) | Steps between packets at each M-drone; the working load. | DECIDED |
@@ -383,12 +425,14 @@ from the commands above.
 | `link_cutoff_sensitivity.csv` | Total loss and its causes, hops, neighbours, GS links and placement draws at link cutoffs 0.99 / 0.5 / 0.2, both rules, at the 200 ms load. |
 | `1b_training_log.csv` | Phase 1b: one row per training run (its total loss and BCE) and per evaluation (validation and train-check total loss, plus the validation loss by cause), with the reference rules measured on the same validation layouts. |
 | `1b_learning_curve.png` | Total loss against training runs — validation, train-check, the faint per-run training loss, and dashed reference lines; below it, the BCE per run. |
-| `1b_validation_causes.png` | Where the validation loss goes at each evaluation: channel, queue_full, no_route, ttl+hop. |
+| `1b_validation_causes.png` | Where the validation loss goes at each evaluation: channel, queue_full, no_route, dead_end, ttl+hop. |
 | `1b_test_runs.csv` | One row per (rule, load, TEST layout), with total loss and its causes. |
 | `1b_comparison_total_loss.png` | Total loss on the 20 TEST layouts for random, greedy, rate and rl, at 200 ms and 500 ms, every layout a dot. |
 | `1b_loss_by_cause.png` | Stacked bars at 200 ms on the TEST layouts for greedy, rate and rl. |
 | `1b_paired.csv` | Per load: `rl − greedy` and `rl − rate` total loss on identical layouts — mean, std, and how many of the 20 rl lost less on. |
-| `out/models/` | *(gitignored)* The best-validation network per init seed. |
+| `1b_loop_guard.csv` | One row per (loop guard, rule, load, TEST layout): total loss, its causes, and mean hops. Both guards side by side. |
+| `1b_loop_guard_paired.csv` | Per-layout `rl − rate`, `rl − greedy` and `rate − greedy` total loss under `LOOP_GUARD = "path"`. |
+| `out/models/<guard>/` | *(gitignored)* The best-validation network per init seed, kept per loop-guard setting, so the pre-guard models are not overwritten. |
 
 `main.py` also writes a JSONL event log per episode under `logs/` (one record
 per packet event, per-step network state and per-drone state).
@@ -454,9 +498,10 @@ was never sent.
 
 ### The two rules
 
-Both choose among the current neighbours plus the GS when in range, **excluding
-the drone the packet just came from** (the loop guard). Nothing left means a
-`no_route` drop.
+Both choose among the current neighbours plus the GS when in range, minus
+whatever [the loop guard](#the-loop-guard) excludes — the whole visited path
+under the default `LOOP_GUARD = "path"`. No candidate at all is a `no_route`
+drop; candidates that the guard removes entirely is a `dead_end` drop.
 
 **`rate`** — no network:
 
@@ -560,6 +605,12 @@ A test reproduces greedy and random at seed 1 against the committed
   (`scripts/range_check.py` measures this), and those layouts are excluded. Every number here therefore describes a *connected*
   deployment, not an arbitrary one — though under the current loss curve no
   layout is actually rejected, so the filter is presently a no-op.
+- **The loop guard is a design assumption.** We assert that the header can
+  carry the visited list and that every drone honours it. That is cheap (about
+  4 bytes) and standard practice (BGP's AS_PATH), but it is still an assumption
+  about the protocol, not a result, and `LOOP_GUARD` is PROVISIONAL. A real
+  network would also have to cope with the header growing in the dynamic phase,
+  where paths can be longer.
 - **Energy is tracked but constrains nothing.** No drone ever runs out.
 - **The Phase-1b network is shared, and trained on pooled experience.** Each
   drone decides from its own local inputs, but one set of weights is fitted to

@@ -214,6 +214,10 @@ def test_phase_1a_results_are_unchanged_by_the_1b_work() -> None:
     the channel stream would have shifted and every Phase-1a result with it.
     This checks against the committed out/1a_runs.csv, not against a value
     copied into the test.
+
+    Pinned to LOOP_GUARD="previous": random is one of the rules the path guard
+    changes, so the Phase-1a baseline is reproducible only under the guard it
+    was run with. See tests/test_loop_guard.py.
     """
     from scripts.metrics_1a import compute_metrics
     from scripts.stamp import read_stamped_csv
@@ -222,8 +226,10 @@ def test_phase_1a_results_are_unchanged_by_the_1b_work() -> None:
     runs = read_stamped_csv(os.path.join(here, "out", "1a_runs.csv"))
 
     previous = config.PACKET_INTERVAL_STEPS
+    previous_guard = config.LOOP_GUARD
     try:
         config.PACKET_INTERVAL_STEPS = 2          # the 200 ms rows
+        config.LOOP_GUARD = "previous"
         for rule in ("greedy", "random"):
             expected = next(
                 r for r in runs
@@ -243,3 +249,4 @@ def test_phase_1a_results_are_unchanged_by_the_1b_work() -> None:
             )
     finally:
         config.PACKET_INTERVAL_STEPS = previous
+        config.LOOP_GUARD = previous_guard
