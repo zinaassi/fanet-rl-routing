@@ -432,6 +432,10 @@ from the commands above.
 | `1b_paired.csv` | Per load: `rl − greedy` and `rl − rate` total loss on identical layouts — mean, std, and how many of the 20 rl lost less on. |
 | `1b_loop_guard.csv` | One row per (loop guard, rule, load, TEST layout): total loss, its causes, and mean hops. Both guards side by side. |
 | `1b_loop_guard_paired.csv` | Per-layout `rl − rate`, `rl − greedy` and `rate − greedy` total loss under `LOOP_GUARD = "path"`. |
+| `1b_test50_runs.csv` | One row per (rule, load, layout, init seed) over the 50 TEST layouts: total loss, all six causes kept apart, and mean hops. |
+| `1b_test50_paired.csv` | Paired comparisons on layouts 1–50, 1–20 and 21–50: mean difference, std, layouts won, sign-test and paired t-test p-values. |
+| `1b_comparison_total_loss_50.png` | Total loss per rule on the 50 TEST layouts, every layout a dot, at 200 ms and 500 ms. |
+| `1b_loss_heatmaps_50.png` | A panel per rule: total loss and all six causes, both loads, mean with std, on one shared scale. |
 | `out/models/<guard>/` | *(gitignored)* The best-validation network per init seed, kept per loop-guard setting, so the pre-guard models are not overwritten. |
 
 `main.py` also writes a JSONL event log per episode under `logs/` (one record
@@ -543,7 +547,7 @@ on what it was fitted to:
 | training | 101–300, cycled | one layout per run, 1000 steps, learning on |
 | validation | 301–310 | choosing the kept model; never trained on |
 | train-check | 101–110 | the overfitting comparison only |
-| test | 1–20 | used **once**, at the very end |
+| test | 1–50 | used at the very end; seeds 1–20 are the original set |
 
 Every 10 training runs the network is frozen and measured on the validation and
 train-check layouts. The best validation model is kept under `out/models/`
@@ -567,6 +571,101 @@ python scripts/plot_1b.py                         # learning curve + causes
 
 `regenerate_all.py` runs `evaluate_1b.py` and `plot_1b.py` by default and skips
 them when no trained model is present; `--with-training` retrains first.
+
+### Results on the 50 TEST layouts
+
+Everything below is `LOOP_GUARD = "path"`, with `rl` the mean of init seeds
+0, 1 and 2. Mean % of the packets created, std across the 50 layouts in
+brackets. The six causes sum to the total exactly: no packet created inside
+the measurement window is still in flight when it closes.
+
+| load | rule | total | channel | queue_full | no_route | dead_end | ttl | hop_limit | hops |
+|---|---|---|---|---|---|---|---|---|---|
+| 200 ms | random | **71.76** (3.05) | 57.32 | 0.00 | 0.00 | 3.37 | 0.00 | 11.06 | 4.44 |
+| 200 ms | greedy | **51.78** (6.41) | 7.91 | 42.32 | 0.00 | 0.00 | 1.55 | 0.00 | 3.38 |
+| 200 ms | rate | **21.72** (6.14) | 19.84 | 0.48 | 0.00 | 0.51 | 0.37 | 0.51 | 2.99 |
+| 200 ms | rl | **19.47** (9.32) | 14.19 | 1.93 | 0.00 | 0.98 | 1.20 | 1.16 | 3.35 |
+| 500 ms | random | **71.70** (3.17) | 57.32 | 0.00 | 0.00 | 3.36 | 0.00 | 11.02 | 4.45 |
+| 500 ms | greedy | **26.95** (9.49) | 6.68 | 20.22 | 0.00 | 0.00 | 0.05 | 0.00 | 3.83 |
+| 500 ms | rate | **18.80** (3.85) | 17.84 | 0.04 | 0.00 | 0.32 | 0.00 | 0.61 | 2.94 |
+| 500 ms | rl | **10.75** (4.77) | 9.11 | 0.10 | 0.00 | 0.72 | 0.03 | 0.79 | 3.33 |
+
+Paired on the same layouts. A negative difference means the first rule lost
+fewer packets. The sign test is the exact two-sided binomial on the layouts
+won; the t-test is two-sided on the per-layout differences.
+
+| layouts | load | comparison | mean diff | std | won | p (sign) | p (t-test) |
+|---|---|---|---|---|---|---|---|
+| 1–50 | 200 ms | rl − rate | −2.25 | 3.54 | 40 / 50 | <0.0001 | <0.0001 |
+| 1–50 | 200 ms | rl − greedy | −32.31 | 9.88 | 50 / 50 | <0.0001 | <0.0001 |
+| 1–50 | 200 ms | rate − greedy | −30.06 | 7.52 | 50 / 50 | <0.0001 | <0.0001 |
+| 1–50 | 500 ms | rl − rate | −8.06 | 3.01 | 50 / 50 | <0.0001 | <0.0001 |
+| 1–50 | 500 ms | rl − greedy | −16.20 | 11.31 | 45 / 50 | <0.0001 | <0.0001 |
+| 1–50 | 500 ms | rate − greedy | −8.15 | 10.93 | 38 / 50 | 0.0003 | <0.0001 |
+| 1–20 | 200 ms | rl − rate | −1.24 | 4.09 | 14 / 20 | 0.1153 | 0.1895 |
+| 21–50 | 200 ms | rl − rate | −2.91 | 3.00 | 26 / 30 | <0.0001 | <0.0001 |
+
+The 1–20 rows reproduce the earlier 20-layout evaluation exactly, to 1e-12 on
+the mean, the std and the layouts won.
+
+```bash
+cd rl_sim
+python scripts/evaluate_1b_large.py              # the 50 layouts, both loads
+python scripts/evaluate_1b_large.py --from-csv   # redraw, nothing re-simulated
+```
+
+### What the loop guard changed
+
+Measured on the first 20 TEST layouts, running every rule under both settings
+of `LOOP_GUARD`. Greedy cannot revisit a drone, so it is identical under both
+and the script asserts that rather than assuming it; every other rule moves.
+
+| load | rule | `"previous"` | `"path"` | dead_end under `"path"` |
+|---|---|---|---|---|
+| 200 ms | greedy | 51.70 | 51.70 | 0.00 |
+| 200 ms | random | 76.95 | 71.71 | 4.06 |
+| 200 ms | rate | 24.00 | 22.74 | 0.98 |
+| 200 ms | rl | 23.14 | 21.50 | 1.59 |
+| 500 ms | rl | 15.02 | 11.57 | 1.06 |
+
+Under `"path"` no packet revisits a drone at all: the revisit share over all
+682 823 rl decisions is 0.00%.
+
+```bash
+cd rl_sim
+python scripts/compare_loop_guard.py             # both guards, side by side
+```
+
+### Where the channel losses come from
+
+Every transmission lost in the channel is attributed to the decision that
+chose that link — a packet is lost in the channel on exactly one
+transmission, its last — and classified by what the deciding drone was
+offered at that moment. "Cleaner" means at least 10 points less channel loss;
+a busy queue means a fill of 0.5 or more. Seed-0 model, 200 ms, 50 layouts.
+
+| class | rl | rate |
+|---|---|---|
+| A — a cleaner option existed and its queue was under half full | 33.55% | 63.08% |
+| B — a cleaner option existed but its queue was at least half full | 4.69% | 4.40% |
+| C — nothing 10+ points cleaner was allowed | 61.76% | 32.53% |
+| losses on links losing more than 20% | 20.40% | 47.52% |
+
+Splitting rl's class A by the cleaner option's measured delivery rate:
+
+| | share of A | chosen rate | chosen loss | cleaner rate | cleaner loss |
+|---|---|---|---|---|---|
+| A1 — cleaner option's delivery rate ≥ chosen | 0.22% | 78.33% | 15.13% | 86.45% | 3.16% |
+| A2 — cleaner option's delivery rate < chosen | 99.78% | 77.47% | 18.93% | 23.56% | 0.98% |
+
+Against all of rl's channel losses rather than against class A, A2 is 33.5%
+and A1 is 0.07% (43 of 57 717).
+
+```bash
+cd rl_sim
+python scripts/diagnose_1b_channel.py --init-seed 0            # both rules
+python scripts/diagnose_1b_channel.py --init-seed 0 --rules rl # rl only
+```
 
 ### Seeding
 
@@ -629,7 +728,8 @@ A test reproduces greedy and random at seed 1 against the committed
 .
 ├── CLAUDE.md               Project context and working rules for agent sessions.
 ├── README.md               This file.
-├── requirements.txt        The four third-party packages actually imported.
+├── requirements.txt        The third-party packages actually imported.
+│                           torch is needed only by agents/ and the 1b scripts.
 │
 ├── rl_sim/                 THE SIMULATOR — the only live code.
 │   ├── main.py             Entry point: run one episode, print both views.
@@ -640,7 +740,7 @@ A test reproduces greedy and random at seed 1 against the committed
 │   │   │   │                 transmission, drops, ground-truth counters.
 │   │   │   ├── drone.py      A drone: position, link queues, ACK counters.
 │   │   │   ├── channel.py    The loss curve, link existence, link quality.
-│   │   │   └── packet.py     Packet lifecycle and the five drop reasons.
+│   │   │   └── packet.py     Packet lifecycle and the six drop reasons.
 │   │   └── utils/
 │   │       ├── metrics.py       Connectivity graphs (networkx).
 │   │       ├── event_log.py     JSONL event logger.
@@ -654,7 +754,15 @@ A test reproduces greedy and random at seed 1 against the committed
 │   │   │                     How much LINK_MAX_LOSS moves the results.
 │   │   ├── plot_ploss.py     The channel-loss curve, new against old.
 │   │   ├── train_1b.py       Phase-1b training protocol.
-│   │   ├── evaluate_1b.py    Phase 1b on the held-back TEST layouts.
+│   │   ├── evaluate_1b.py    Phase 1b on the 20 held-back TEST layouts.
+│   │   ├── evaluate_1b_large.py
+│   │   │                     The same on 50 layouts, with the sign test and
+│   │   │                     paired t-test, and the heatmaps.
+│   │   ├── compare_loop_guard.py
+│   │   │                     Every rule under both LOOP_GUARD settings.
+│   │   ├── diagnose_1b*.py   Read-only diagnostics: what the policy chose,
+│   │   │                     the packet's state at each decision, and why
+│   │   │                     the channel losses happened.
 │   │   ├── plot_1b.py        The learning curve and validation causes.
 │   │   ├── regenerate_all.py Rebuild every output from the current config.
 │   │   ├── stamp.py          The settings stamp on every figure and CSV.
@@ -664,9 +772,10 @@ A test reproduces greedy and random at seed 1 against the committed
 │   │   ├── tracker.py        Delivery rates, decisions, ACKs and deadlines.
 │   │   ├── rate_router.py    The shared base, and the "rate" rule.
 │   │   └── rl_router.py      The network, the "rl" rule, and its learning.
-│   ├── tests/              202 tests: channel, queues, routing, conservation,
+│   ├── tests/              214 tests: channel, queues, routing, conservation,
 │   │                       ACK-vs-ground-truth, layout filter, static world,
-│   │                       reproducibility, and the Phase-1b agents.
+│   │                       reproducibility, the loop guard, and the
+│   │                       Phase-1b agents.
 │   └── out/                Generated results (gitignored).
 │
 ├── archive/                NOT PART OF THE PROJECT. Kept for reference only.

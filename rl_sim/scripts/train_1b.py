@@ -152,6 +152,9 @@ def run_once(
             "no_route": by_reason["no_route"],
             "dead_end": by_reason["dead_end"],
             "ttl_hop": by_reason["ttl"] + by_reason["hop_limit"],
+            # Kept apart as well, for the tables that want all six causes.
+            "ttl": by_reason["ttl"],
+            "hop_limit": by_reason["hop_limit"],
             # Mean hops of the DELIVERED packets, for the loop-guard tables.
             "mean_hops": truth["mean_hops"],
             "views_agree": not metrics["discrepancies"],

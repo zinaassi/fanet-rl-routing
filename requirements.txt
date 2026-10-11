@@ -1,4 +1,4 @@
-# Python dependencies for the FANET Phase-1A simulator.
+# Python dependencies for the FANET simulator and its Phase-1b agents.
 #
 # These are the only third-party packages the simulator, its tests and the
 # scripts import. Everything else they use is in the Python standard library
@@ -7,13 +7,20 @@
 #
 # Developed and run on Python 3.13.
 #
-# There is deliberately NO torch: the live simulator has no learned component.
-# The archived RL code under archive/ does need torch, but nothing in rl_sim/
-# imports it.
+# torch is needed ONLY by rl_sim/agents/ (the Phase-1b "rl" router) and the
+# scripts that train, evaluate or diagnose it. The simulator itself stays
+# torch-free: fanet_sim/ never imports torch and never imports agents/ -- a
+# router is injected into FANETEnv and called through five duck-typed hooks,
+# and a test enforces this with an import blocker. Running only the Phase-1a
+# simulator therefore does not need torch installed.
+#
+# Nothing in rl_sim/ imports from archive/.
 #
 #     pip install -r requirements.txt
 
 numpy>=2.0          # positions, RNG streams, the link-loss matrices
 matplotlib>=3.8     # every figure (Agg backend; no interactive display needed)
 networkx>=3.0       # connectivity: paths to the GS, isolated drones, hop counts
+scipy>=1.11         # the sign test and paired t-test in evaluate_1b_large.py
 pytest>=8.0         # the test suite under rl_sim/tests/
+torch==2.12.0       # Phase-1b "rl" only; developed against the 2.12.0+cpu build

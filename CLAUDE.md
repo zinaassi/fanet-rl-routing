@@ -15,6 +15,14 @@ reach the GS. Per-link loss and loss by cause (channel, queue_full,
 no_route, dead_end, ttl, hop_limit) are secondary, used to explain the
 total.
 
+## Decided by the supervisor (not open for revisiting)
+- The objective is TOTAL PACKET LOSS. Everything else is explanation.
+- One FIFO queue per OUTGOING LINK, not one queue per drone.
+- The static world comes first (greedy, random, then RL); the dynamic
+  world only after Phase 1 is approved.
+- The RL reward is the end-to-end delivery outcome, carried by the GS
+  ACK -- not a per-hop signal.
+
 ## Plan (order set by the supervisor; each step starts only after the
 ## previous one is approved)
 Phase 1 — STATIC world (nothing moves):
@@ -26,8 +34,9 @@ Phase 2 — DYNAMIC world (M-drones fly), only after Phase 1:
   2b. RL routing agent alone.
   2c. RL topology agent alone (C-drone movement), greedy routing.
   2d. Both agents together.
-Current work is 1a only: no learning of any kind. Later RL agents will
-be written NEW; the archived RL code is not to be reused.
+Current work is 1b: the RL routing agent, in the static world. Phase 1a
+is done. The Phase-1b agents were written NEW; the archived RL code is
+not to be reused, and the same holds for the Phase-2 agents.
 
 ## Current model (full details and DECIDED/PROVISIONAL status in
 ## README.md at the repo root, written at Checkpoint 5)
@@ -124,16 +133,79 @@ be written NEW; the archived RL code is not to be reused.
   delivery rate: it was never sent.
   These rules do NOT use the hop-by-hop ACK. The simulator's ACK
   counters and the views_agree check stay as measurement tools only.
+- RL reward form [DECIDED by the supervisor]: a per-packet END-TO-END
+  reward, 1 if the packet reached the GS and 0 if it did not. When a
+  packet arrives, the GS ACK walks back along its path and every drone
+  that decided on that packet is told the outcome; a packet still
+  unacked at created_at + TTL is recorded lost the same way. There is
+  no per-hop reward and no discounting: every decision on a packet gets
+  that packet's single outcome.
+- CRITICAL implementation note -- do NOT simplify this away:
+  Packet.path records only the hops that SUCCEEDED. A drone whose
+  transmission failed never appears there, and those are exactly the
+  examples the network most needs. So rl/rate decisions are stored
+  SEPARATELY, in the tracker, as a LIST per packet (a list, not one
+  entry: under LOOP_GUARD = "previous" a packet can decide at the same
+  drone more than once), and outcomes are resolved from that store.
+  Never reconstruct who decided on a packet from its path.
+- Agent seeding: the exploration stream comes from the agent's OWN
+  np.random.SeedSequence([run_seed, config.AGENT_STREAM_TAG]) with
+  AGENT_STREAM_TAG = 0xA6E17 -- NOT a third spawn off the environment's
+  two streams. Spawning a third would shift the channel stream and move
+  every Phase-1a result with it. A test checks greedy and random still
+  reproduce out/1a_runs.csv to 1e-12.
+- RL training protocol:
+    layouts  training 101-300 (cycled, one per run), validation
+             301-310 (picks the kept model), train-check 101-110 (the
+             overfitting comparison only), TEST 1-50 (seeds 1-20 are
+             kept as the original CHECKPOINT-12 set).
+    schedule 1000 steps per run at 200 ms; freeze and evaluate every 10
+             runs; stop at 300 runs or early when validation has not
+             improved by 0.5 points over five evaluations; repeated for
+             network init seeds 0, 1 and 2.
+    learning Monte Carlo targets (the packet's own outcome, no
+             bootstrapping), binary cross-entropy, Adam at 1e-3,
+             batches of 32, NO replay buffer and NO target network.
+    models   saved under out/models/<loop_guard>/, so a change of guard
+             does not overwrite the previous models.
+
+## Status (Phase 1b, measured -- see README for the full tables)
+- 50 TEST layouts, LOOP_GUARD = "path", rl = mean of init seeds 0/1/2.
+  Total loss, mean % of packets created:
+    200 ms   rl 19.47   rate 21.72   greedy 51.78   random 71.76
+    500 ms   rl 10.75   rate 18.80   greedy 26.95   random 71.70
+  Paired on the same 50 layouts, rl - rate:
+    200 ms   -2.25 points, 40/50 layouts, sign and t-test p < 0.0001
+    500 ms   -8.06 points, 50/50 layouts, sign and t-test p < 0.0001
+- Where rl's channel losses come from (seed-0 model, 200 ms): 61.8%
+  geometry-forced (nothing 10+ points cleaner was allowed), 4.7%
+  congestion-forced (a cleaner option existed but its queue was at
+  least half full), 33.6% had a cleaner idle option. Within that last
+  group, 99.8% were trade-offs where the cleaner link had a WORSE
+  measured delivery rate, and 0.2% were worse on both counts -- 33.5%
+  and 0.07% of all channel losses respectively.
+- The geometry is kept as it is. Phase 2's topology agent (moving the
+  C-drones) is the intended answer to the geometry-forced share, not a
+  change to the channel or the layout.
 
 ## Open questions (do NOT decide these; ask)
-Whether LOOP_GUARD stays "path" (the header-carried visited list) is
-pending supervisor confirmation; "previous" is kept as the baseline.
-Pooling every drone's training examples into ONE shared network is an
-ASSUMPTION pending supervisor confirmation; each drone still decides
-from its own local inputs only. Also: ACK details (routed or ideal, capacity use, retransmissions); RL reward
-form; whether the topology agent joins the static phase; link-break
-handling and hello messages in the dynamic phase; a near-full load
-(e.g. 90 ms).
+- Whether LOOP_GUARD stays "path" (the header-carried visited list);
+  "previous" is kept as the baseline either way.
+- Pooling every drone's training examples into ONE shared network is an
+  ASSUMPTION pending confirmation; each drone still decides from its
+  own local inputs only.
+- Retransmissions, or a milder channel instead. Most of rl's remaining
+  loss is channel loss on links it had no cleaner alternative to; both
+  answers are MODEL CHANGES and are the supervisor's call.
+- Whether the Rosati curve already includes MAC-layer retries. If it
+  does, adding retransmissions on top would double-count them.
+- A hop count as a 4th network input. Deferred, optional.
+- An optional robustness check on denser layouts (more drones, or a
+  smaller arena), to see whether the ordering holds.
+- ACK details: routed or ideal, whether they consume capacity.
+- Whether the topology agent joins the static phase.
+- Link-break handling and hello messages in the dynamic phase.
+- A near-full load (e.g. 90 ms).
 
 ## IGNORE / LEAVE BEHIND
 We keep ONLY the simulator: world, drones, placement/mobility, channel,

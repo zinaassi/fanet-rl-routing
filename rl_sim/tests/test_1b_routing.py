@@ -215,21 +215,31 @@ def test_phase_1a_results_are_unchanged_by_the_1b_work() -> None:
     This checks against the committed out/1a_runs.csv, not against a value
     copied into the test.
 
-    Pinned to LOOP_GUARD="previous": random is one of the rules the path guard
-    changes, so the Phase-1a baseline is reproducible only under the guard it
-    was run with. See tests/test_loop_guard.py.
+    The loop guard is read back from the CSV's own settings stamp rather than
+    hardcoded: random is one of the rules the guard changes, so these numbers
+    are reproducible only under the guard that produced them, and the file
+    records which that was. See tests/test_loop_guard.py.
     """
     from scripts.metrics_1a import compute_metrics
-    from scripts.stamp import read_stamped_csv
+    from scripts.stamp import read_stamp, read_stamped_csv
 
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    runs = read_stamped_csv(os.path.join(here, "out", "1a_runs.csv"))
+    csv_path = os.path.join(here, "out", "1a_runs.csv")
+    runs = read_stamped_csv(csv_path)
+
+    stamp = read_stamp(csv_path) or ""
+    guard = next((part.split("=", 1)[1].strip()
+                  for part in stamp.split("|")
+                  if part.strip().startswith("loop_guard=")), "previous")
+    assert guard in config.LOOP_GUARD_MODES, (
+        f"out/1a_runs.csv was written with an unknown loop guard: {guard!r}"
+    )
 
     previous = config.PACKET_INTERVAL_STEPS
     previous_guard = config.LOOP_GUARD
     try:
         config.PACKET_INTERVAL_STEPS = 2          # the 200 ms rows
-        config.LOOP_GUARD = "previous"
+        config.LOOP_GUARD = guard
         for rule in ("greedy", "random"):
             expected = next(
                 r for r in runs
