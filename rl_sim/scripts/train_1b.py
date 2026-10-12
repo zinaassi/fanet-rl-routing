@@ -73,6 +73,14 @@ LOG_COLUMNS = [
     "validation_no_route", "validation_dead_end", "validation_ttl_hop",
 ]
 
+# The per-LAYOUT log, written beside the one above. The training log keeps
+# only the mean over the validation layouts, which cannot show the spread
+# across them; this records every layout at every evaluation.
+EVAL_LOG_COLUMNS = [
+    "init_seed", "run_index", "evaluation_index", "set", "placement_seed",
+    "total_loss", "saved_best",
+]
+
 
 def parse_args() -> argparse.Namespace:
     """Parse command-line arguments.
@@ -91,6 +99,8 @@ def parse_args() -> argparse.Namespace:
                         help="Where the log and models go.")
     parser.add_argument("--log-name", type=str, default="1b_training_log.csv",
                         help="Name of the training log inside --out-dir.")
+    parser.add_argument("--eval-log-name", type=str, default="1b_eval_log.csv",
+                        help="Name of the per-layout evaluation log.")
     return parser.parse_args()
 
 
@@ -157,6 +167,11 @@ def run_once(
             "hop_limit": by_reason["hop_limit"],
             # Mean hops of the DELIVERED packets, for the loop-guard tables.
             "mean_hops": truth["mean_hops"],
+            # Delay of the delivered packets, and how full the link queues
+            # got, for the queue-size check.
+            "mean_delay_ms": truth["mean_delay_ms"],
+            "mean_queue": truth["mean_queue"],
+            "max_queue": truth["max_queue"],
             "views_agree": not metrics["discrepancies"],
             "discrepancies": metrics["discrepancies"],
         }
@@ -220,11 +235,18 @@ def evaluate(
                 print(f"    ! {problem}")
             raise SystemExit(1)
 
-    return {
+    summary: Dict[str, Any] = {
         key: statistics.fmean(r[key] for r in results)
         for key in ("total_loss", "channel", "queue_full", "no_route",
                     "dead_end", "ttl_hop")
     }
+    # Per layout as well, for the per-seed learning curves. Recording this
+    # reads nothing extra from the simulator and draws no random numbers, so
+    # it cannot move the training trajectory.
+    summary["per_layout"] = {
+        seed: result["total_loss"] for seed, result in zip(seeds, results)
+    }
+    return summary
 
 
 # ---------------------------------------------------------------------------
@@ -233,7 +255,7 @@ def evaluate(
 
 def train_one_seed(
     init_seed: int, runs: int, workers: int, out_dir: str
-) -> List[Dict[str, Any]]:
+) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
     """Train one network from scratch and log its progress.
 
     Args:
@@ -243,7 +265,7 @@ def train_one_seed(
         out_dir:   Where the best model is written.
 
     Returns:
-        The log rows for this init seed.
+        ``(log rows, per-layout evaluation rows)`` for this init seed.
     """
     from agents import make_router
 
@@ -255,6 +277,7 @@ def train_one_seed(
     state = {k: v.clone() for k, v in router.net.state_dict().items()}
 
     rows: List[Dict[str, Any]] = []
+    eval_rows: List[Dict[str, Any]] = []
     best_loss: Optional[float] = None
     best_eval_index = 0
     evaluations = 0
@@ -297,6 +320,18 @@ def train_one_seed(
             "validation_ttl_hop": validation["ttl_hop"],
         })
 
+        # One row per layout per set, marked with whether THIS evaluation
+        # went on to save a new best model (filled in just below).
+        for name, values in (("validation", validation),
+                             ("train_check", train_check)):
+            for seed, loss in values["per_layout"].items():
+                eval_rows.append({
+                    "init_seed": init_seed, "run_index": run_index,
+                    "evaluation_index": evaluations, "set": name,
+                    "placement_seed": seed, "total_loss": loss,
+                    "saved_best": False,
+                })
+
         marker = ""
         if best_loss is None or validation["total_loss"] < best_loss - MIN_IMPROVEMENT / 100.0:
             best_loss = validation["total_loss"]
@@ -305,6 +340,9 @@ def train_one_seed(
 
             torch.save(state, os.path.join(models_dir, f"rl_seed{init_seed}.pt"))
             marker = "  <- best, saved"
+            for row in eval_rows:
+                if row["run_index"] == run_index:
+                    row["saved_best"] = True
         elif best_loss is None or validation["total_loss"] < best_loss:
             best_loss = validation["total_loss"]
 
@@ -318,7 +356,7 @@ def train_one_seed(
                   f"{MIN_IMPROVEMENT} points in {PATIENCE} evaluations")
             break
 
-    return rows
+    return rows, eval_rows
 
 
 def _fmt(value: Optional[float]) -> str:
@@ -348,9 +386,14 @@ def main() -> None:
         print(f"    {rule:<7} total loss {references[rule]['total_loss']*100:6.2f}%")
 
     rows: List[Dict[str, Any]] = []
+    eval_rows: List[Dict[str, Any]] = []
     for init_seed in args.init_seeds:
         print(f"\n  init seed {init_seed}")
-        rows.extend(train_one_seed(init_seed, args.runs, args.workers, args.out_dir))
+        seed_rows, seed_eval_rows = train_one_seed(
+            init_seed, args.runs, args.workers, args.out_dir
+        )
+        rows.extend(seed_rows)
+        eval_rows.extend(seed_eval_rows)
 
     for rule, values in references.items():
         rows.append({
@@ -374,6 +417,16 @@ def main() -> None:
         writer.writeheader()
         writer.writerows(rows)
     print(f"\n  wrote {path}")
+
+    eval_path = os.path.join(args.out_dir, args.eval_log_name)
+    with open(eval_path, "w", newline="") as handle:
+        handle.write(csv_comment(loads_ms=[LOAD_MS],
+                                 placements=len(VALIDATION_SEEDS),
+                                 extra="phase 1b per-layout evaluations"))
+        writer = csv.DictWriter(handle, fieldnames=EVAL_LOG_COLUMNS)
+        writer.writeheader()
+        writer.writerows(eval_rows)
+    print(f"  wrote {eval_path}")
 
 
 if __name__ == "__main__":

@@ -34,6 +34,8 @@ rl_sim/out/*
 !rl_sim/out/link_cutoff_sensitivity.csv
 !rl_sim/out/range_check.csv
 !rl_sim/out/1b_*.csv
+!rl_sim/out/queue_size_paired.csv
+!rl_sim/out/queue_size_1a.csv
 
 # ---------------------------------------------------------------------------
 # Scratch / temp

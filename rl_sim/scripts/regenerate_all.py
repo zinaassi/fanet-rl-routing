@@ -12,7 +12,9 @@ Order:
     3. experiment_1a.py             the grid, its CSVs and its three figures
     4. link_cutoff_sensitivity.py   how much the cutoff moves the results
     5. evaluate_1b.py               Phase 1b on the held-back TEST layouts
-    6. plot_1b.py                   the learning curve and validation causes
+    6. plot_1b.py                   the learning curve, the per-seed curves
+                                    and the validation causes
+    7. queue_size_check.py          the key results at Q = 5, 10 and 20
 
 Phase-1b TRAINING is NOT part of the default run: it takes tens of minutes
 and overwrites the saved models. Pass ``--with-training`` to include it,
@@ -129,6 +131,14 @@ def steps(
         plan.append(script("plot_1b.py"))
     else:
         print("  (skipping plot_1b.py: no out/1b_training_log.csv yet)")
+
+    # The queue-size sweep reruns every rule at three capacities, so it is by
+    # far the longest step; it needs the same trained models as evaluate_1b.
+    if with_training or all(os.path.exists(path) for path in models):
+        plan.append(list(script("queue_size_check.py"))
+                    + ["--init-seeds", *seed_args])
+    else:
+        print("  (skipping queue_size_check.py: no trained models)")
 
     return plan
 

@@ -12,6 +12,13 @@ Reads ``out/1b_training_log.csv`` and draws:
                shaded min-max band.
         bottom the training loss (BCE) per run.
 
+    out/1b_learning_curve_seeds.png
+        the same training, one line per init seed instead of a mean: the
+        validation curve with a standard-error band across the 10 validation
+        layouts and a star wherever that seed saved a new best model, the
+        train-check curve beneath it for the overfitting comparison, and the
+        per-run BCE with a moving average. Needs out/1b_eval_log.csv.
+
     out/1b_validation_causes.png
         where the loss goes on the validation layouts at each evaluation:
         channel, queue_full, no_route, dead_end and ttl+hop, as a share
@@ -56,6 +63,11 @@ CAUSE_COLORS = {
     "dead_end": "#e87ba4",
     "ttl_hop": "#eda100",
 }
+# One hue per init seed, distinct from each other and from the reference
+# lines they are read against.
+SEED_COLORS = {0: "#2a78d6", 1: "#1baf7a", 2: "#b5509c"}
+MOVING_AVERAGE = 10
+
 TEXT_PRIMARY = "#1a1a19"
 TEXT_SECONDARY = "#5c5b54"
 GRID_COLOR = "#e4e3dd"
@@ -74,6 +86,9 @@ def parse_args() -> argparse.Namespace:
                         help="The training log to read.")
     parser.add_argument("--suffix", type=str, default="",
                         help="Appended to every output filename.")
+    parser.add_argument("--eval-log", type=str, default="out/1b_eval_log.csv",
+                        help="The per-layout evaluation log, for the "
+                             "per-seed learning curves.")
     parser.add_argument("--out-dir", type=str, default="out",
                         help="Where the figures go.")
     return parser.parse_args()
@@ -287,6 +302,166 @@ def plot_validation_causes(log: Dict[str, Any], path: str) -> None:
     plt.close(fig)
 
 
+def load_eval_log(path: str) -> Dict[int, Dict[str, Dict[int, List[float]]]]:
+    """Read the per-layout evaluation log.
+
+    Args:
+        path: Path to ``out/1b_eval_log.csv``.
+
+    Returns:
+        ``{init_seed: {set: {run_index: [total_loss per layout]}}}``, plus
+        ``{init_seed: {"saved": {run_index}}}`` for the runs that saved a
+        new best model.
+    """
+    out: Dict[int, Dict[str, Any]] = {}
+    for row in read_stamped_csv(path):
+        seed = int(row["init_seed"])
+        run_index = int(row["run_index"])
+        bucket = out.setdefault(seed, {"validation": {}, "train_check": {},
+                                       "saved": set()})
+        bucket[row["set"]].setdefault(run_index, []).append(
+            float(row["total_loss"])
+        )
+        if row["saved_best"] == "True" and row["set"] == "validation":
+            bucket["saved"].add(run_index)
+    return out
+
+
+def _standard_error(values: Sequence[float]) -> float:
+    """Standard error of the mean, 0 for fewer than two values."""
+    if len(values) < 2:
+        return 0.0
+    return float(np.std(values, ddof=1) / np.sqrt(len(values)))
+
+
+def _moving_average(values: Sequence[float], window: int) -> List[float]:
+    """Trailing moving average, shortening the window at the start."""
+    out: List[float] = []
+    for index in range(len(values)):
+        chunk = values[max(0, index - window + 1):index + 1]
+        out.append(sum(chunk) / len(chunk))
+    return out
+
+
+def plot_learning_curve_seeds(log: Dict[str, Any],
+                              evals: Dict[int, Dict[str, Any]],
+                              path: str) -> None:
+    """Draw the three stacked per-seed panels.
+
+    Args:
+        log:   The training log, for the BCE and the reference rules.
+        evals: The per-layout evaluation log.
+        path:  Output PNG path.
+    """
+    fig, axes = plt.subplots(3, 1, figsize=(11.5, 12.0), dpi=150,
+                             sharex=True,
+                             gridspec_kw={"height_ratios": [3, 3, 2]})
+    fig.patch.set_facecolor(SURFACE)
+    for ax in axes:
+        ax.set_facecolor(SURFACE)
+
+    seeds = sorted(evals)
+
+    # --- panels 1 and 2: validation, then train-check.
+    for ax, name, title, stars in (
+        (axes[0], "validation", "Validation — the layouts the kept model is "
+         "chosen on", True),
+        (axes[1], "train_check", "Train-check — layouts it DID train on, for "
+         "the overfitting comparison", False),
+    ):
+        for seed in seeds:
+            series = evals[seed][name]
+            runs = sorted(series)
+            means = np.array([np.mean(series[r]) * 100 for r in runs])
+            errors = np.array([_standard_error(series[r]) * 100
+                               for r in runs])
+            color = SEED_COLORS.get(seed, TEXT_SECONDARY)
+            ax.fill_between(runs, means - errors, means + errors,
+                            color=color, alpha=0.16, linewidth=0, zorder=2)
+            ax.plot(runs, means, color=color, linewidth=2.0, marker="o",
+                    markersize=4.5, label=f"init seed {seed}", zorder=3)
+
+            if not stars:
+                continue
+            saved = sorted(evals[seed]["saved"])
+            if not saved:
+                continue
+            index = {run: position for position, run in enumerate(runs)}
+            ax.scatter([r for r in saved], [means[index[r]] for r in saved],
+                       marker="*", s=150, color=color, zorder=5,
+                       edgecolors=SURFACE, linewidths=0.6)
+            # The last save is the model actually kept.
+            final = saved[-1]
+            ax.scatter([final], [means[index[final]]], marker="*", s=420,
+                       color=color, zorder=6, edgecolors=SURFACE,
+                       linewidths=1.0)
+
+        if name == "validation":
+            for rule, values in log["references"].items():
+                if rule not in ("greedy", "rate"):
+                    continue
+                ax.axhline(values["total_loss"] * 100, linestyle="--",
+                           linewidth=1.4, color=REFERENCE_COLORS[rule],
+                           zorder=1)
+                ax.annotate(f"{rule}  {values['total_loss']*100:.1f}%",
+                            (1.0, values["total_loss"] * 100),
+                            xycoords=("axes fraction", "data"),
+                            textcoords="offset points", xytext=(-4, 4),
+                            ha="right", color=REFERENCE_COLORS[rule],
+                            fontsize=9, fontweight="bold")
+
+        ax.set_ylabel("Total packet loss (%)\nlower is better",
+                      color=TEXT_SECONDARY, fontsize=10)
+        ax.set_title(title, color=TEXT_PRIMARY, fontsize=11,
+                     fontweight="bold", pad=8, loc="left")
+        _style(ax)
+
+    # The seed curves sit near the bottom and the greedy line near the top,
+    # so both the legend and the note go in the empty band between them
+    # rather than over the data or over the panel title.
+    axes[0].legend(frameon=False, fontsize=9, labelcolor=TEXT_SECONDARY,
+                   loc="upper left", ncol=len(seeds),
+                   bbox_to_anchor=(0.0, 0.80))
+    axes[0].annotate(
+        "★ a new best model was saved;  the large ★ is the model kept",
+        (0.005, 0.66), xycoords="axes fraction", color=TEXT_SECONDARY,
+        fontsize=8.5,
+    )
+
+    # --- panel 3: the per-run BCE.
+    for seed in seeds:
+        series = log["train"].get(seed, [])
+        points = [(index, bce) for index, _, bce in series if bce is not None]
+        if not points:
+            continue
+        runs = [index for index, _ in points]
+        values = [bce for _, bce in points]
+        color = SEED_COLORS.get(seed, TEXT_SECONDARY)
+        axes[2].plot(runs, values, color=color, linewidth=0.8, alpha=0.25,
+                     zorder=2)
+        axes[2].plot(runs, _moving_average(values, MOVING_AVERAGE),
+                     color=color, linewidth=2.0, zorder=3,
+                     label=f"init seed {seed}")
+    axes[2].set_ylabel(f"Training loss (BCE)\nfaint = per run, "
+                       f"solid = {MOVING_AVERAGE}-run mean",
+                       color=TEXT_SECONDARY, fontsize=10)
+    axes[2].set_title("Training loss per run", color=TEXT_PRIMARY,
+                      fontsize=11, fontweight="bold", pad=8, loc="left")
+    axes[2].set_xlabel("Training runs", color=TEXT_SECONDARY, fontsize=11)
+    _style(axes[2])
+
+    fig.suptitle(
+        "Phase-1b training, one line per init seed — each line ends where "
+        "that seed early-stopped",
+        color=TEXT_PRIMARY, fontsize=13, fontweight="bold", x=0.01, ha="left",
+    )
+    fig.tight_layout(rect=(0, 0.045, 1, 0.965))
+    fig.text(0.01, 0.008, stamp_lines(width=140, loads_ms=[LOAD_MS]),
+             color=TEXT_SECONDARY, fontsize=7.5, va="bottom")
+    fig.savefig(path, facecolor=SURFACE)
+    plt.close(fig)
+
+
 def best_evaluation(evaluation: Dict[int, List[Dict[str, Any]]]) -> Dict[str, Any]:
     """Return the evaluation row with the lowest validation total loss.
 
@@ -391,6 +566,15 @@ def main() -> None:
     print()
     print(f"  wrote {curve}")
     print(f"  wrote {causes}")
+
+    if os.path.exists(args.eval_log):
+        seeds_path = os.path.join(args.out_dir,
+                                  f"1b_learning_curve_seeds{args.suffix}.png")
+        plot_learning_curve_seeds(log, load_eval_log(args.eval_log),
+                                  seeds_path)
+        print(f"  wrote {seeds_path}")
+    else:
+        print(f"  (skipping the per-seed curves: no {args.eval_log})")
 
 
 if __name__ == "__main__":
