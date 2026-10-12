@@ -15,6 +15,7 @@ Order:
     6. plot_1b.py                   the learning curve, the per-seed curves
                                     and the validation causes
     7. queue_size_check.py          the key results at Q = 5, 10 and 20
+    8. report_figures.py            the written report's figures
 
 Phase-1b TRAINING is NOT part of the default run: it takes tens of minutes
 and overwrites the saved models. Pass ``--with-training`` to include it,
@@ -139,6 +140,9 @@ def steps(
                     + ["--init-seeds", *seed_args])
     else:
         print("  (skipping queue_size_check.py: no trained models)")
+
+    # Last, so the report folder is filled from figures this run just made.
+    plan.append(script("report_figures.py"))
 
     return plan
 
