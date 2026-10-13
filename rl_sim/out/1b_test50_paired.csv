@@ -1,4 +1,4 @@
-# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-54dBm@10%  |  b=0.749/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200/500 ms  |  placements=50  |  window=[50,950) of 1000  |  commit=380e7e4  |  phase 1b, 50 TEST layouts
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-54dBm@10%  |  b=0.749/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200/500 ms  |  placements=50  |  window=[50,950) of 1000  |  commit=14fe113  |  phase 1b, 50 TEST layouts
 layouts,n,load_ms,comparison,mean_diff,std_diff,wins,ties,p_sign,p_ttest
 1-50,50,200,rate - greedy,-0.277079012345679,0.08086847911209745,50,0,1.7763568394002505e-15,6.26428511064833e-29
 1-50,50,200,rate - random,-0.4912271604938272,0.06150153531008024,50,0,1.7763568394002505e-15,2.9054524486261213e-46
