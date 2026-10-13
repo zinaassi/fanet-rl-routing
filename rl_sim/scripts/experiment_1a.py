@@ -750,7 +750,7 @@ def plot_loss_heatmaps(summary: List[Dict[str, Any]], path: str) -> None:
     # neither lands on the column labels.
     grid = fig.add_gridspec(
         1, 5, width_ratios=[len(HEATMAP_COLUMNS), len(HEATMAP_COLUMNS),
-                            0.20, 1.3, 0.20],
+                            0.20, 2.0, 0.20],
         wspace=0.55, bottom=0.20, top=0.88,
     )
     fig.patch.set_facecolor(SURFACE)
