@@ -36,10 +36,17 @@ def git_commit() -> str:
             ["git", "-C", repo, "rev-parse", "--short", "HEAD"],
             capture_output=True, text=True, timeout=10, check=True,
         ).stdout.strip()
-        dirty = subprocess.run(
+        # The generated outputs are excluded: a script that writes into
+        # rl_sim/out/ would otherwise dirty the tree before stamping its own
+        # figures, so every regeneration would mark itself "-dirty". What the
+        # stamp is for is the version of the CODE that produced the artefact.
+        status = subprocess.run(
             ["git", "-C", repo, "status", "--porcelain"],
             capture_output=True, text=True, timeout=10, check=True,
-        ).stdout.strip()
+        ).stdout.splitlines()
+        dirty = [line for line in status
+                 if line[3:].strip().strip('"') and
+                 not line[3:].strip().strip('"').startswith("rl_sim/out/")]
         return f"{commit}-dirty" if dirty else commit
     except (subprocess.SubprocessError, OSError):
         return "unknown"

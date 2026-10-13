@@ -447,30 +447,20 @@ from the commands above.
 
 | File | Contents |
 |---|---|
-| `1a_runs.csv` | *(gitignored)* One row per experiment run (160): seeds, rule, load, created/delivered, total loss and its five causes as shares of created, pooled per-link loss and its three parts, queue occupancy, delay, hops, isolated M-drone count (0 under the filter), drones in GS range, how many layout draws the seed needed, and whether the two views agreed. |
+| `ploss_curve.png` | The channel loss curve against distance, with the receiver sensitivity and the link edge marked and the link margin on a second axis. |
+| `edge_scan.csv` | What each candidate link edge (300–450 m) does to the geometry over 3000 random layouts, with the connected-layout filter off: share of connected layouts, share of M-drones with a direct link to the GS, mean neighbours, mean minimum hops, and the loss at 200 m and 300 m. |
+| `1a_runs.csv` | *(gitignored)* One row per experiment run (160): seeds, rule, load, created/delivered, total loss and its six causes as shares of created, pooled per-link loss and its three parts, queue occupancy, delay, hops, isolated M-drone count (0 under the filter), drones in GS range, how many layout draws the seed needed, and whether the two views agreed. |
 | `1a_summary.csv` | Mean and standard deviation of every numeric column, per (routing, load). |
 | `1a_paired.csv` | Per load: mean and std of `greedy − random` total loss on identical seeds, and how many of the 20 placements greedy lost less on. |
 | `1a_total_loss_vs_load.png` | Total packet loss against offered load, one line per rule, mean with std error bars. |
 | `1a_loss_heatmaps.png` | Three panels: loss causes for greedy and for random, sharing a "% of packets created" scale, then per-link loss on its own "% of link attempts" scale. Mean % with std beneath. |
 | `1a_link_matrix_placement1.png` | Per-link loss for placement 1: eight matrices (2 rules × 4 loads), senders as rows, receivers plus GS as columns, grey where a link was never used. |
-| `range_check.csv` | One row per link cutoff (20 / 50 / 90 / 95 / 99 % loss), with reach, connectivity, neighbour counts, good-link counts and hops on the most reliable path. |
-| `ploss_vs_distance.png` | The loss curve, with the model it replaced drawn alongside. |
-| `1a_summary_OLD_k08.csv` | The previous channel model's summary (FSPL, k = 0.8), regenerated from commit `84a2072` so the old-vs-new table can be printed. Committed. |
-| `link_cutoff_sensitivity.csv` | Total loss and its causes, hops, neighbours, GS links and placement draws at link cutoffs 0.99 / 0.5 / 0.2, both rules, at the 200 ms load. |
-| `1b_training_log.csv` | Phase 1b: one row per training run (its total loss and BCE) and per evaluation (validation and train-check total loss, plus the validation loss by cause), with the reference rules measured on the same validation layouts. |
-| `1b_learning_curve.png` | Total loss against training runs — validation, train-check, the faint per-run training loss, and dashed reference lines; below it, the BCE per run. |
-| `1b_validation_causes.png` | Where the validation loss goes at each evaluation: channel, queue_full, no_route, dead_end, ttl+hop. |
-| `1b_test_runs.csv` | One row per (rule, load, TEST layout), with total loss and its causes. |
-| `1b_comparison_total_loss.png` | Total loss on the 20 TEST layouts for random, greedy, rate and rl, at 200 ms and 500 ms, every layout a dot. |
-| `1b_loss_by_cause.png` | Stacked bars at 200 ms on the TEST layouts for greedy, rate and rl. |
-| `1b_paired.csv` | Per load: `rl − greedy` and `rl − rate` total loss on identical layouts — mean, std, and how many of the 20 rl lost less on. |
-| `1b_loop_guard.csv` | One row per (loop guard, rule, load, TEST layout): total loss, its causes, and mean hops. Both guards side by side. |
-| `1b_loop_guard_paired.csv` | Per-layout `rl − rate`, `rl − greedy` and `rate − greedy` total loss under `LOOP_GUARD = "path"`. |
-| `1b_test50_runs.csv` | One row per (rule, load, layout, init seed) over the 50 TEST layouts: total loss, all six causes kept apart, and mean hops. |
-| `1b_test50_paired.csv` | Paired comparisons on layouts 1–50, 1–20 and 21–50: mean difference, std, layouts won, sign-test and paired t-test p-values. |
-| `1b_comparison_total_loss_50.png` | Total loss per rule on the 50 TEST layouts, every layout a dot, at 200 ms and 500 ms. |
-| `1b_loss_heatmaps_50.png` | A panel per rule: total loss and all six causes, both loads, mean with std, on one shared scale. |
-| `out/models/<guard>/` | *(gitignored)* The best-validation network per init seed, kept per loop-guard setting, so the pre-guard models are not overwritten. |
+
+Phase 1b writes `1b_*` files and the trained networks under `out/models/`;
+none of them exist at the moment, because Phase 1b has not been re-run since
+the channel changed. `range_check.csv` and `link_cutoff_sensitivity.csv` are
+likewise produced by their own scripts and are not present until those are
+re-run.
 
 `main.py` also writes a JSONL event log per episode under `logs/` (one record
 per packet event, per-step network state and per-drone state).
