@@ -287,6 +287,15 @@ def train_one_seed(
         seed = TRAIN_SEEDS[(run_index - 1) % len(TRAIN_SEEDS)]
         result = run_once("rl", seed, seed, LOAD_MS, state_dict=state,
                           training=True, init_seed=init_seed)
+        # The frozen evaluations check this too, but a training run that
+        # silently disagreed with its own ACK bookkeeping would still have
+        # fed the network. Checked here so no run goes uninspected.
+        if not result["views_agree"]:
+            print(f"\nSTOP: views disagree — training run {run_index}, "
+                  f"layout {seed}, init seed {init_seed}")
+            for problem in result["discrepancies"]:
+                print(f"    ! {problem}")
+            raise SystemExit(1)
         state = result["state_dict"]
 
         rows.append({

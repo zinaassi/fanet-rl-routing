@@ -9,6 +9,14 @@ written into the report yet.
 - **docs/report/ is STALE: written with the old channel; rewrite after the
   Phase 1 re-runs.** <!-- source: the commit replacing the channel, 2026-10-13 -->
 
+## Caveats to state in the write-up
+
+- The step-4a RL training runs (250 of them) were NOT checked for
+  views_agree: `run_once` computed it but `train_one_seed` never read it,
+  so only the 530 frozen evaluation and reference runs were inspected. The
+  assertion was added to `train_one_seed` afterwards, so any FUTURE
+  training is checked, but the models trained at that step were not. <!-- source: rl_sim/scripts/train_1b.py; commit fe94b73 -->
+
 ## Difficulties we hit
 
 - The channel model was changed twice. An earlier FSPL loss `exp(-0.8*M)`
