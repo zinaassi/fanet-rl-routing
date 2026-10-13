@@ -62,7 +62,8 @@ RULES = ("random", "greedy", "rate", "rl")
 #: subset without it can be measured with no model present.
 MODEL_RULES = ("rl",)
 CAUSES = ("channel", "queue_full", "no_route", "dead_end", "ttl", "hop_limit")
-COMPARISONS = (("rl", "rate"), ("rl", "greedy"), ("rate", "greedy"))
+COMPARISONS = (("rl", "rate"), ("rl", "greedy"),
+               ("rate", "greedy"), ("rate", "random"))
 
 SURFACE = "#faf9f5"
 TEXT_PRIMARY = "#1a1a19"
