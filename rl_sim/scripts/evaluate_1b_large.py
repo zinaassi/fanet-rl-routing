@@ -498,10 +498,11 @@ def plot_heatmaps(rows: Sequence[Dict[str, Any]], path: str,
         f"{len(TEST50_SEEDS)} TEST layouts  \u2014  mean % (std)",
         color=TEXT_PRIMARY, fontsize=13, fontweight="bold", x=0.01, ha="left",
     )
+    rl_note = (" rl is the mean of its init seeds." if "rl" in rules else "")
     fig.text(0.01, 0.105,
-             "Identical layouts and traffic for every rule; rl is the mean of "
-             "3 init seeds. Every panel is a share of the packets created, so "
-             "they share one scale. The six causes sum to the total loss.",
+             f"Identical layouts and traffic for every rule.{rl_note} Every "
+             "panel is a share of the packets created, so they share one "
+             "scale. The six causes sum to the total loss.",
              color=TEXT_SECONDARY, fontsize=8)
     fig.text(0.01, 0.02,
              stamp_lines(width=170, loads_ms=list(LOADS_MS),
