@@ -101,6 +101,13 @@ def parse_args() -> argparse.Namespace:
                         help="Name of the training log inside --out-dir.")
     parser.add_argument("--eval-log-name", type=str, default="1b_eval_log.csv",
                         help="Name of the per-layout evaluation log.")
+    parser.add_argument("--loop-guard", type=str, default=None,
+                        choices=list(config.LOOP_GUARD_MODES),
+                        help="Train under this loop guard INSTEAD of the "
+                             "configured one, for this run only. config.py is "
+                             "not written; the models go to "
+                             "out/models/<guard>/ either way. Use a separate "
+                             "--log-name so the other guard's logs survive.")
     return parser.parse_args()
 
 
@@ -381,6 +388,12 @@ def main() -> None:
     """Train every requested init seed and write the log."""
     args = parse_args()
     os.makedirs(args.out_dir, exist_ok=True)
+
+    # Set before anything else runs, and before any worker pool is forked, so
+    # the whole process tree trains under one guard. config.py is untouched:
+    # this lives only in this process.
+    if args.loop_guard is not None:
+        config.LOOP_GUARD = args.loop_guard
 
     print(f"Phase-1b training at {LOAD_MS} ms, "
           f"loop guard = {config.LOOP_GUARD!r}")
