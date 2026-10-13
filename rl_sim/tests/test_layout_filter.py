@@ -84,11 +84,10 @@ def test_the_experiment_seeds_need_few_draws() -> None:
     """The 20 experiment seeds all connect on their first draw.
 
     This records a fact about the current parameters, not a property of the
-    filter. At the configured 0.5 cutoff (356 m reach) the range check puts
-    the strand rate near 2% of layouts, so a rejection among 20 seeds is
-    possible — it just does not happen with these ones. The assertion is
-    deliberately loose: it catches the reach collapsing without failing the
-    moment one seed needs a redraw.
+    filter. At the configured 0.5 cutoff (350 m edge) about 5% of random
+    layouts strand an M-drone, so a rejection among 20 seeds is possible and
+    does happen for a few. The assertion is deliberately loose: it catches
+    the edge collapsing without failing the moment one seed needs a redraw.
     """
     draws = [_env(seed).placement_draws for seed in range(1, 21)]
     assert all(d >= 1 for d in draws)
@@ -104,7 +103,9 @@ def test_the_filter_rejects_layouts_when_links_are_short() -> None:
     """
     previous = config.LINK_MAX_LOSS
     try:
-        # Loss of 6.6% is reached at 250 m, so links stop there.
+        # Cut the cutoff to the loss at 250 m, so links stop there. This is
+        # a round-trip through distance_for_loss, so it also catches an
+        # inverse that does not match the curve.
         config.LINK_MAX_LOSS = channel.p_loss(250.0)
         assert channel.max_link_distance() == pytest.approx(250.0, abs=0.5)
 

@@ -8,14 +8,15 @@ is the point: a stale figure next to a fresh table is worse than neither.
 
 Order:
     1. plot_ploss.py                the loss curve
-    2. range_check.py               connectivity at several link cutoffs
-    3. experiment_1a.py             the grid, its CSVs and its three figures
-    4. link_cutoff_sensitivity.py   how much the cutoff moves the results
-    5. evaluate_1b.py               Phase 1b on the held-back TEST layouts
-    6. plot_1b.py                   the learning curve, the per-seed curves
+    2. edge_scan.py                 what each candidate link edge does
+    3. range_check.py               connectivity at several link cutoffs
+    4. experiment_1a.py             the grid, its CSVs and its three figures
+    5. link_cutoff_sensitivity.py   how much the cutoff moves the results
+    6. evaluate_1b.py               Phase 1b on the held-back TEST layouts
+    7. plot_1b.py                   the learning curve, the per-seed curves
                                     and the validation causes
-    7. queue_size_check.py          the key results at Q = 5, 10 and 20
-    8. report_figures.py            the written report's figures
+    8. queue_size_check.py          the key results at Q = 5, 10 and 20
+    9. report_figures.py            the written report's figures
 
 Phase-1b TRAINING is NOT part of the default run: it takes tens of minutes
 and overwrites the saved models. Pass ``--with-training`` to include it,
@@ -110,6 +111,7 @@ def steps(
     seed_args = [str(seed) for seed in init_seeds]
     plan: List[Sequence[str]] = [
         script("plot_ploss.py"),
+        script("edge_scan.py"),
         script("range_check.py", takes_placements=True),
         script("experiment_1a.py", takes_placements=True),
         script("link_cutoff_sensitivity.py", takes_placements=True),

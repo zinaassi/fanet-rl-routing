@@ -4,16 +4,21 @@ Things noticed while writing the report that belong in a section written
 after Phase 2. One line each, with where it came from. Nothing here is
 written into the report yet.
 
+## URGENT
+
+- **docs/report/ is STALE: written with the old channel; rewrite after the
+  Phase 1 re-runs.** <!-- source: the commit replacing the channel, 2026-10-13 -->
+
 ## Difficulties we hit
 
-- The first channel model (free-space path loss, receiver sensitivity
-  -54 dBm, hard 249.69 m range, loss `exp(-k*M)` with k = 0.8) reached
-  ~100% loss right at its own range edge, which measured UAV links do not
-  show. Replaced at Checkpoint 7. <!-- source: rl_sim/fanet_sim/config.py lines 130-142; commit bd7cb3e -->
-- When the logistic curve was introduced, the link cutoff was 0.99, giving a
-  ~539.8 m reach as a side effect rather than a choice. The network became
-  very dense (~15 neighbours per drone) and RANDOM was handed links losing
-  over 90% of what was sent on them. Changed to 0.5 at Checkpoint 7b. <!-- source: rl_sim/fanet_sim/config.py lines 144-154; commit bc0bcaf -->
+- The channel model was changed twice. An earlier FSPL loss `exp(-0.8*M)`
+  put 100% loss at the receiver sensitivity, a wall at 250 m. A curve in
+  distance replaced it, and was itself replaced on 2026-10-13 by the current
+  S-curve on the FSPL margin, where the sensitivity means 10% loss (802.11
+  OFDM). Every result from the first two models was deleted. <!-- source: rl_sim/fanet_sim/config.py; rl_sim/fanet_sim/envs/channel.py -->
+- The link edge is a design choice, not a physical constant, and had to be
+  chosen from geometry alone before any routing experiment so that it could
+  not be tuned to a result. <!-- source: rl_sim/out/edge_scan.csv; CLAUDE.md -->
 - A stale figure was once committed beside a fresh table after a config
   change. This is why every figure and CSV now carries a settings stamp and
   why `regenerate_all.py` exists. <!-- source: rl_sim/scripts/stamp.py; rl_sim/scripts/regenerate_all.py -->
@@ -31,8 +36,8 @@ written into the report yet.
 - Retransmissions, or a milder channel instead. Most of rl's remaining loss
   is channel loss on links it had no cleaner alternative to. Both are model
   changes and the supervisor's call. <!-- source: CLAUDE.md open questions; rl_sim/scripts/diagnose_1b_channel.py output -->
-- Whether the Rosati curve already includes MAC-layer retries; if it does,
-  adding retransmissions on top would double-count them. <!-- source: CLAUDE.md open questions -->
+- Whether the S-curve already absorbs MAC-layer retries; if it does, adding
+  retransmissions on top would double-count them. <!-- source: CLAUDE.md open questions -->
 - A hop count as a 4th network input (deferred, optional). <!-- source: CLAUDE.md open questions -->
 - A robustness check on denser layouts (more drones, or a smaller arena). <!-- source: CLAUDE.md open questions -->
 - A near-full load, e.g. 90 ms. <!-- source: CLAUDE.md open questions -->
@@ -43,10 +48,12 @@ written into the report yet.
 
 - FANET routing families and where greedy geographic routing sits among
   them. [CITE: a FANET routing survey]
-- The measured UAV link study the loss curve is fitted to: Rosati et al.,
-  "Dynamic Routing for Flying Ad Hoc Networks", arXiv:1406.4399. <!-- source: rl_sim/fanet_sim/config.py lines 125-132 -->
-- The drone speed range comes from IQMR (Sharvari et al., 2024,
-  arXiv:2408.09109); unused while the world is static. <!-- source: rl_sim/fanet_sim/config.py line 42 -->
+- 802.11 OFDM defines receiver sensitivity as the power giving a 10% packet
+  error rate on 1000-octet frames, which is what anchors the S-curve.
+  [CITE: the 802.11 clause defining receiver minimum input sensitivity] <!-- source: rl_sim/fanet_sim/config.py -->
+- The radio constants (1 W, 2.4 GHz, -54 dBm) and the drone speed range come
+  from IQMR (Sharvari et al., 2024, arXiv:2408.09109); the speed range is
+  unused while the world is static. <!-- source: rl_sim/fanet_sim/config.py -->
 - BGP's AS_PATH as the standard precedent for a path-carried loop guard. <!-- source: CLAUDE.md loop guard section -->
 
 ## Checkpoint dates and milestones

@@ -168,12 +168,14 @@ def main() -> None:
     run_seed = config.RUN_SEED if args.run_seed is None else args.run_seed
     print(f"  Seeds     : placement={placement_seed}  run={run_seed}")
     print(f"  Log file  : {log_path}")
-    print("  Channel   : logistic loss vs distance "
-          "(Rosati et al., arXiv:1406.4399)")
-    print(f"    p_loss(d) = 1 / (1 + exp(-{config.LOSS_SLOPE_PER_M} "
-          f"* (d - {config.LOSS_50_DISTANCE_M:.0f})))")
-    print(f"    50% loss at {config.LOSS_50_DISTANCE_M:.0f} m   "
-          f"10% at {channel.distance_for_loss(0.10):.0f} m   "
+    print("  Channel   : S-curve on the free-space path loss margin")
+    print(f"    FSPL margin over {config.F_HZ / 1e9:.1f} GHz, "
+          f"Pt {config.PT_DBM:.0f} dBm, G {config.GT_DBI:.0f} dBi, "
+          f"sensitivity {config.RX_SENSITIVITY_DBM:.0f} dBm")
+    print(f"    p_loss = 1 / (1 + {channel.A:.0f} * "
+          f"exp({channel.B_PER_DB:.3f} * margin_dB))")
+    print(f"    {config.SENS_LOSS:.0%} loss at "
+          f"{channel.SENSITIVITY_DISTANCE_M:.1f} m (zero margin)   "
           f"1% at {channel.distance_for_loss(0.01):.0f} m")
     print(f"    link exists while loss < {config.LINK_MAX_LOSS:.2f}  "
           f"=> reaches {channel.max_link_distance():.1f} m")

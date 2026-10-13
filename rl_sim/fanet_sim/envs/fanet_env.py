@@ -411,10 +411,16 @@ class FANETEnv:
                 "drain_steps": config.DRAIN_STEPS,
             },
             connectivity_model_params={
-                "model": "logistic_distance",
-                "reference": "Rosati et al., arXiv:1406.4399",
+                "model": "fspl_sigmoid",
+                "sensitivity_definition": "802.11 OFDM, 10% PER",
+                "pt_dbm": config.PT_DBM,
+                "gt_dbi": config.GT_DBI,
+                "gr_dbi": config.GR_DBI,
+                "f_hz": config.F_HZ,
+                "rx_sensitivity_dbm": config.RX_SENSITIVITY_DBM,
+                "sens_loss": config.SENS_LOSS,
                 "loss_50_distance_m": config.LOSS_50_DISTANCE_M,
-                "loss_slope_per_m": config.LOSS_SLOPE_PER_M,
+                "b_per_db": channel.B_PER_DB,
                 "link_max_loss": config.LINK_MAX_LOSS,
                 "max_link_distance_m": channel.max_link_distance(),
                 "timestep_s": config.TIMESTEP,
@@ -428,12 +434,11 @@ class FANETEnv:
                 "notes": (
                     "From IQMR: speed range (10-30 m/s) and the energy budget "
                     "(11.1 V x 5200 mAh = 207792 J). "
-                    "NOT from IQMR: the channel, which since Checkpoint 7 is "
-                    "the logistic loss curve of Rosati et al. "
-                    "(arXiv:1406.4399) rather than an FSPL power budget; the "
-                    "900x900 m arena; the 18 M + 7 C fleet split; and 2D "
-                    "instead of 3D — those are Phase-1A choices for this "
-                    "project."
+                    "From IQMR too: the radio (1 W, 2.4 GHz, -54 dBm). "
+                    "NOT from IQMR: the S-curve that turns the FSPL margin "
+                    "into a loss, the 350 m link edge, the 900x900 m arena, "
+                    "the 18 M + 7 C fleet split, and 2D instead of 3D — "
+                    "those are choices for this project."
                 ),
             },
         )

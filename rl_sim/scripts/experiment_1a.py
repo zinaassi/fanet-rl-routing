@@ -496,8 +496,7 @@ def print_old_vs_new(
         print(f"  (no {BASELINE_FILENAME} found — skipping the old-vs-new table)")
         return
 
-    print("  OLD channel model (FSPL, exp(-0.8*margin), 250 m wall)"
-          "  vs  NEW (logistic in distance)")
+    print("  OLD channel model  vs  NEW (S-curve on the FSPL margin)")
     print(f"  Mean % of packets created, over the same "
           f"{summary[0]['runs']} placements.")
     print("  " + "-" * 92)

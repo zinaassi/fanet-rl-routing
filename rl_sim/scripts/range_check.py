@@ -265,8 +265,10 @@ def print_tables(records: List[Dict[str, Any]]) -> None:
     print(f"  Range check — {first['placements']} random placements, "
           f"{config.NUM_M_DRONES} M + {config.NUM_C_DRONES} C drones in "
           f"{config.WIDTH:.0f}x{config.HEIGHT:.0f} m, GS at the centre")
-    print(f"  Loss curve: 1/(1+exp(-{config.LOSS_SLOPE_PER_M}*(d-"
-          f"{config.LOSS_50_DISTANCE_M:.0f})))  (Rosati et al., arXiv:1406.4399)")
+    print(f"  Loss curve: 1/(1+{channel.A:.0f}*exp({channel.B_PER_DB:.3f}*M)),"
+          f" M = FSPL margin above {config.RX_SENSITIVITY_DBM:.0f} dBm"
+          f"  ({config.SENS_LOSS:.0%} loss at "
+          f"{channel.SENSITIVITY_DISTANCE_M:.1f} m)")
     print("  Geometry only. Layouts are UNFILTERED. No config changed.")
 
     print()

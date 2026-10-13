@@ -3,34 +3,46 @@ channel.py — Packet loss versus distance, and what counts as a link.
 
 Loss model
 ----------
-A logistic curve in DISTANCE, fitted to measured UAV-to-UAV links in
+A free-space path loss budget gives each link a MARGIN above the receiver's
+sensitivity, and that margin drives an S-curve for the chance one
+transmission is lost:
 
-    Rosati et al., "Dynamic Routing for Flying Ad Hoc Networks",
-    arXiv:1406.4399
+    FSPL_dB(d) = 20*log10(d) + 20*log10(F_HZ) + 20*log10(4*pi/c)
+    M(d)       = PT_DBM + GT_DBI + GR_DBI - FSPL_dB(d) - RX_SENSITIVITY_DBM
+    p_loss(M)  = 1 / (1 + A * exp(b * M))
 
-    p_loss(d) = 1 / (1 + exp(-s * (d - D50)))
+        A = (1 - SENS_LOSS) / SENS_LOSS, so that p_loss is exactly SENS_LOSS
+            where the margin is zero
+        b = ln(A) / -M(LOSS_50_DISTANCE_M), DERIVED at import time so that
+            p_loss is exactly 0.5 at the link edge. Never hardcode it: change
+            LOSS_50_DISTANCE_M and b follows.
 
-        d   = distance between sender and receiver, in metres
-        D50 = config.LOSS_50_DISTANCE_M, the distance where loss is 50%
-        s   = config.LOSS_SLOPE_PER_M, the measured steepness
+The receiver sensitivity is NOT a wall. It is the point where 10% of
+transmissions are lost, following 802.11 OFDM, which defines sensitivity as
+the power giving a 10% packet error rate on 1000-octet frames. With the
+configured constants that point is 249.69 m:
 
-With D50 = 356 m and s = 0.025 this is the paper's
-``1 / (1 + exp(-(0.025*d - 8.9)))``:
+    d (m)      50     100     150     200   249.7     250     300     350
+    p_loss  0.0000  0.0003  0.0040  0.0256  0.1000  0.1007  0.2684  0.5000
 
-    d (m)     100     200     250     270     300     356     400     540
-    p_loss  0.0017  0.0198  0.0661  0.1044  0.1978  0.5000  0.7503  0.9900
+Links between 249.69 m and the edge have a NEGATIVE margin and still exist;
+they simply lose more. The same curve governs the last hop into the ground
+station — the GS is just another endpoint.
 
-The curve never reaches 0 or 1 exactly; it only approaches them. The same
-curve governs the last hop into the ground station — the GS is just another
-endpoint.
+p_loss returns exactly 0.0 at zero distance, where the margin is infinite.
+Mathematically it only approaches 1 and never reaches it; in float64 the
+exponential underflows around 99 km and it becomes exactly 1.0, which is far
+beyond any distance this arena can produce.
 
 Link existence
 --------------
 A link exists while its loss stays under ``config.LINK_MAX_LOSS``, which puts
-the edge at ``max_link_distance()``. Currently that cutoff is 0.5 and the edge
-is 356 m — see config.py, which is the single source of truth. This is the ONE
-rule used everywhere: neighbour sets, the GS link, the connected-layout filter
-and the range check. Distance alone decides it, through the curve.
+the edge at ``max_link_distance()``. That cutoff is 0.5, so the edge is
+exactly ``config.LOSS_50_DISTANCE_M``. This is the ONE rule used everywhere:
+neighbour sets, the GS link, the connected-layout filter and the range check.
+Distance alone decides it, through the curve.
+
+The edge is a design choice, not a physical constant — see CLAUDE.md.
 
 Assumptions
 -----------
@@ -39,17 +51,6 @@ Assumptions
 * Every endpoint has the same radio, the GS included.
 * Loss depends on distance only — not on traffic, antenna orientation or
   interference from other transmissions.
-
-What this replaced
-------------------
-Until Checkpoint 7 the model was free-space path loss (FSPL): transmit power
-30 dBm, 2 dBi antennas, 2.4 GHz carrier and a receiver sensitivity of -54 dBm,
-giving a hard 249.69 m range, with loss ``exp(-k * M)`` on the margin M above
-sensitivity (k = 0.8). That curve hit ~100% loss exactly at 250 m, which
-measured UAV links do not show, and 250 m is short against a 900x900 m area.
-The FSPL code is removed — nothing in the simulator needed it once link
-existence stopped being power-based. ``scripts/plot_ploss.py`` carries its own
-copy of the old formula, only so the two curves can be drawn together.
 """
 
 from __future__ import annotations
@@ -65,36 +66,95 @@ from fanet_sim import config
 # ---------------------------------------------------------------------------
 # The loss curve
 # ---------------------------------------------------------------------------
+SPEED_OF_LIGHT = 299_792_458.0
 
-def p_loss(
-    dist_m: float,
-    d50: Optional[float] = None,
-    slope: Optional[float] = None,
-) -> float:
-    """Probability that a transmission over *dist_m* metres is lost.
+# The distance-independent part of free-space path loss, in dB.
+FSPL_CONST_DB = (
+    20.0 * math.log10(config.F_HZ)
+    + 20.0 * math.log10(4.0 * math.pi / SPEED_OF_LIGHT)
+)
 
-    ``1 / (1 + exp(-slope * (dist_m - d50)))`` — strictly increasing in
-    distance, and always strictly inside (0, 1).
+# Fixed by the sensitivity definition: p_loss is SENS_LOSS at margin 0.
+A = (1.0 - config.SENS_LOSS) / config.SENS_LOSS
+
+
+def fspl_db(dist_m: float) -> float:
+    """Free-space path loss over *dist_m* metres, in dB.
 
     Args:
         dist_m: Distance between sender and receiver, in metres.
-        d50:    Distance at which loss is 50%. Defaults to
-                ``config.LOSS_50_DISTANCE_M``.
-        slope:  Steepness per metre. Defaults to ``config.LOSS_SLOPE_PER_M``.
 
     Returns:
-        Float in (0.0, 1.0).
+        The path loss in dB. Undefined at 0 m, where it diverges.
     """
-    if d50 is None:
-        d50 = config.LOSS_50_DISTANCE_M
-    if slope is None:
-        slope = config.LOSS_SLOPE_PER_M
+    return 20.0 * math.log10(dist_m) + FSPL_CONST_DB
 
-    exponent = -slope * (dist_m - d50)
+
+def margin_db(dist_m: float) -> float:
+    """How far the received power is above the receiver's sensitivity, in dB.
+
+    Negative past the sensitivity distance. Such a link still exists — it
+    simply loses more than ``config.SENS_LOSS`` of what is sent on it.
+
+    Args:
+        dist_m: Distance between sender and receiver, in metres.
+
+    Returns:
+        The margin in dB.
+    """
+    return (config.PT_DBM + config.GT_DBI + config.GR_DBI
+            - fspl_db(dist_m) - config.RX_SENSITIVITY_DBM)
+
+
+# Where the margin is exactly zero, i.e. the sensitivity point. Everything
+# else is anchored to it, so it is computed once here.
+SENSITIVITY_DISTANCE_M = 10.0 ** (
+    (config.PT_DBM + config.GT_DBI + config.GR_DBI
+     - config.RX_SENSITIVITY_DBM - FSPL_CONST_DB) / 20.0
+)
+
+
+def _slope_for_edge(edge_m: float) -> float:
+    """The S-curve steepness b that puts 50% loss at *edge_m*.
+
+    Args:
+        edge_m: The distance that should lose half of what is sent on it.
+
+    Returns:
+        b, in units of 1/dB.
+    """
+    return math.log(A) / (-margin_db(edge_m))
+
+
+# DERIVED, never hardcoded: move LOSS_50_DISTANCE_M and b follows.
+B_PER_DB = _slope_for_edge(config.LOSS_50_DISTANCE_M)
+
+
+def p_loss(dist_m: float, edge_m: Optional[float] = None) -> float:
+    """Probability that a transmission over *dist_m* metres is lost.
+
+    Strictly increasing in distance, and always strictly inside (0, 1).
+
+    Args:
+        dist_m: Distance between sender and receiver, in metres.
+        edge_m: Distance of 50% loss. Defaults to
+                ``config.LOSS_50_DISTANCE_M``; pass it only to ask what a
+                different edge would do.
+
+    Returns:
+        A loss in [0.0, 1.0]: exactly 0.0 at zero distance, and strictly
+        inside (0, 1) at every distance this arena can produce.
+    """
+    if dist_m <= 0.0:
+        # Zero distance has infinite margin, so nothing is lost.
+        return 0.0
+    b = B_PER_DB if edge_m is None else _slope_for_edge(edge_m)
+
+    exponent = b * margin_db(dist_m)
     # exp() overflows for a very short link; the limit there is a loss of 0.
     if exponent > 700.0:
         return 0.0
-    return 1.0 / (1.0 + math.exp(exponent))
+    return 1.0 / (1.0 + A * math.exp(exponent))
 
 
 def link_quality(dist_m: float) -> float:
@@ -114,18 +174,20 @@ def link_quality(dist_m: float) -> float:
 
 def distance_for_loss(
     target_loss: float,
-    d50: Optional[float] = None,
-    slope: Optional[float] = None,
+    edge_m: Optional[float] = None,
 ) -> float:
     """Return the distance at which loss equals *target_loss*.
 
-    The inverse of :func:`p_loss`:
-    ``d = d50 + ln(L / (1 - L)) / slope``.
+    The inverse of :func:`p_loss`. Solving the S-curve for the margin and
+    then the margin for the distance:
+
+        M = ln((1 - L) / (A * L)) / b
+        d = SENSITIVITY_DISTANCE_M * 10 ** (-M / 20)
 
     Args:
         target_loss: A loss strictly between 0 and 1.
-        d50:         Defaults to ``config.LOSS_50_DISTANCE_M``.
-        slope:       Defaults to ``config.LOSS_SLOPE_PER_M``.
+        edge_m:      Distance of 50% loss. Defaults to
+                     ``config.LOSS_50_DISTANCE_M``.
 
     Returns:
         The distance in metres.
@@ -138,12 +200,10 @@ def distance_for_loss(
         raise ValueError(
             f"target_loss must be strictly between 0 and 1, got {target_loss}"
         )
-    if d50 is None:
-        d50 = config.LOSS_50_DISTANCE_M
-    if slope is None:
-        slope = config.LOSS_SLOPE_PER_M
+    b = B_PER_DB if edge_m is None else _slope_for_edge(edge_m)
 
-    return d50 + math.log(target_loss / (1.0 - target_loss)) / slope
+    margin = math.log((1.0 - target_loss) / (A * target_loss)) / b
+    return SENSITIVITY_DISTANCE_M * 10.0 ** (-margin / 20.0)
 
 
 def max_link_distance(max_loss: Optional[float] = None) -> float:
@@ -154,8 +214,8 @@ def max_link_distance(max_loss: Optional[float] = None) -> float:
                   ``config.LINK_MAX_LOSS``.
 
     Returns:
-        The distance in metres. At the configured cutoff of 0.5 this is 356 m,
-        the curve's midpoint.
+        The distance in metres. At the configured cutoff of 0.5 this is
+        exactly ``config.LOSS_50_DISTANCE_M``, the curve's midpoint.
     """
     if max_loss is None:
         max_loss = config.LINK_MAX_LOSS

@@ -58,26 +58,36 @@ not to be reused, and the same holds for the Phase-2 agents.
   arrives, the drone picks the next hop and puts it in that link's
   queue. Arrivals within a step are processed in random (reproducible)
   order. Arrived packets wait at least one step.
-- Channel loss: a logistic curve in DISTANCE, fitted to measured UAV
-  links in Rosati et al., "Dynamic Routing for Flying Ad Hoc Networks"
-  (arXiv:1406.4399):
-      p_loss(d) = 1 / (1 + exp(-s*(d - D50)))
-  with D50 = 356 m and s = 0.025 (both PROVISIONAL). Loss is ~0.2% at
-  100 m, 6.6% at 250 m, 50% at 356 m, 99% at 540 m. The same curve
-  covers the last hop into the GS.
-  REPLACED the earlier FSPL model (-54 dBm sensitivity, a hard 249.69 m
-  range, loss exp(-k*M) with k = 0.8), which hit ~100% loss right at
-  250 m. The FSPL code is gone; scripts/plot_ploss.py keeps a local copy
-  of the old curve only to draw the two together.
-- Link existence: a link exists while p_loss < LINK_MAX_LOSS = 0.5
-  (PROVISIONAL), i.e. out to exactly 356 m. Justification: a drone lists
-  a neighbor only when at least half of its hello messages get through.
-  ONE rule everywhere: neighbors, the GS link, the connected-layout
-  filter and the range check.
-  This was 0.99 (~539.8 m) when the curve was introduced at Checkpoint
-  7; that reach was a side effect of the cutoff, not a choice, and it
-  made the network very dense. At 0.5 a drone has ~8.6 neighbors and
-  ~12 of 25 drones link straight to the GS.
+- Channel loss [DECIDED 2026-10-13]: a free-space path loss budget gives
+  each link a MARGIN above the receiver's sensitivity, and that margin
+  drives an S-curve:
+      FSPL_dB(d) = 20*log10(d) + 20*log10(F_HZ) + 20*log10(4*pi/c)
+      M(d)       = PT_DBM + GT_DBI + GR_DBI - FSPL_dB(d) - RX_SENSITIVITY_DBM
+      p_loss(M)  = 1 / (1 + A * exp(b * M)),  A = (1 - SENS_LOSS)/SENS_LOSS
+  with PT_DBM = 30 (1 W), GT_DBI = GR_DBI = 2, F_HZ = 2.4e9,
+  RX_SENSITIVITY_DBM = -54, SENS_LOSS = 0.10, LOSS_50_DISTANCE_M = 350.
+  A = 9 and b = 0.749045 per dB; b is DERIVED at import time from the edge
+  and must never be hardcoded.
+  The sensitivity is NOT a wall: it is the point where 10% of transmissions
+  are lost, following 802.11 OFDM (10% packet error rate on 1000-octet
+  frames). That point is 249.689108 m. Links between 249.7 m and 350 m have
+  a NEGATIVE margin and still exist; they simply lose more. Loss is 0.03%
+  at 100 m, 2.6% at 200 m, 10% at 249.7 m, 26.8% at 300 m, 50% at 350 m.
+  The same curve covers the last hop into the GS.
+  History: an earlier FSPL loss exp(-0.8*M) put 100% loss at the
+  sensitivity, a wall at 250 m; replaced by an S-curve where the
+  sensitivity means 10% loss (802.11).
+- Link existence: a link exists while p_loss < LINK_MAX_LOSS = 0.5, i.e.
+  out to exactly LOSS_50_DISTANCE_M = 350 m. ONE rule everywhere:
+  neighbours, the GS link, the connected-layout filter and the range check.
+  The link edge is a design choice, not a physical constant: with 1 W in
+  free space the radio would reach kilometres. We compared edges from 300
+  to 450 m on 3000 random layouts (out/edge_scan.csv) and chose 350 m,
+  where about 95% of random layouts are connected and about half of the
+  M-drones (52%) still need a relay to reach the ground station. Shorter
+  edges often leave drones cut off; longer edges let most drones reach the
+  GS directly, which leaves little to route. Chosen from geometry alone,
+  before any routing experiment, and FIXED.
 - Link loss = 1 - (1 - channel loss) * (1 - queue_full), where
   queue_full = 1 if the sender's own queue for that link is full.
 - Loop guard, a design assumption of the NETWORK (not of a routing
@@ -169,24 +179,12 @@ not to be reused, and the same holds for the Phase-2 agents.
     models   saved under out/models/<loop_guard>/, so a change of guard
              does not overwrite the previous models.
 
-## Status (Phase 1b, measured -- see README for the full tables)
-- 50 TEST layouts, LOOP_GUARD = "path", rl = mean of init seeds 0/1/2.
-  Total loss, mean % of packets created:
-    200 ms   rl 19.47   rate 21.72   greedy 51.78   random 71.76
-    500 ms   rl 10.75   rate 18.80   greedy 26.95   random 71.70
-  Paired on the same 50 layouts, rl - rate:
-    200 ms   -2.25 points, 40/50 layouts, sign and t-test p < 0.0001
-    500 ms   -8.06 points, 50/50 layouts, sign and t-test p < 0.0001
-- Where rl's channel losses come from (seed-0 model, 200 ms): 61.8%
-  geometry-forced (nothing 10+ points cleaner was allowed), 4.7%
-  congestion-forced (a cleaner option existed but its queue was at
-  least half full), 33.6% had a cleaner idle option. Within that last
-  group, 99.8% were trade-offs where the cleaner link had a WORSE
-  measured delivery rate, and 0.2% were worse on both counts -- 33.5%
-  and 0.07% of all channel losses respectively.
-- The geometry is kept as it is. Phase 2's topology agent (moving the
-  C-drones) is the intended answer to the geometry-forced share, not a
-  change to the channel or the layout.
+## Status
+Phase 1a and Phase 1b: TO RE-RUN WITH THE NEW CHANNEL. Every result
+made with the old channel has been deleted, including the trained
+Phase-1b models under out/models/. Nothing in out/ is a current
+result except ploss_curve.png and edge_scan.csv.
+The written report under docs/report/ is STALE for the same reason.
 
 ## Open questions (do NOT decide these; ask)
 - Whether LOOP_GUARD stays "path" (the header-carried visited list);
@@ -197,8 +195,8 @@ not to be reused, and the same holds for the Phase-2 agents.
 - Retransmissions, or a milder channel instead. Most of rl's remaining
   loss is channel loss on links it had no cleaner alternative to; both
   answers are MODEL CHANGES and are the supervisor's call.
-- Whether the Rosati curve already includes MAC-layer retries. If it
-  does, adding retransmissions on top would double-count them.
+- Whether the S-curve already absorbs MAC-layer retries. If it does,
+  adding retransmissions on top would double-count them.
 - A hop count as a 4th network input. Deferred, optional.
 - An optional robustness check on denser layouts (more drones, or a
   smaller arena), to see whether the ordering holds.

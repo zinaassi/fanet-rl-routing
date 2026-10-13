@@ -17,11 +17,11 @@ Earlier versions of this file sized the world to match IQMR's scenario
 900 x 900 m square with 18 M + 7 C drones, chosen for this project
 (Phase 1A). Those are our numbers, not IQMR's.
 
-What still comes from IQMR is the speed range (10-30 m/s) and the energy
-budget (11.1 V x 5200 mAh = 207792 J). The radio no longer does: as of
-Checkpoint 7 the channel is a logistic loss curve in distance fitted to
-measured UAV links by Rosati et al. (arXiv:1406.4399), and how far a link
-reaches falls out of that curve rather than out of a power budget.
+What still comes from IQMR is the speed range (10-30 m/s), the energy
+budget (11.1 V x 5200 mAh = 207792 J) and the radio: 1 W at 2.4 GHz into a
+receiver with -54 dBm sensitivity. The channel turns the free-space margin
+above that sensitivity into an S-curve for the chance a transmission is
+lost, and the link edge is a design choice rather than a power-budget limit.
 
 The simulation is 2-D. There is no MAC layer and no interference model.
 """
@@ -119,39 +119,46 @@ MAX_TX_PER_STEP: int = 1          # packets each LINK queue may send per step,
                                   # oldest first                             [DECIDED]
 
 # ---------------------------------------------------------------------------
-# Channel loss and link existence
+# Channel loss and link existence                      [DECIDED 2026-10-13]
 # ---------------------------------------------------------------------------
-# A logistic curve in DISTANCE, fitted to measured UAV links in
-#   Rosati et al., "Dynamic Routing for Flying Ad Hoc Networks",
-#   arXiv:1406.4399
+# A free-space path loss budget gives each link a MARGIN above the receiver's
+# sensitivity, and that margin drives an S-curve for the chance one
+# transmission is lost:
 #
-#     p_loss(d) = 1 / (1 + exp(-LOSS_SLOPE_PER_M * (d - LOSS_50_DISTANCE_M)))
+#     FSPL_dB(d) = 20*log10(d) + 20*log10(F_HZ) + 20*log10(4*pi/c)
+#     M(d)       = PT_DBM + GT_DBI + GR_DBI - FSPL_dB(d) - RX_SENSITIVITY_DBM
+#     p_loss(M)  = 1 / (1 + A * exp(b * M)),   A = (1 - SENS_LOSS) / SENS_LOSS
 #
-# which is the paper's 1 / (1 + exp(-(0.025*d - 8.9))). Loss is ~0.2% at 100 m,
-# ~6.6% at 250 m, 50% at 356 m and ~99% at 540 m. The same curve applies to the
-# last hop into the GS. A lost transmission is dropped with reason "channel".
+# The sensitivity is NOT a wall. It is the point where 10% of transmissions
+# are lost, following 802.11 OFDM, which defines receiver sensitivity as the
+# power giving 10% packet error rate on 1000-octet frames. That puts the 10%
+# point at 249.69 m. Links beyond it have a NEGATIVE margin and still exist;
+# they simply lose more. The same curve covers the last hop into the GS, and a
+# lost transmission is dropped with reason "channel".
 #
-# REPLACES the earlier model, which took link existence from a free-space path
-# loss budget (Pt 30 dBm, 2.4 GHz, receiver sensitivity -54 dBm -> a hard
-# 249.69 m range) and loss from exp(-k * M) on the margin M above sensitivity,
-# with k = 0.8. That made loss ~1 right at 250 m, which measured UAV links do
-# not show. The FSPL code is gone; scripts/plot_ploss.py keeps a local copy of
-# the old curve purely to draw it alongside the new one.
-LOSS_50_DISTANCE_M: float = 356.0  # distance where p_loss = 0.5  PROVISIONAL - to confirm
-LOSS_SLOPE_PER_M: float = 0.025    # measured steepness           PROVISIONAL - to confirm
+# b is DERIVED, never hardcoded: it is whatever value puts 50% loss at
+# LOSS_50_DISTANCE_M. See channel.py.
+#
+# History: an earlier FSPL model took loss as exp(-0.8 * M), which reaches
+# 100% loss right at the sensitivity and so put a wall at 250 m; it is
+# replaced by this S-curve, where the sensitivity means 10% loss.
+PT_DBM: float = 30.0               # transmit power, 1 W                [DECIDED]
+GT_DBI: float = 2.0                # transmit antenna gain              [DECIDED]
+GR_DBI: float = 2.0                # receive antenna gain               [DECIDED]
+F_HZ: float = 2.4e9                # carrier frequency                  [DECIDED]
+RX_SENSITIVITY_DBM: float = -54.0  # receiver sensitivity               [DECIDED]
+SENS_LOSS: float = 0.10            # loss AT the sensitivity point      [DECIDED]
+
+# The distance where half of all transmissions are lost, which is also the
+# link edge. A DESIGN CHOICE, not a physical constant: with 1 W in free space
+# the radio would reach kilometres. Chosen from geometry alone, before any
+# routing experiment, and FIXED. See CLAUDE.md and out/edge_scan.csv.
+LOSS_50_DISTANCE_M: float = 350.0  #                                    [DECIDED]
 
 # A link exists while its loss is below this. One rule everywhere: neighbour
-# sets, the GS link, the connected-layout filter and the range check.
-#
-# At 0.5 a drone lists a neighbour only when at least half of its hello
-# messages get through to it. That puts the edge at exactly LOSS_50_DISTANCE_M,
-# 356 m.
-#
-# This was 0.99 (edge ~539.8 m) when the loss curve was introduced. That reach
-# was a side effect of the cutoff rather than a choice: it made the network
-# very dense (~15 neighbours per drone) and handed the RANDOM rule a pile of
-# links losing over 90% of what was sent on them.
-LINK_MAX_LOSS: float = 0.5         # PROVISIONAL - to confirm
+# sets, the GS link, the connected-layout filter and the range check. At 0.5
+# the edge sits at exactly LOSS_50_DISTANCE_M.
+LINK_MAX_LOSS: float = 0.5         #                                    [DECIDED]
 
 # ---------------------------------------------------------------------------
 # Simulation

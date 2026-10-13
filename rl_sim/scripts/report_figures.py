@@ -54,7 +54,7 @@ COPIED = (
     "1a_total_loss_vs_load.png",
     "1a_loss_heatmaps.png",
     "1a_link_matrix_placement1.png",
-    "ploss_vs_distance.png",
+    "ploss_curve.png",
     "1b_learning_curve_seeds.png",
     "1b_comparison_total_loss_50.png",
     "1b_loss_heatmaps_50.png",
@@ -177,70 +177,6 @@ def plot_example_layout(path: str) -> Dict[str, float]:
 
 
 # ---------------------------------------------------------------------------
-# Figure: the channel-loss curve
-# ---------------------------------------------------------------------------
-
-def plot_channel_curve(path: str) -> None:
-    """Draw the loss curve with the link cutoff marked.
-
-    Args:
-        path: Output PNG path.
-    """
-    reach = channel.max_link_distance()
-    distances = np.linspace(0, 700, 1400)
-    losses = np.array([channel.p_loss(float(d)) for d in distances]) * 100
-
-    fig, ax = plt.subplots(figsize=(8.6, 5.0), dpi=150)
-    fig.patch.set_facecolor(SURFACE)
-    ax.set_facecolor(SURFACE)
-
-    ax.plot(distances, losses, color=M_COLOR, linewidth=2.4, zorder=4)
-    # Beyond the cutoff there is no link at all, so that half of the curve is
-    # never actually used.
-    ax.axvspan(reach, 700, color=GRID_COLOR, alpha=0.65, zorder=1)
-    ax.annotate("no link: loss above the cutoff",
-                (reach + 12, 92), color=TEXT_SECONDARY, fontsize=9)
-    ax.axvline(reach, color=GS_COLOR, linestyle="--", linewidth=1.4, zorder=3)
-    ax.axhline(config.LINK_MAX_LOSS * 100, color=GS_COLOR, linestyle="--",
-               linewidth=1.4, zorder=3)
-
-    # Offsets chosen per point: at 250 m a label to the right would run into
-    # the cutoff line, and at 356 m it would sit on the shaded region's edge.
-    offsets = {100: (8, 10), 250: (-10, 14), 356: (12, -16)}
-    alignments = {100: "left", 250: "right", 356: "left"}
-    for d in (100, 250, 356):
-        loss = channel.p_loss(float(d)) * 100
-        ax.scatter([d], [loss], s=45, color=M_COLOR, zorder=5,
-                   edgecolors=SURFACE, linewidths=1.0)
-        ax.annotate(f"{loss:.1f}% at {d} m", (d, loss),
-                    textcoords="offset points", xytext=offsets[d],
-                    ha=alignments[d], color=TEXT_PRIMARY, fontsize=9,
-                    fontweight="bold", zorder=6)
-
-    ax.set_xlim(0, 700)
-    ax.set_ylim(0, 100)
-    ax.set_xlabel("distance between the two drones (m)",
-                  color=TEXT_SECONDARY, fontsize=10)
-    ax.set_ylabel("chance one transmission is lost (%)",
-                  color=TEXT_SECONDARY, fontsize=10)
-    _style(ax)
-
-    fig.suptitle(
-        f"Channel loss against distance — the link reach is {reach:.0f} m",
-        color=TEXT_PRIMARY, fontsize=12, fontweight="bold", x=0.01, ha="left",
-    )
-    fig.text(0.01, 0.905,
-             f"A link exists only while the loss stays under "
-             f"{config.LINK_MAX_LOSS:.0%}.",
-             color=TEXT_SECONDARY, fontsize=9.5)
-    fig.tight_layout(rect=(0, 0.09, 1, 0.885))
-    _stamp(fig)
-    fig.savefig(path, facecolor=SURFACE)
-    plt.close(fig)
-    print(f"  wrote {path}")
-
-
-# ---------------------------------------------------------------------------
 # Figure: what happens in one step
 # ---------------------------------------------------------------------------
 
@@ -342,7 +278,6 @@ def main() -> None:
 
     stats = plot_example_layout(os.path.join(figures_dir,
                                              "example_layout.png"))
-    plot_channel_curve(os.path.join(figures_dir, "channel_loss_curve.png"))
     plot_step_schematic(os.path.join(figures_dir, "step_schematic.png"))
 
     missing = copy_shared(args.out_dir, figures_dir)

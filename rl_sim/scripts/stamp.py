@@ -67,10 +67,13 @@ def settings_stamp(
     load_text = "/".join(str(int(load)) for load in loads_ms) + " ms"
 
     parts = [
-        f"D50={config.LOSS_50_DISTANCE_M:.0f} m",
-        f"slope={config.LOSS_SLOPE_PER_M}/m",
-        f"LINK_MAX_LOSS={config.LINK_MAX_LOSS}",
-        f"reach={channel.max_link_distance():.0f} m",
+        "channel=fspl_sigmoid",
+        f"f={config.F_HZ / 1e9:.1f}GHz",
+        f"Pt={config.PT_DBM:.0f}dBm",
+        f"G={config.GT_DBI:.0f}dBi",
+        f"sens={config.RX_SENSITIVITY_DBM:.0f}dBm@{config.SENS_LOSS:.0%}",
+        f"b={channel.B_PER_DB:.3f}/dB",
+        f"edge={channel.max_link_distance():.0f}m",
         f"loop_guard={config.LOOP_GUARD}",
         f"area={config.WIDTH:.0f}x{config.HEIGHT:.0f} m",
         f"{config.NUM_M_DRONES}M+{config.NUM_C_DRONES}C",

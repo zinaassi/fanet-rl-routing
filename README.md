@@ -24,6 +24,17 @@ the code, and none of the archived RL code is reused.
 
 ---
 
+## Status
+
+**Phase 1a and Phase 1b must be re-run.** The channel model was replaced on
+2026-10-13, and every result made with the old one — CSVs, figures, training
+logs and the trained models under `out/models/` — was deleted rather than left
+to look current. The only current outputs are `out/ploss_curve.png` and
+`out/edge_scan.csv`. The written report under `docs/report/` is stale for the
+same reason.
+
+---
+
 ## 1. What the simulator models
 
 ### World
@@ -51,35 +62,53 @@ not of the routing, and it swamps the comparison. It does **not** remove every
 the GS but no neighbour closer to it. `scripts/range_check.py` deliberately
 runs **unfiltered**, since measuring how often isolation happens is its job.
 
-At the current 356 m reach the range check puts the strand rate near **2 % of
-random layouts**, and all 20 experiment seeds happen to connect on their first
-draw. The filter is therefore rarely invoked, but not inert — unlike at the
-earlier 0.99 cutoff, where nothing was ever rejected.
+At the current 350 m edge about **5 % of random layouts** strand at least one
+M-drone (`out/edge_scan.csv`, 3000 layouts), so the filter is rarely invoked
+but not inert.
 
 ### Channel and links
 
-Loss is a **logistic curve in distance**, fitted to measured UAV-to-UAV links in
-Rosati et al., *"Dynamic Routing for Flying Ad Hoc Networks"*
-([arXiv:1406.4399](https://arxiv.org/abs/1406.4399)):
+Loss comes from a **free-space path loss budget turned into an S-curve**. The
+budget gives each link a *margin* above the receiver's sensitivity, and the
+margin sets the chance one transmission is lost:
 
 ```
-p_loss(d) = 1 / (1 + exp(-s · (d − D50)))      D50 = 356 m,  s = 0.025
+FSPL_dB(d) = 20·log10(d) + 20·log10(F_HZ) + 20·log10(4π/c)
+M(d)       = PT_DBM + GT_DBI + GR_DBI − FSPL_dB(d) − RX_SENSITIVITY_DBM
+p_loss(M)  = 1 / (1 + A · exp(b · M))        A = (1 − SENS_LOSS)/SENS_LOSS
 ```
 
-| d (m) | 100 | 200 | 250 | 270 | 300 | 356 | 400 | 540 |
+with 1 W at 2.4 GHz, 2 dBi antennas and a −54 dBm receiver. `A` = 9 and
+`b` = 0.749045 per dB. **`b` is derived, never written down**: it is whatever
+value puts 50 % loss at the link edge, computed when `channel.py` is imported,
+so moving the edge moves `b` with it.
+
+The receiver sensitivity is **not a wall**. It is the point where 10 % of
+transmissions are lost, following 802.11 OFDM, which defines sensitivity as
+the power giving a 10 % packet error rate on 1000-octet frames. That point is
+**249.7 m**.
+
+| d (m) | 50 | 100 | 150 | 200 | 249.7 | 250 | 300 | 350 |
 |---|---|---|---|---|---|---|---|---|
-| p_loss | 0.002 | 0.020 | 0.066 | 0.104 | 0.198 | 0.500 | 0.750 | 0.990 |
+| margin (dB) | 13.97 | 7.95 | 4.43 | 1.93 | 0.00 | −0.01 | −1.59 | −2.93 |
+| p_loss | 0.000 | 0.000 | 0.004 | 0.026 | 0.100 | 0.101 | 0.268 | 0.500 |
 
-The curve approaches 0 and 1 but never reaches either. The GS uses the same
-model — it is just another endpoint, and the last hop into it draws like any
-other.
+Links between 249.7 m and the edge have a **negative margin and still exist**;
+they simply lose more. The GS uses the same model — it is just another
+endpoint, and the last hop into it draws like any other.
 
 **A link exists while its loss stays under `LINK_MAX_LOSS` = 0.5**, which puts
-the edge at exactly **356 m** — the curve's midpoint. The justification: a
-drone lists a neighbour only if at least half of its hello messages get
-through to it. That is the single rule used everywhere: neighbour sets, the GS
-link, the connected-layout filter and the range check. Distance alone decides
-it, through the curve.
+the edge at exactly **350 m**. That is the single rule used everywhere:
+neighbour sets, the GS link, the connected-layout filter and the range check.
+Distance alone decides it, through the curve.
+
+The edge is a **design choice, not a physical constant**: with 1 W in free
+space the radio would reach kilometres. We compared edges from 300 to 450 m on
+3000 random layouts (`out/edge_scan.csv`) and chose 350 m, where about 95 % of
+random layouts are connected and about half of the M-drones (52 %) still need
+a relay to reach the ground station. Shorter edges often leave drones cut off;
+longer edges let most drones reach the GS directly, which leaves little to
+route. Chosen from geometry alone, before any routing experiment, and fixed.
 
 At this cutoff, across the 20 experiment layouts, a drone has about **7.9
 neighbours** and **12.2 of 25** drones hold a direct link to the GS. The range
@@ -136,7 +165,7 @@ current holder. Among those, minimise
 
 ```
 link_loss    = 1 − (1 − channel_loss) · (1 − queue_full)
-channel_loss = p_loss(that link's distance)   — the logistic curve above
+channel_loss = p_loss(that link's distance)   — the S-curve above
 queue_full   = 1 if the holder's OWN queue for that link is at capacity, else 0
 ```
 
@@ -376,9 +405,13 @@ defaults and carry a `PROVISIONAL - to confirm` comment in the file.
 | `MAX_PLACEMENT_DRAWS` | 10000 | Give up rather than loop forever looking for one. | — |
 | `QUEUE_CAPACITY` | 10 | Packets per **link** queue. | DECIDED |
 | `MAX_TX_PER_STEP` | 1 | Packets each **link** queue sends per step. | DECIDED |
-| `LOSS_50_DISTANCE_M` | 356.0 m | Distance at which loss is 50%. | PROVISIONAL |
-| `LOSS_SLOPE_PER_M` | 0.025 | Steepness of the loss curve, per metre. | PROVISIONAL |
-| `LINK_MAX_LOSS` | 0.5 | A link exists while loss is under this (→ 356 m): at least half the hello messages get through. | PROVISIONAL |
+| `PT_DBM` | 30.0 dBm | Transmit power (1 W). | DECIDED |
+| `GT_DBI`, `GR_DBI` | 2.0 dBi | Antenna gains. | DECIDED |
+| `F_HZ` | 2.4 GHz | Carrier frequency. | DECIDED |
+| `RX_SENSITIVITY_DBM` | −54.0 dBm | Receiver sensitivity. | DECIDED |
+| `SENS_LOSS` | 0.10 | Loss **at** the sensitivity point (802.11 OFDM's 10 % PER). | DECIDED |
+| `LOSS_50_DISTANCE_M` | 350.0 m | Distance of 50 % loss, which is the link edge. A design choice, chosen from geometry. | DECIDED |
+| `LINK_MAX_LOSS` | 0.5 | A link exists while loss is under this (→ 350 m). | DECIDED |
 | `LOOP_GUARD` | `"path"` | Which previously visited drones a packet may not be sent back to: `"path"` (all of them) or `"previous"` (only the last). Applies to every routing rule. | PROVISIONAL |
 | `PACKET_TTL` | 50 steps | Packet lifetime. | DECIDED |
 | `MAX_HOPS` | 10 | Most hops a packet may take. | DECIDED |
@@ -395,12 +428,13 @@ defaults and carry a `PROVISIONAL - to confirm` comment in the file.
 | `DRONE_SPEED_MIN/MAX` | 10.0 / 30.0 m/s | Drawn per drone; unused while static. | DECIDED |
 | `LOG_DIR` | `logs` | Where per-episode JSONL event logs go. | — |
 
-`channel.max_link_distance()` derives the 356 m link reach from the three loss
-parameters, so there is no separate range constant to keep in step.
+`channel.max_link_distance()` derives the 350 m link reach from the loss
+curve, so there is no separate range constant to keep in step.
 
-The loss curve comes from Rosati et al. (arXiv:1406.4399). The speed range is
-from IQMR (Sharvari et al., 2024, arXiv:2408.09109). The arena size, the 18 + 7
-fleet split and the 2-D simplification are **our** choices.
+The radio constants and the speed range come from IQMR (Sharvari et al., 2024,
+arXiv:2408.09109); the 10 % sensitivity definition follows 802.11 OFDM. The
+arena size, the 18 + 7 fleet split, the link edge and the 2-D simplification
+are **our** choices.
 
 ---
 
@@ -445,29 +479,9 @@ per packet event, per-step network state and per-drone state).
 
 ## 5. Observed baseline behaviour
 
-Recorded from the runs, without interpretation.
-
-**Greedy concentrates congestion into a few drones near the GS — a funnel.**
-Greedy sends toward whichever qualifying neighbour has the lowest link loss,
-so traffic converges on the drones closest to the ground station. Each drone
-sends at most one packet per link per step and each link queue holds ten, so a
-drone fed by many neighbours cannot drain as fast as it fills.
-
-Measured over 10 placements at the 200 ms load:
-
-| | |
-|---|---|
-| drones with any `queue_full` drop at all | **2.5 of 25** |
-| share of all `queue_full` drops at the 3 worst drones | **100 %** |
-| the single worst drone sits | **72 m** from the GS, with **11.1** neighbours |
-
-On one placement the worst drone was offered 2 952 packets and refused 1 916
-of them (64.9 %) for want of queue space, while 22 of the 25 drones refused
-none. Across the grid, `queue_full` is greedy's largest loss cause at the
-heavier loads, reaching 52.7 % of packets created at 100 ms.
-
-Random shows no such concentration: its `queue_full` is 0.0 % at every load,
-and its mean link-queue occupancy stays near 0.0 of 10.
+_No current results._ Every Phase-1a result was produced with the channel
+model that has now been replaced, so all of them were deleted rather than
+left to look current. See **Status** below.
 
 ---
 
@@ -572,99 +586,20 @@ python scripts/plot_1b.py                         # learning curve + causes
 `regenerate_all.py` runs `evaluate_1b.py` and `plot_1b.py` by default and skips
 them when no trained model is present; `--with-training` retrains first.
 
-### Results on the 50 TEST layouts
+### Results
 
-Everything below is `LOOP_GUARD = "path"`, with `rl` the mean of init seeds
-0, 1 and 2. Mean % of the packets created, std across the 50 layouts in
-brackets. The six causes sum to the total exactly: no packet created inside
-the measurement window is still in flight when it closes.
-
-| load | rule | total | channel | queue_full | no_route | dead_end | ttl | hop_limit | hops |
-|---|---|---|---|---|---|---|---|---|---|
-| 200 ms | random | **71.76** (3.05) | 57.32 | 0.00 | 0.00 | 3.37 | 0.00 | 11.06 | 4.44 |
-| 200 ms | greedy | **51.78** (6.41) | 7.91 | 42.32 | 0.00 | 0.00 | 1.55 | 0.00 | 3.38 |
-| 200 ms | rate | **21.72** (6.14) | 19.84 | 0.48 | 0.00 | 0.51 | 0.37 | 0.51 | 2.99 |
-| 200 ms | rl | **19.47** (9.32) | 14.19 | 1.93 | 0.00 | 0.98 | 1.20 | 1.16 | 3.35 |
-| 500 ms | random | **71.70** (3.17) | 57.32 | 0.00 | 0.00 | 3.36 | 0.00 | 11.02 | 4.45 |
-| 500 ms | greedy | **26.95** (9.49) | 6.68 | 20.22 | 0.00 | 0.00 | 0.05 | 0.00 | 3.83 |
-| 500 ms | rate | **18.80** (3.85) | 17.84 | 0.04 | 0.00 | 0.32 | 0.00 | 0.61 | 2.94 |
-| 500 ms | rl | **10.75** (4.77) | 9.11 | 0.10 | 0.00 | 0.72 | 0.03 | 0.79 | 3.33 |
-
-Paired on the same layouts. A negative difference means the first rule lost
-fewer packets. The sign test is the exact two-sided binomial on the layouts
-won; the t-test is two-sided on the per-layout differences.
-
-| layouts | load | comparison | mean diff | std | won | p (sign) | p (t-test) |
-|---|---|---|---|---|---|---|---|
-| 1–50 | 200 ms | rl − rate | −2.25 | 3.54 | 40 / 50 | <0.0001 | <0.0001 |
-| 1–50 | 200 ms | rl − greedy | −32.31 | 9.88 | 50 / 50 | <0.0001 | <0.0001 |
-| 1–50 | 200 ms | rate − greedy | −30.06 | 7.52 | 50 / 50 | <0.0001 | <0.0001 |
-| 1–50 | 500 ms | rl − rate | −8.06 | 3.01 | 50 / 50 | <0.0001 | <0.0001 |
-| 1–50 | 500 ms | rl − greedy | −16.20 | 11.31 | 45 / 50 | <0.0001 | <0.0001 |
-| 1–50 | 500 ms | rate − greedy | −8.15 | 10.93 | 38 / 50 | 0.0003 | <0.0001 |
-| 1–20 | 200 ms | rl − rate | −1.24 | 4.09 | 14 / 20 | 0.1153 | 0.1895 |
-| 21–50 | 200 ms | rl − rate | −2.91 | 3.00 | 26 / 30 | <0.0001 | <0.0001 |
-
-The 1–20 rows reproduce the earlier 20-layout evaluation exactly, to 1e-12 on
-the mean, the std and the layouts won.
+_No current results._ The Phase-1b results, the loop-guard comparison, the
+channel-loss diagnostics and the trained models under `out/models/` were all
+produced with the replaced channel and have been deleted. See **Status**.
 
 ```bash
 cd rl_sim
-python scripts/evaluate_1b_large.py              # the 50 layouts, both loads
-python scripts/evaluate_1b_large.py --from-csv   # redraw, nothing re-simulated
-```
-
-### What the loop guard changed
-
-Measured on the first 20 TEST layouts, running every rule under both settings
-of `LOOP_GUARD`. Greedy cannot revisit a drone, so it is identical under both
-and the script asserts that rather than assuming it; every other rule moves.
-
-| load | rule | `"previous"` | `"path"` | dead_end under `"path"` |
-|---|---|---|---|---|
-| 200 ms | greedy | 51.70 | 51.70 | 0.00 |
-| 200 ms | random | 76.95 | 71.71 | 4.06 |
-| 200 ms | rate | 24.00 | 22.74 | 0.98 |
-| 200 ms | rl | 23.14 | 21.50 | 1.59 |
-| 500 ms | rl | 15.02 | 11.57 | 1.06 |
-
-Under `"path"` no packet revisits a drone at all: the revisit share over all
-682 823 rl decisions is 0.00%.
-
-```bash
-cd rl_sim
-python scripts/compare_loop_guard.py             # both guards, side by side
-```
-
-### Where the channel losses come from
-
-Every transmission lost in the channel is attributed to the decision that
-chose that link — a packet is lost in the channel on exactly one
-transmission, its last — and classified by what the deciding drone was
-offered at that moment. "Cleaner" means at least 10 points less channel loss;
-a busy queue means a fill of 0.5 or more. Seed-0 model, 200 ms, 50 layouts.
-
-| class | rl | rate |
-|---|---|---|
-| A — a cleaner option existed and its queue was under half full | 33.55% | 63.08% |
-| B — a cleaner option existed but its queue was at least half full | 4.69% | 4.40% |
-| C — nothing 10+ points cleaner was allowed | 61.76% | 32.53% |
-| losses on links losing more than 20% | 20.40% | 47.52% |
-
-Splitting rl's class A by the cleaner option's measured delivery rate:
-
-| | share of A | chosen rate | chosen loss | cleaner rate | cleaner loss |
-|---|---|---|---|---|---|
-| A1 — cleaner option's delivery rate ≥ chosen | 0.22% | 78.33% | 15.13% | 86.45% | 3.16% |
-| A2 — cleaner option's delivery rate < chosen | 99.78% | 77.47% | 18.93% | 23.56% | 0.98% |
-
-Against all of rl's channel losses rather than against class A, A2 is 33.5%
-and A1 is 0.07% (43 of 57 717).
-
-```bash
-cd rl_sim
-python scripts/diagnose_1b_channel.py --init-seed 0            # both rules
-python scripts/diagnose_1b_channel.py --init-seed 0 --rules rl # rl only
+python scripts/train_1b.py --init-seeds 0 1 2     # tens of minutes
+python scripts/evaluate_1b.py                     # the 20 TEST layouts
+python scripts/evaluate_1b_large.py               # the 50 TEST layouts
+python scripts/compare_loop_guard.py              # both guards side by side
+python scripts/diagnose_1b_channel.py             # why the channel losses happen
+python scripts/queue_size_check.py                # Q = 5, 10 and 20
 ```
 
 ### Seeding
@@ -684,10 +619,10 @@ A test reproduces greedy and random at seed 1 against the committed
   medium, which is exactly why each link gets its own queue and its own
   per-step budget, and why a drone can send on all its links at once. A real
   radio could not.
-- **The loss curve is fitted, but to someone else's measurements.** The
-  logistic shape and its two parameters come from Rosati et al.'s UAV
-  experiments, not from this scenario's hardware, altitude or environment. Both
-  parameters are PROVISIONAL, and they drive the results directly.
+- **The loss curve is a model, not a measurement.** Free-space path loss with
+  no terrain, obstruction or fading, turned into an S-curve whose only fitted
+  point is the 10 % sensitivity definition. The link edge is our design
+  choice. Both drive the results directly.
 - **Loss depends on distance alone.** Not on traffic, antenna orientation, or
   interference from other transmissions.
 - **Ideal ACKs.** Instant, never lost, no capacity used, no retransmissions.
@@ -699,11 +634,10 @@ A test reproduces greedy and random at seed 1 against the committed
   up to date. This matters little in the static Phase 1 and will be revisited
   for the dynamic Phase 2.
 - **Layouts are filtered, so the results are conditional.** Only placements in
-  which every M-drone can reach the GS are simulated. At the current 356 m
-  reach about 2% of random layouts strand at least one M-drone
-  (`scripts/range_check.py` measures this), and those layouts are excluded. Every number here therefore describes a *connected*
-  deployment, not an arbitrary one — though under the current loss curve no
-  layout is actually rejected, so the filter is presently a no-op.
+  which every M-drone can reach the GS are simulated. At the current 350 m
+  edge about 5% of random layouts strand at least one M-drone
+  (`out/edge_scan.csv`), and those layouts are excluded. Every number here
+  therefore describes a *connected* deployment, not an arbitrary one.
 - **The loop guard is a design assumption.** We assert that the header can
   carry the visited list and that every drone honours it. That is cheap (about
   4 bytes) and standard practice (BGP's AS_PATH), but it is still an assumption
