@@ -52,6 +52,9 @@ from scripts.train_1b import TEST_SEEDS, run_once
 LOADS_MS = (200, 500)
 MAIN_LOAD_MS = 200
 RULES = ("random", "greedy", "rate", "rl")
+#: Only "rl" needs a trained network; the others run on their own, so a
+#: subset without it can be measured with no model present.
+MODEL_RULES = ("rl",)
 CAUSES = ("channel", "queue_full", "no_route", "dead_end", "ttl_hop")
 
 RULE_COLORS = {
@@ -94,6 +97,12 @@ def parse_args() -> argparse.Namespace:
                              "different loop guards do not overwrite each other.")
     parser.add_argument("--workers", type=int, default=min(20, os.cpu_count() or 1),
                         help="Parallel workers; 1 runs sequentially.")
+    parser.add_argument("--rules", type=str, nargs="+", default=list(RULES),
+                        help="Which rules to run, comma- or space-separated. "
+                             "Models are loaded only when a rule needing one "
+                             "is among them, so greedy, random and rate can "
+                             "be measured with no trained network present. "
+                             "Default: all four.")
     return parser.parse_args()
 
 
@@ -134,14 +143,17 @@ def _job(args: Tuple) -> Dict[str, Any]:
 
 
 def run_grid(
-    init_seeds: Sequence[int], out_dir: str, workers: int
+    init_seeds: Sequence[int], out_dir: str, workers: int,
+    rules: Sequence[str] = RULES,
 ) -> List[Dict[str, Any]]:
-    """Run every rule on every TEST layout, at both loads.
+    """Run the chosen rules on every TEST layout, at both loads.
 
     Args:
         init_seeds: Which trained models to evaluate.
         out_dir:    Where the saved models live.
         workers:    Parallel workers.
+        rules:      Which rules to run. Models are loaded ONLY when a rule
+                    needing one is among them.
 
     Returns:
         One row per run.
@@ -151,22 +163,24 @@ def run_grid(
     """
     from concurrent.futures import ProcessPoolExecutor
 
-    import torch
-
     states: Dict[int, Dict[str, Any]] = {}
-    for init_seed in init_seeds:
-        path = os.path.join(out_dir, "models", config.LOOP_GUARD,
-                            f"rl_seed{init_seed}.pt")
-        if not os.path.exists(path):
-            print(f"STOP: no trained model at {path}. Run train_1b.py first.")
-            raise SystemExit(1)
-        states[init_seed] = torch.load(path, weights_only=True)
+    if any(rule in MODEL_RULES for rule in rules):
+        import torch
+
+        for init_seed in init_seeds:
+            path = os.path.join(out_dir, "models", config.LOOP_GUARD,
+                                f"rl_seed{init_seed}.pt")
+            if not os.path.exists(path):
+                print(f"STOP: no trained model at {path}. "
+                      f"Run train_1b.py first.")
+                raise SystemExit(1)
+            states[init_seed] = torch.load(path, weights_only=True)
 
     jobs: List[Tuple] = []
     for load_ms in LOADS_MS:
         for seed in TEST_SEEDS:
-            for rule in RULES:
-                if rule == "rl":
+            for rule in rules:
+                if rule in MODEL_RULES:
                     for init_seed in init_seeds:
                         jobs.append((rule, load_ms, seed, init_seed,
                                      states[init_seed]))
@@ -174,7 +188,7 @@ def run_grid(
                     jobs.append((rule, load_ms, seed, -1, None))
 
     print(f"Running {len(jobs)} test runs "
-          f"({len(RULES)} rules x {len(LOADS_MS)} loads x "
+          f"({len(rules)} rules x {len(LOADS_MS)} loads x "
           f"{len(TEST_SEEDS)} layouts, rl x {len(init_seeds)} init seeds) ...")
 
     if workers > 1:
@@ -222,7 +236,8 @@ def per_layout(
 # Figures
 # ---------------------------------------------------------------------------
 
-def plot_comparison(rows: Sequence[Dict[str, Any]], path: str) -> None:
+def plot_comparison(rows: Sequence[Dict[str, Any]], path: str,
+                    rules: Sequence[str] = RULES) -> None:
     """Draw total loss per rule, with every layout shown as a dot.
 
     Args:
@@ -237,30 +252,30 @@ def plot_comparison(rows: Sequence[Dict[str, Any]], path: str) -> None:
         ax.set_facecolor(SURFACE)
         # Percentages everywhere: the boxes and the dots must share units.
         series = [[value * 100 for value in per_layout(rows, rule, load_ms)]
-                  for rule in RULES]
+                  for rule in rules]
 
         parts = ax.boxplot(series, widths=0.55, patch_artist=True,
                            medianprops={"color": TEXT_PRIMARY, "linewidth": 1.6},
                            whiskerprops={"color": TEXT_SECONDARY},
                            capprops={"color": TEXT_SECONDARY},
                            flierprops={"marker": ""}, zorder=2)
-        for patch, rule in zip(parts["boxes"], RULES):
+        for patch, rule in zip(parts["boxes"], rules):
             patch.set_facecolor(RULE_COLORS[rule])
             patch.set_alpha(0.25)
             patch.set_edgecolor(RULE_COLORS[rule])
 
         rng = np.random.default_rng(0)       # fixed jitter, so the plot replays
-        for index, (rule, values) in enumerate(zip(RULES, series), start=1):
+        for index, (rule, values) in enumerate(zip(rules, series), start=1):
             jitter = rng.uniform(-0.16, 0.16, size=len(values))
             ax.scatter(index + jitter, values, s=22,
                        color=RULE_COLORS[rule], alpha=0.75, zorder=3,
                        edgecolors="none")
 
         # The mean goes under the tick label, where nothing can collide with it.
-        ax.set_xticks(range(1, len(RULES) + 1))
+        ax.set_xticks(range(1, len(rules) + 1))
         ax.set_xticklabels([
             f"{rule}\n{statistics.fmean(values):.1f}%"
-            for rule, values in zip(RULES, series)
+            for rule, values in zip(rules, series)
         ])
         heading = f"{load_ms} ms"
         if load_ms != MAIN_LOAD_MS:
@@ -285,14 +300,17 @@ def plot_comparison(rows: Sequence[Dict[str, Any]], path: str) -> None:
     plt.close(fig)
 
 
-def plot_loss_by_cause(rows: Sequence[Dict[str, Any]], path: str) -> None:
+def plot_loss_by_cause(rows: Sequence[Dict[str, Any]], path: str,
+                       available: Sequence[str] = RULES) -> None:
     """Draw stacked bars of where the loss goes at the main load.
 
     Args:
-        rows: Every run's row.
-        path: Output PNG path.
+        rows:      Every run's row.
+        path:      Output PNG path.
+        available: Which rules were run; the panel shows those of
+                   greedy/rate/rl that are present.
     """
-    rules = ("greedy", "rate", "rl")
+    rules = [r for r in ("greedy", "rate", "rl") if r in available]
 
     fig, ax = plt.subplots(figsize=(8.5, 5.6), dpi=150)
     fig.patch.set_facecolor(SURFACE)
@@ -341,19 +359,26 @@ def plot_loss_by_cause(rows: Sequence[Dict[str, Any]], path: str) -> None:
 # The paired table
 # ---------------------------------------------------------------------------
 
-def paired_table(rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def paired_table(rows: Sequence[Dict[str, Any]],
+                 rules: Sequence[str] = RULES) -> List[Dict[str, Any]]:
     """Compare rl against greedy and rate on the same layouts.
 
     Args:
-        rows: Every run's row.
+        rows:  Every run's row.
+        rules: Which rules were run. Without "rl" there is nothing to
+               compare, so the table comes back empty.
 
     Returns:
         One record per (load, comparison).
     """
     records: List[Dict[str, Any]] = []
+    if "rl" not in rules:
+        return records
     for load_ms in LOADS_MS:
         rl = per_layout(rows, "rl", load_ms)
         for other in ("greedy", "rate"):
+            if other not in rules:
+                continue
             baseline = per_layout(rows, other, load_ms)
             differences = [a - b for a, b in zip(rl, baseline)]
             records.append({
@@ -369,13 +394,15 @@ def paired_table(rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 def print_tables(
-    rows: Sequence[Dict[str, Any]], paired: Sequence[Dict[str, Any]]
+    rows: Sequence[Dict[str, Any]], paired: Sequence[Dict[str, Any]],
+    rules: Sequence[str] = RULES,
 ) -> None:
     """Print the test results and the paired comparison.
 
     Args:
         rows:   Every run's row.
         paired: Output of :func:`paired_table`.
+        rules:  Which rules were run.
     """
     print()
     print(f"  TEST layouts (seeds {TEST_SEEDS[0]}-{TEST_SEEDS[-1]}), "
@@ -386,7 +413,7 @@ def print_tables(
           f"{'ttl+hop':>10}{'std':>9}")
     print("  " + "-" * 84)
     for load_ms in LOADS_MS:
-        for rule in RULES:
+        for rule in rules:
             totals = per_layout(rows, rule, load_ms)
             causes = [statistics.fmean(per_layout(rows, rule, load_ms, c))
                       for c in CAUSES]
@@ -414,11 +441,14 @@ def print_tables(
 
 def main() -> None:
     """Run the test grid, write every output and print the tables."""
+    from scripts.evaluate_1b_large import parse_rules
+
     args = parse_args()
     os.makedirs(args.out_dir, exist_ok=True)
 
-    rows = run_grid(args.init_seeds, args.out_dir, args.workers)
-    paired = paired_table(rows)
+    rules = parse_rules(args.rules)
+    rows = run_grid(args.init_seeds, args.out_dir, args.workers, rules)
+    paired = paired_table(rows, rules)
 
     runs_path = os.path.join(args.out_dir, f"1b_test_runs{args.suffix}.csv")
     with open(runs_path, "w", newline="") as handle:
@@ -441,10 +471,10 @@ def main() -> None:
 
     comparison_path = os.path.join(args.out_dir, f"1b_comparison_total_loss{args.suffix}.png")
     causes_path = os.path.join(args.out_dir, f"1b_loss_by_cause{args.suffix}.png")
-    plot_comparison(rows, comparison_path)
-    plot_loss_by_cause(rows, causes_path)
+    plot_comparison(rows, comparison_path, rules)
+    plot_loss_by_cause(rows, causes_path, rules)
 
-    print_tables(rows, paired)
+    print_tables(rows, paired, rules)
     print()
     for path in (runs_path, paired_path, comparison_path, causes_path):
         print(f"  wrote {path}")

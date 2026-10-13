@@ -195,3 +195,63 @@ def test_parallel_evaluation_matches_sequentially_for_the_network_too() -> None:
     parallel = evaluate("rl", seeds, state_dict=state, workers=2)
 
     assert sequential == parallel
+
+
+# ---------------------------------------------------------------------------
+# Evaluating a subset of the rules
+# ---------------------------------------------------------------------------
+
+def test_the_non_rl_rules_evaluate_with_no_model_present() -> None:
+    """greedy, random and rate can be measured without a trained network.
+
+    Only "rl" needs one. The evaluation scripts used to load the models
+    before running anything, so deleting out/models/ blocked every rule,
+    including the three that need no model at all.
+
+    Checked against a directory that is guaranteed to hold no model, rather
+    than against out/, so the test does not depend on whether a model
+    happens to be lying around.
+    """
+    import tempfile
+
+    from scripts import evaluate_1b_large as big
+
+    rules = big.parse_rules(["greedy,random,rate"])
+    assert not any(rule in big.MODEL_RULES for rule in rules)
+
+    # Two layouts at one load: this test is about the model gate, not about
+    # the numbers, and the full grid is 300 simulations.
+    previous_seeds, previous_loads = big.TEST50_SEEDS, big.LOADS_MS
+    big.TEST50_SEEDS, big.LOADS_MS = (1, 2), (200,)
+    try:
+        with tempfile.TemporaryDirectory() as empty:
+            assert not os.path.exists(os.path.join(empty, "models"))
+            rows = big.run_grid(empty, [0], workers=1, rules=rules)
+    finally:
+        big.TEST50_SEEDS, big.LOADS_MS = previous_seeds, previous_loads
+
+    assert len(rows) == len(rules) * 2, rows
+    assert {row["rule"] for row in rows} == set(rules)
+    assert all(row["views_agree"] for row in rows)
+
+
+def test_asking_for_rl_without_a_model_still_stops() -> None:
+    """The guard is narrowed, not removed: rl without a model must fail."""
+    import tempfile
+
+    from scripts import evaluate_1b_large as big
+
+    # It must stop before running anything, so no layouts are needed.
+    with tempfile.TemporaryDirectory() as empty:
+        with pytest.raises(SystemExit):
+            big.run_grid(empty, [0], workers=1, rules=big.parse_rules(["rl"]))
+
+
+def test_unknown_rule_names_are_rejected() -> None:
+    """A typo in --rules fails loudly instead of silently running nothing."""
+    from scripts.evaluate_1b_large import parse_rules
+
+    with pytest.raises(SystemExit):
+        parse_rules(["greedy,qroute"])
+    with pytest.raises(SystemExit):
+        parse_rules([","])

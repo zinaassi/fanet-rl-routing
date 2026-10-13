@@ -120,9 +120,15 @@ not to be reused, and the same holds for the Phase-2 agents.
 - Packets that arrive already dead are retired on arrival
   (expired_on_arrival).
 - Loads: each M-drone creates one packet every 1000/500/200/100 ms.
-  200 ms is the working load for the next phases; the experiment still
-  sweeps all four. Metrics use packets created in steps [50, 950) of
-  1000.
+  The experiment sweeps all four. Metrics use packets created in steps
+  [50, 950) of 1000.
+- Working load 200 ms [DECIDED 2026-10-13]. Reason: the heaviest load
+  where the network is congested (queue_full drops are a real part of
+  the loss) but not yet saturated (greedy beats random on every
+  placement). Chosen by the team after running all four loads, and
+  re-checked after the channel change: at 200 ms greedy queue_full =
+  40.0% and greedy beats random on 20/20 placements by 21.8 points; at
+  100 ms only 18/20 (saturated).
 - Seeds: separate placement, channel/traffic and routing streams;
   greedy and random run on identical placement and traffic.
 - Neighbor knowledge: each drone knows its neighbors' positions and

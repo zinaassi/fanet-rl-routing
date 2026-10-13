@@ -58,6 +58,9 @@ ADDED_SEEDS = tuple(range(21, 51))        # the 30 new ones
 LOADS_MS = (200, 500)
 MAIN_LOAD_MS = 200
 RULES = ("random", "greedy", "rate", "rl")
+#: Only "rl" needs a trained network; the others run on their own, so a
+#: subset without it can be measured with no model present.
+MODEL_RULES = ("rl",)
 CAUSES = ("channel", "queue_full", "no_route", "dead_end", "ttl", "hop_limit")
 COMPARISONS = (("rl", "rate"), ("rl", "greedy"), ("rate", "greedy"))
 
@@ -100,39 +103,48 @@ def _job(args: Tuple) -> Dict[str, Any]:
     }
 
 
-def run_grid(out_dir: str, init_seeds: Sequence[int],
-             workers: int) -> List[Dict[str, Any]]:
-    """Run every rule on every layout, at both loads.
+def run_grid(out_dir: str, init_seeds: Sequence[int], workers: int,
+             rules: Sequence[str] = RULES) -> List[Dict[str, Any]]:
+    """Run the chosen rules on every layout, at both loads.
+
+    Args:
+        out_dir:    Where the trained models live.
+        init_seeds: Which trained models to evaluate.
+        workers:    Parallel workers.
+        rules:      Which rules to run. Models are loaded ONLY when a rule
+                    needing one is among them, so greedy, random and rate
+                    can be measured with no trained network present.
 
     Returns:
         One row per run.
 
     Raises:
-        SystemExit: If a model is missing, or any run's views disagree.
+        SystemExit: If a needed model is missing, or any run's views disagree.
     """
-    import torch
-
     states: Dict[int, Dict[str, Any]] = {}
-    for init_seed in init_seeds:
-        path = os.path.join(out_dir, "models", config.LOOP_GUARD,
-                            f"rl_seed{init_seed}.pt")
-        if not os.path.exists(path):
-            print(f"STOP: no trained model at {path}.")
-            raise SystemExit(1)
-        states[init_seed] = torch.load(path, weights_only=True)
+    if any(rule in MODEL_RULES for rule in rules):
+        import torch
+
+        for init_seed in init_seeds:
+            path = os.path.join(out_dir, "models", config.LOOP_GUARD,
+                                f"rl_seed{init_seed}.pt")
+            if not os.path.exists(path):
+                print(f"STOP: no trained model at {path}.")
+                raise SystemExit(1)
+            states[init_seed] = torch.load(path, weights_only=True)
 
     jobs: List[Tuple] = []
     for load_ms in LOADS_MS:
         for seed in TEST50_SEEDS:
-            for rule in RULES:
-                if rule == "rl":
+            for rule in rules:
+                if rule in MODEL_RULES:
                     for init_seed in init_seeds:
                         jobs.append((rule, load_ms, seed, init_seed,
                                      states[init_seed]))
                 else:
                     jobs.append((rule, load_ms, seed, -1, None))
 
-    print(f"Running {len(jobs)} runs ({len(RULES)} rules x {len(LOADS_MS)} "
+    print(f"Running {len(jobs)} runs ({len(rules)} rules x {len(LOADS_MS)} "
           f"loads x {len(TEST50_SEEDS)} layouts, rl x {len(init_seeds)} "
           f"init seeds) ...")
     if workers > 1:
@@ -221,20 +233,25 @@ def paired_t_test(diffs: Sequence[float]) -> float:
 
 
 def paired_rows(rows: Sequence[Dict[str, Any]], seeds: Sequence[int],
-                label: str) -> List[Dict[str, Any]]:
+                label: str,
+                rules: Sequence[str] = RULES) -> List[Dict[str, Any]]:
     """Build the paired comparison rows for one set of layouts.
 
     Args:
         rows:  Every run's row.
         seeds: The layouts to compare on.
         label: A name for this set, carried into the CSV.
+        rules: Which rules were run; a comparison needing a rule that was
+               not run is skipped rather than compared against nothing.
 
     Returns:
         One row per (load, comparison).
     """
+    comparisons = [(a, b) for a, b in COMPARISONS
+                   if a in rules and b in rules]
     out: List[Dict[str, Any]] = []
     for load_ms in LOADS_MS:
-        for first, second in COMPARISONS:
+        for first, second in comparisons:
             a = per_layout(rows, first, load_ms, seeds)
             b = per_layout(rows, second, load_ms, seeds)
             diffs = [x - y for x, y in zip(a, b)]
@@ -254,7 +271,8 @@ def paired_rows(rows: Sequence[Dict[str, Any]], seeds: Sequence[int],
 # Tables
 # ---------------------------------------------------------------------------
 
-def print_summary(rows: Sequence[Dict[str, Any]]) -> None:
+def print_summary(rows: Sequence[Dict[str, Any]],
+                  rules: Sequence[str] = RULES) -> None:
     """Print table (a): every rule at every load, all six causes."""
     width = 106
     print()
@@ -266,7 +284,7 @@ def print_summary(rows: Sequence[Dict[str, Any]]) -> None:
           f"{'hop_limit':>11}{'hops':>7}")
     print("  " + "-" * width)
     for load_ms in LOADS_MS:
-        for rule in RULES:
+        for rule in rules:
             totals = per_layout(rows, rule, load_ms)
             causes = [statistics.fmean(
                 per_layout(rows, rule, load_ms, TEST50_SEEDS, c)
@@ -328,7 +346,8 @@ def _style(ax: plt.Axes) -> None:
     ax.tick_params(colors=TEXT_SECONDARY, labelsize=9)
 
 
-def plot_comparison(rows: Sequence[Dict[str, Any]], path: str) -> None:
+def plot_comparison(rows: Sequence[Dict[str, Any]], path: str,
+                    rules: Sequence[str] = RULES) -> None:
     """Draw total loss per rule, one dot per layout, at both loads."""
     fig, axes = plt.subplots(1, len(LOADS_MS), figsize=(12.0, 5.6), dpi=150,
                              sharey=True)
@@ -338,7 +357,7 @@ def plot_comparison(rows: Sequence[Dict[str, Any]], path: str) -> None:
         ax.set_facecolor(SURFACE)
         # Percentages everywhere: the boxes and the dots must share units.
         series = [[value * 100 for value in per_layout(rows, rule, load_ms)]
-                  for rule in RULES]
+                  for rule in rules]
 
         parts = ax.boxplot(series, widths=0.55, patch_artist=True,
                            medianprops={"color": TEXT_PRIMARY,
@@ -346,23 +365,23 @@ def plot_comparison(rows: Sequence[Dict[str, Any]], path: str) -> None:
                            whiskerprops={"color": TEXT_SECONDARY},
                            capprops={"color": TEXT_SECONDARY},
                            flierprops={"marker": ""}, zorder=2)
-        for patch, rule in zip(parts["boxes"], RULES):
+        for patch, rule in zip(parts["boxes"], rules):
             patch.set_facecolor(RULE_COLORS[rule])
             patch.set_alpha(0.25)
             patch.set_edgecolor(RULE_COLORS[rule])
 
         rng = np.random.default_rng(0)       # fixed jitter, so the plot replays
-        for index, (rule, values) in enumerate(zip(RULES, series), start=1):
+        for index, (rule, values) in enumerate(zip(rules, series), start=1):
             jitter = rng.uniform(-0.18, 0.18, size=len(values))
             ax.scatter(index + jitter, values, s=16,
                        color=RULE_COLORS[rule], alpha=0.7, zorder=3,
                        edgecolors="none")
 
         # The mean goes under the tick label, where nothing can collide.
-        ax.set_xticks(range(1, len(RULES) + 1))
+        ax.set_xticks(range(1, len(rules) + 1))
         ax.set_xticklabels([
             f"{rule}\n{statistics.fmean(values):.1f}%"
-            for rule, values in zip(RULES, series)
+            for rule, values in zip(rules, series)
         ])
         heading = f"{load_ms} ms"
         if load_ms != MAIN_LOAD_MS:
@@ -428,7 +447,8 @@ def _draw_panel(ax: plt.Axes, means: np.ndarray, stds: np.ndarray,
     return image
 
 
-def plot_heatmaps(rows: Sequence[Dict[str, Any]], path: str) -> None:
+def plot_heatmaps(rows: Sequence[Dict[str, Any]], path: str,
+                  rules: Sequence[str] = RULES) -> None:
     """Draw total loss and every cause, one panel per rule, both loads.
 
     Every number is a share of the packets created, so all four panels share
@@ -445,17 +465,17 @@ def plot_heatmaps(rows: Sequence[Dict[str, Any]], path: str) -> None:
 
     fig = plt.figure(figsize=(19.5, 5.2), dpi=150)
     grid = fig.add_gridspec(
-        1, len(RULES) + 1,
-        width_ratios=[len(columns)] * len(RULES) + [0.30],
+        1, len(rules) + 1,
+        width_ratios=[len(columns)] * len(rules) + [0.30],
         wspace=0.28, bottom=0.26, top=0.80, left=0.045, right=0.965,
     )
     fig.patch.set_facecolor(SURFACE)
 
-    axes = [fig.add_subplot(grid[0, i]) for i in range(len(RULES))]
-    bar_ax = fig.add_subplot(grid[0, len(RULES)])
+    axes = [fig.add_subplot(grid[0, i]) for i in range(len(rules))]
+    bar_ax = fig.add_subplot(grid[0, len(rules)])
 
     image = None
-    for ax, rule in zip(axes, RULES):
+    for ax, rule in zip(axes, rules):
         means = np.zeros((len(LOADS_MS), len(columns)))
         stds = np.zeros_like(means)
         for i, load_ms in enumerate(LOADS_MS):
@@ -536,6 +556,39 @@ def write_csv(path: str, rows: Sequence[Dict[str, Any]],
     print(f"  wrote {path}")
 
 
+def parse_rules(values: Sequence[str]) -> List[str]:
+    """Normalise the --rules argument into a list in RULES order.
+
+    Accepts comma-separated ("greedy,random,rate") and space-separated
+    ("greedy random rate") forms, since both read naturally on a command
+    line.
+
+    Args:
+        values: The raw argument values.
+
+    Returns:
+        The chosen rules, in the canonical RULES order.
+
+    Raises:
+        SystemExit: If a name is not a known rule.
+    """
+    chosen: List[str] = []
+    for value in values:
+        for name in value.split(","):
+            name = name.strip()
+            if not name:
+                continue
+            if name not in RULES:
+                print(f"STOP: unknown rule {name!r}; known: {', '.join(RULES)}")
+                raise SystemExit(1)
+            if name not in chosen:
+                chosen.append(name)
+    if not chosen:
+        print("STOP: --rules selected nothing")
+        raise SystemExit(1)
+    return [rule for rule in RULES if rule in chosen]
+
+
 def main() -> None:
     """Run the 50-layout evaluation and print every table."""
     parser = argparse.ArgumentParser(
@@ -548,6 +601,12 @@ def main() -> None:
     parser.add_argument("--workers", type=int,
                         default=min(20, os.cpu_count() or 1),
                         help="Parallel workers; 1 runs sequentially.")
+    parser.add_argument("--rules", type=str, nargs="+", default=list(RULES),
+                        help="Which rules to run, comma- or space-separated. "
+                             "Models are loaded only when a rule needing one "
+                             "is among them, so greedy, random and rate can "
+                             "be measured with no trained network present. "
+                             "Default: all four.")
     parser.add_argument("--from-csv", action="store_true",
                         help="Redraw from out/1b_test50_runs.csv instead of "
                              "running the 600 runs again.")
@@ -557,17 +616,19 @@ def main() -> None:
         print(f"STOP: LOOP_GUARD is {config.LOOP_GUARD!r}, expected 'path'.")
         raise SystemExit(1)
 
+    rules = parse_rules(args.rules)
+
     if args.from_csv:
         rows = _read_rows(os.path.join(args.out_dir, "1b_test50_runs.csv"))
         print(f"Redrawing from {len(rows)} saved runs "
               f"(nothing re-simulated).")
     else:
-        rows = run_grid(args.out_dir, args.init_seeds, args.workers)
-    print_summary(rows)
+        rows = run_grid(args.out_dir, args.init_seeds, args.workers, rules)
+    print_summary(rows, rules)
 
-    paired = (paired_rows(rows, TEST50_SEEDS, "1-50")
-              + paired_rows(rows, ORIGINAL_SEEDS, "1-20")
-              + paired_rows(rows, ADDED_SEEDS, "21-50"))
+    paired = (paired_rows(rows, TEST50_SEEDS, "1-50", rules)
+              + paired_rows(rows, ORIGINAL_SEEDS, "1-20", rules)
+              + paired_rows(rows, ADDED_SEEDS, "21-50", rules))
 
     print_paired(paired, "1-50",
                  "(b) Paired on the same 50 layouts (seeds 1-50)")
@@ -585,9 +646,9 @@ def main() -> None:
               ["layouts", "n", "load_ms", "comparison", "mean_diff",
                "std_diff", "wins", "ties", "p_sign", "p_ttest"])
     plot_comparison(rows, os.path.join(
-        args.out_dir, "1b_comparison_total_loss_50.png"))
+        args.out_dir, "1b_comparison_total_loss_50.png"), rules)
     plot_heatmaps(rows, os.path.join(
-        args.out_dir, "1b_loss_heatmaps_50.png"))
+        args.out_dir, "1b_loss_heatmaps_50.png"), rules)
 
 
 if __name__ == "__main__":
