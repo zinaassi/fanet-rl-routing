@@ -27,12 +27,18 @@ Class A is then split by the cleaner option's measured delivery rate:
 "Allowed" means what the router could actually pick: the loop guard's
 candidates, minus the drone the packet came from.
 
-Nothing is trained and no model changes. Read-only.
+Nothing is trained and no model changes. Read-only as far as the simulator
+and the models go; the tables are written to a CSV so they can be checked
+without rerunning.
+
+Writes:
+    out/1b_channel_diagnosis.csv
 """
 
 from __future__ import annotations
 
 import argparse
+import csv
 import os
 import sys
 from concurrent.futures import ProcessPoolExecutor
@@ -43,7 +49,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from fanet_sim import config
 from fanet_sim.envs.fanet_env import FANETEnv
 from fanet_sim.envs.packet import DropReason
-from scripts.stamp import settings_stamp
+from scripts.stamp import csv_comment, settings_stamp
 
 TEST_SEEDS = tuple(range(1, 51))
 LOAD_MS = 200
@@ -294,6 +300,67 @@ def print_a_split(rule: str, data: Dict[str, Any]) -> None:
     print("  " + "-" * width)
 
 
+def csv_rows(rule: str, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Flatten one rule's tables into CSV rows.
+
+    Two kinds of row, told apart by the ``table`` column: the A/B/C
+    classification, and the split of class A by delivery rate.
+
+    Args:
+        rule: The rule measured.
+        data: Output of :func:`collect`.
+
+    Returns:
+        One row per class and per A-split, plus a row for the dirty-link share.
+    """
+    total = data["total"]
+    rows: List[Dict[str, Any]] = []
+    for name in CLASSES:
+        count = data["counts"][name]
+        rows.append({
+            "rule": rule, "table": "class", "name": name,
+            "label": CLASS_LABELS[name], "count": count,
+            "share_of_total": (count / total) if total else 0.0,
+            "share_of_class_a": "",
+            "mean_chosen_loss": (data["loss_sums"][name] / count) if count
+                                else 0.0,
+            "mean_chosen_rate": "", "mean_cleaner_loss": "",
+            "mean_cleaner_rate": "",
+        })
+    a_total = data["counts"]["A"]
+    for name in A_SPLIT:
+        count = data["a_counts"][name]
+        sums = data["a_sums"][name]
+        rows.append({
+            "rule": rule, "table": "class_a_split", "name": name,
+            "label": A_SPLIT_LABELS[name], "count": count,
+            "share_of_total": (count / total) if total else 0.0,
+            "share_of_class_a": (count / a_total) if a_total else 0.0,
+            "mean_chosen_loss": (sums["chosen_loss"] / count) if count else 0.0,
+            "mean_chosen_rate": (sums["chosen_rate"] / count) if count else 0.0,
+            "mean_cleaner_loss": (sums["clean_loss"] / count) if count else 0.0,
+            "mean_cleaner_rate": (sums["clean_rate"] / count) if count else 0.0,
+        })
+    rows.append({
+        "rule": rule, "table": "dirty_links",
+        "name": f"loss_above_{DIRTY_LINK:.0%}",
+        "label": f"channel losses on links losing more than {DIRTY_LINK:.0%}",
+        "count": data["dirty"],
+        "share_of_total": (data["dirty"] / total) if total else 0.0,
+        "share_of_class_a": "", "mean_chosen_loss": "",
+        "mean_chosen_rate": "", "mean_cleaner_loss": "",
+        "mean_cleaner_rate": "",
+    })
+    return rows
+
+
+CSV_COLUMNS = [
+    "rule", "table", "name", "label", "count", "share_of_total",
+    "share_of_class_a", "mean_chosen_loss", "mean_chosen_rate",
+    "mean_cleaner_loss", "mean_cleaner_rate",
+]
+
+
 def main() -> None:
     """Run the diagnostic for both rules and print the tables."""
     parser = argparse.ArgumentParser(
@@ -332,10 +399,23 @@ def main() -> None:
           f"{CLEANER_BY * 100:.0f} points less channel loss; a busy queue "
           f"means fill >= {BUSY_QUEUE}.")
 
+    rows: List[Dict[str, Any]] = []
     for rule in args.rules:
         data = collect(rule, state, args.workers)
         print_table(rule, data)
         print_a_split(rule, data)
+        rows.extend(csv_rows(rule, data))
+
+    path = os.path.join(args.out_dir, "1b_channel_diagnosis.csv")
+    with open(path, "w", newline="") as handle:
+        handle.write(csv_comment(loads_ms=[LOAD_MS],
+                                 placements=len(TEST_SEEDS),
+                                 extra=f"channel-loss diagnosis, seed-"
+                                       f"{args.init_seed} model"))
+        writer = csv.DictWriter(handle, fieldnames=CSV_COLUMNS)
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"\n  wrote {path}")
 
 
 if __name__ == "__main__":
