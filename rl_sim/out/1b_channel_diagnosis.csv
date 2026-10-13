@@ -1,0 +1,14 @@
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-54dBm@10%  |  b=0.749/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  placements=50  |  window=[50,950) of 1000  |  commit=1822dc3  |  channel-loss diagnosis, seed-0 model
+rule,table,name,label,count,share_of_total,share_of_class_a,mean_chosen_loss,mean_chosen_rate,mean_cleaner_loss,mean_cleaner_rate
+rl,class,A,"A  avoidable (cleaner option, queue < 0.5)",35939,0.4734484711957739,,0.23980820502168665,,,
+rl,class,B,"B  congestion-forced (cleaner option, queue >= 0.5)",5364,0.0706635576809074,,0.2437641276582281,,,
+rl,class,C,C  geometry-forced (nothing 10+ points cleaner),34606,0.4558879711233187,,0.1035991145483271,,,
+rl,class_a_split,A1,A1  cleaner option's delivery rate >= chosen,17,0.0002239523640148072,0.0004730237346615098,0.15749257243957704,0.808235294117647,0.006862038726410213,0.8188235294117647
+rl,class_a_split,A2,A2  cleaner option's delivery rate <  chosen,35922,0.4732245188317591,0.9995269762653385,0.2398471606965905,0.7636004012719648,0.011381913245186179,0.24164201390359497
+rl,dirty_links,loss_above_20%,channel losses on links losing more than 20%,29059,0.38281363211213426,,,,,
+rate,class,A,"A  avoidable (cleaner option, queue < 0.5)",61267,0.6594585867283784,,0.2880848469151255,,,
+rate,class,B,"B  congestion-forced (cleaner option, queue >= 0.5)",4897,0.05270975727894085,,0.27614565414837405,,,
+rate,class,C,C  geometry-forced (nothing 10+ points cleaner),26741,0.2878316559926807,,0.09391032368849445,,,
+rate,class_a_split,A1,A1  cleaner option's delivery rate >= chosen,3763,0.04050374037995802,0.061419687596911875,0.35574138551146006,0.2893439920667805,0.007854567521316365,0.5852938979268226
+rate,class_a_split,A2,A2  cleaner option's delivery rate <  chosen,57504,0.6189548463484205,0.9385803124030881,0.2836574756933321,0.7550258534901749,0.007224421742585736,0.37975471183702486
+rate,dirty_links,loss_above_20%,channel losses on links losing more than 20%,50895,0.5478176632043485,,,,,
