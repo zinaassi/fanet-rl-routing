@@ -255,3 +255,98 @@ def test_unknown_rule_names_are_rejected() -> None:
         parse_rules(["greedy,qroute"])
     with pytest.raises(SystemExit):
         parse_rules([","])
+
+
+# ---------------------------------------------------------------------------
+# The non-RL rules must not move when RL is added
+# ---------------------------------------------------------------------------
+
+#: The commit whose 1b_test50_runs.csv holds greedy, random and rate measured
+#: on their own, before any RL run. Those three rules are seeded only by
+#: (rule, placement_seed, run_seed, load), so adding "rl" to the job list must
+#: not move a single one of their numbers.
+RATE_ONLY_COMMIT = "e34383e"
+REPRODUCED_RULES = ("greedy", "random", "rate")
+
+
+def _committed_csv(commit: str, path: str):
+    """Return the rows of a CSV as it was at *commit*, or None.
+
+    Args:
+        commit: The commit to read from.
+        path:   Repository-relative path.
+
+    Returns:
+        The parsed rows, or None when git cannot produce the file.
+    """
+    import csv as _csv
+    import subprocess
+
+    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    repo = os.path.dirname(repo)
+    try:
+        blob = subprocess.run(
+            ["git", "-C", repo, "show", f"{commit}:{path}"],
+            capture_output=True, text=True, timeout=30, check=True,
+        ).stdout
+    except (subprocess.SubprocessError, OSError):
+        return None
+    lines = [line for line in blob.splitlines() if not line.startswith("#")]
+    return list(_csv.DictReader(lines))
+
+
+def test_adding_rl_does_not_move_greedy_random_or_rate() -> None:
+    """The three non-RL rules reproduce their committed numbers exactly.
+
+    Each run is a separate process seeded only by its rule, layout, run seed
+    and load, so putting "rl" into the same grid cannot change them. This
+    checks that rather than assuming it, against the CSV committed when the
+    three were measured alone.
+
+    Skips until an RL run exists, since before that the current file IS the
+    committed one and the check would be vacuous.
+    """
+    from scripts.stamp import read_stamped_csv
+
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    current_path = os.path.join(here, "out", "1b_test50_runs.csv")
+    if not os.path.exists(current_path):
+        pytest.skip("out/1b_test50_runs.csv is not present")
+
+    current = read_stamped_csv(current_path)
+    if not any(row["rule"] == "rl" for row in current):
+        pytest.skip(
+            "no rl rows yet: the current file is still the rate-only run, so "
+            "comparing it against itself would prove nothing"
+        )
+
+    baseline = _committed_csv(
+        RATE_ONLY_COMMIT, "rl_sim/out/1b_test50_runs.csv"
+    )
+    if baseline is None:
+        pytest.skip(f"cannot read the CSV committed at {RATE_ONLY_COMMIT}")
+
+    fields = ["total_loss", "channel", "queue_full", "no_route", "dead_end",
+              "ttl", "hop_limit", "mean_hops"]
+
+    def key(row):
+        return (row["rule"], int(row["load_ms"]), int(row["placement_seed"]))
+
+    want = {key(r): r for r in baseline if r["rule"] in REPRODUCED_RULES}
+    got = {key(r): r for r in current if r["rule"] in REPRODUCED_RULES}
+
+    assert want, "the committed file has no non-RL rows"
+    assert set(want) == set(got), (
+        "the set of non-RL runs changed: "
+        f"missing {sorted(set(want) - set(got))[:5]}, "
+        f"extra {sorted(set(got) - set(want))[:5]}"
+    )
+
+    for row_key, expected in want.items():
+        actual = got[row_key]
+        for field in fields:
+            if not expected[field]:
+                continue
+            assert float(actual[field]) == pytest.approx(
+                float(expected[field]), abs=1e-12
+            ), f"{row_key} moved on {field}"
