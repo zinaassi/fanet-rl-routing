@@ -1,0 +1,6 @@
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-54dBm@10%  |  b=0.749/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=1000/500/200/100 ms  |  placements=20  |  window=[50,950) of 1000  |  commit=77b00a3
+load_ms,placements,mean_greedy_minus_random,std_greedy_minus_random,placements_greedy_lower
+1000,20,-0.6274382716049383,0.1053992616857667,20
+500,20,-0.4798456790123457,0.11080774501874655,20
+200,20,-0.21795679012345678,0.06343732524840706,20
+100,20,-0.07987654320987654,0.0521608571602665,18

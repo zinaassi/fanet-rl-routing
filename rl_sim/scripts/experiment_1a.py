@@ -71,7 +71,7 @@ OUT_DIR = "out"
 RUN_COLUMNS = [
     "placement_seed", "run_seed", "routing", "load_ms",
     "created", "delivered", "total_loss",
-    "loss_channel", "loss_queue_full", "loss_no_route",
+    "loss_channel", "loss_queue_full", "loss_no_route", "loss_dead_end",
     "loss_ttl", "loss_hop_limit",
     "per_link_loss_pooled", "per_link_queue_full", "per_link_channel",
     "per_link_expired",
@@ -200,6 +200,7 @@ def run_one(
             "loss_channel": share(truth["loss_by_reason"]["channel"]),
             "loss_queue_full": share(truth["loss_by_reason"]["queue_full"]),
             "loss_no_route": share(truth["loss_by_reason"]["no_route"]),
+            "loss_dead_end": share(truth["loss_by_reason"]["dead_end"]),
             "loss_ttl": share(truth["loss_by_reason"]["ttl"]),
             "loss_hop_limit": share(truth["loss_by_reason"]["hop_limit"]),
             "per_link_loss_pooled": links["pooled_loss"] or 0.0,
@@ -428,7 +429,7 @@ def print_summary(summary: List[Dict[str, Any]]) -> None:
     """
     header = (
         f"{'rule':<8}{'load':>7}{'runs':>6}"
-        f"{'total loss':>18}{'channel':>16}{'queue_full':>16}"
+        f"{'total loss':>18}{'channel':>16}{'dead_end':>16}{'queue_full':>16}"
         f"{'no_route':>16}{'ttl+hop':>15}{'per-link':>16}"
         f"{'delay':>13}{'hops':>12}{'queue':>12}"
     )
@@ -444,6 +445,7 @@ def print_summary(summary: List[Dict[str, Any]]) -> None:
             f"{record['routing']:<8}{record['load_ms']:>5} ms{record['runs']:>6}"
             f"{_pm(record['total_loss_mean'], record['total_loss_std']):>18}"
             f"{_pm(record['loss_channel_mean'], record['loss_channel_std']):>16}"
+            f"{_pm(record['loss_dead_end_mean'], record['loss_dead_end_std']):>16}"
             f"{_pm(record['loss_queue_full_mean'], record['loss_queue_full_std']):>16}"
             f"{_pm(record['loss_no_route_mean'], record['loss_no_route_std']):>16}"
             f"{_pm(ttl_hop_mean, ttl_hop_std):>15}"
@@ -463,6 +465,7 @@ COMPARISON_ROWS = [
     ("loss_channel", "  channel"),
     ("loss_queue_full", "  queue_full"),
     ("loss_no_route", "  no_route"),
+    ("loss_dead_end", "  dead_end"),
     ("loss_ttl", "  ttl"),
     ("loss_hop_limit", "  hop_limit"),
 ]
@@ -652,6 +655,7 @@ HEATMAP_COLUMNS = [
     ("loss_channel", "channel"),
     ("loss_queue_full", "queue\nfull"),
     ("loss_no_route", "no\nroute"),
+    ("loss_dead_end", "dead\nend"),
     ("_ttl_hop", "ttl +\nhop"),
 ]
 
