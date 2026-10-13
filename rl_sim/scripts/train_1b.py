@@ -115,6 +115,28 @@ def parse_args() -> argparse.Namespace:
 # One run
 # ---------------------------------------------------------------------------
 
+def _revisit_share(env) -> float:
+    """Share of measured packets that visited the same drone more than once.
+
+    Args:
+        env: A finished environment.
+
+    Returns:
+        A fraction of the packets created inside the measurement window.
+    """
+    from scripts.metrics_1a import measured_packets
+
+    packets = measured_packets(env)
+    if not packets:
+        return 0.0
+    revisited = 0
+    for pkt in packets:
+        hops = [h for h in pkt.path if h != "GS"]
+        if len(hops) != len(set(hops)):
+            revisited += 1
+    return revisited / len(packets)
+
+
 def run_once(
     routing: str,
     placement_seed: int,
@@ -176,6 +198,10 @@ def run_once(
             "mean_hops": truth["mean_hops"],
             # Delay of the delivered packets, and how full the link queues
             # got, for the queue-size check.
+            # Share of measured packets that visited some drone twice. Zero
+            # by construction under the "path" loop guard; the point of
+            # measuring it is to show that, and what "previous" allows.
+            "revisit_share": _revisit_share(env),
             "mean_delay_ms": truth["mean_delay_ms"],
             "mean_queue": truth["mean_queue"],
             "max_queue": truth["max_queue"],

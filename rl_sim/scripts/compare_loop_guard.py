@@ -35,11 +35,16 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fanet_sim import config
 from scripts.stamp import csv_comment
-from scripts.train_1b import TEST_SEEDS, run_once
+from scripts.evaluate_1b_large import (
+    TEST50_SEEDS as TEST_SEEDS, paired_t_test, sign_test,
+)
+from scripts.train_1b import run_once
 
 GUARDS = ("previous", "path")
 LOADS_MS = (200, 500)
-CAUSES = ("channel", "queue_full", "no_route", "dead_end", "ttl_hop")
+CAUSES = ("channel", "queue_full", "no_route", "dead_end", "ttl",
+          "hop_limit")
+EXTRAS = ("revisit_share", "mean_hops")
 
 # greedy is reported once: it cannot revisit, so the guard cannot touch it.
 # The run still happens under both guards, and _check_greedy verifies that.
@@ -71,7 +76,7 @@ def _job(args: Tuple) -> Dict[str, Any]:
         "init_seed": init_seed if rule == "rl" else -1,
         "total_loss": result["total_loss"],
         **{cause: result[cause] for cause in CAUSES},
-        "mean_hops": result["mean_hops"],
+        **{extra: result[extra] for extra in EXTRAS},
         "views_agree": result["views_agree"],
         "discrepancies": result["discrepancies"],
     }
@@ -169,7 +174,7 @@ def _check_greedy(rows: List[Dict[str, Any]]) -> None:
     This is the claim that lets the table carry one greedy row instead of two.
     """
     for load_ms in LOADS_MS:
-        for field in ("total_loss", *CAUSES, "mean_hops"):
+        for field in ("total_loss", *CAUSES, *EXTRAS):
             previous = _per_layout(rows, "previous", "greedy", load_ms, field)
             path = _per_layout(rows, "path", "greedy", load_ms, field)
             assert previous == path, (
@@ -177,51 +182,101 @@ def _check_greedy(rows: List[Dict[str, Any]]) -> None:
             )
 
 
+def _fmt_p(p: float) -> str:
+    """Format a p-value without pretending to more precision than it has."""
+    return "<0.0001" if p < 1e-4 else f"{p:.4f}"
+
+
 def print_table(rows: List[Dict[str, Any]]) -> None:
     """Print table (a): every rule under every guard, per load."""
     print()
-    print("  (a) TEST layouts (seeds 1-20), mean % of packets created")
+    print(f"  (a) {len(TEST_SEEDS)} TEST layouts (seeds {TEST_SEEDS[0]}-"
+          f"{TEST_SEEDS[-1]}), mean % of packets created")
     print("      greedy is listed once: identical under both guards (checked)")
-    width = 104
+    width = 118
     print("  " + "-" * width)
-    print(f"  {'load':>7}{'guard':>10}{'rule':>8}{'total':>9}{'channel':>10}"
-          f"{'queue_full':>12}{'no_route':>10}{'dead_end':>10}{'ttl+hop':>10}"
-          f"{'std':>8}{'hops':>7}")
+    print(f"  {'load':>7}{'guard':>10}{'rule':>8}{'total':>9}{'std':>7}"
+          f"{'channel':>10}{'queue_full':>12}{'no_route':>10}{'dead_end':>10}"
+          f"{'ttl':>7}{'hop_lim':>9}{'revisits':>10}{'hops':>7}")
     print("  " + "-" * width)
 
-    for load_ms in LOADS_MS:
-        greedy = _per_layout(rows, "path", "greedy", load_ms)
+    def line(label: str, guard: str, rule: str, load_ms: int) -> None:
+        """Print one row."""
+        totals = list(_per_layout(rows, guard, rule, load_ms).values())
         causes = [statistics.fmean(
-            _per_layout(rows, "path", "greedy", load_ms, c).values()
+            _per_layout(rows, guard, rule, load_ms, c).values()
         ) for c in CAUSES]
-        hops = statistics.fmean(
-            _per_layout(rows, "path", "greedy", load_ms, "mean_hops").values()
+        revisits = statistics.fmean(
+            _per_layout(rows, guard, rule, load_ms, "revisit_share").values()
         )
-        totals = list(greedy.values())
-        print(f"  {load_ms:>5} ms{'both':>10}{'greedy':>8}"
+        hops = statistics.fmean(
+            _per_layout(rows, guard, rule, load_ms, "mean_hops").values()
+        )
+        print(f"  {label:>17}{rule:>8}"
               f"{statistics.fmean(totals)*100:>8.2f}%"
+              f"{statistics.stdev(totals)*100:>7.2f}"
               f"{causes[0]*100:>9.2f}%{causes[1]*100:>11.2f}%"
               f"{causes[2]*100:>9.2f}%{causes[3]*100:>9.2f}%"
-              f"{causes[4]*100:>9.2f}%"
-              f"{statistics.stdev(totals)*100:>8.2f}{hops:>7.2f}")
+              f"{causes[4]*100:>6.2f}%{causes[5]*100:>8.2f}%"
+              f"{revisits*100:>9.2f}%{hops:>7.2f}")
 
+    for load_ms in LOADS_MS:
+        line(f"{load_ms:>5} ms      both", "path", "greedy", load_ms)
         for rule in ("random", "rate", "rl"):
             for guard in GUARDS:
-                totals = list(_per_layout(rows, guard, rule, load_ms).values())
-                causes = [statistics.fmean(
-                    _per_layout(rows, guard, rule, load_ms, c).values()
-                ) for c in CAUSES]
-                hops = statistics.fmean(
-                    _per_layout(rows, guard, rule, load_ms,
-                                "mean_hops").values()
-                )
-                print(f"  {'':>8}{guard:>10}{rule:>8}"
-                      f"{statistics.fmean(totals)*100:>8.2f}%"
-                      f"{causes[0]*100:>9.2f}%{causes[1]*100:>11.2f}%"
-                      f"{causes[2]*100:>9.2f}%{causes[3]*100:>9.2f}%"
-                      f"{causes[4]*100:>9.2f}%"
-                      f"{statistics.stdev(totals)*100:>8.2f}{hops:>7.2f}")
+                line(f"{guard:>10}", guard, rule, load_ms)
         print("  " + "-" * width)
+
+
+def guard_paired_rows(rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Pair "path" against "previous" on the same layout, rule by rule.
+
+    Args:
+        rows: Every run's row.
+
+    Returns:
+        One record per (load, rule).
+    """
+    out: List[Dict[str, Any]] = []
+    for load_ms in LOADS_MS:
+        for rule in RULES:
+            path = _per_layout(rows, "path", rule, load_ms)
+            previous = _per_layout(rows, "previous", rule, load_ms)
+            seeds = sorted(set(path) & set(previous))
+            diffs = [path[s] - previous[s] for s in seeds]
+            wins, used, p_sign = sign_test(diffs)
+            out.append({
+                "load_ms": load_ms, "rule": rule, "n": len(diffs),
+                "mean_diff": statistics.fmean(diffs),
+                "std_diff": statistics.stdev(diffs) if len(diffs) > 1 else 0.0,
+                "wins": wins, "ties": len(diffs) - used,
+                "p_sign": p_sign, "p_ttest": paired_t_test(diffs),
+            })
+    return out
+
+
+def print_guard_paired(records: Sequence[Dict[str, Any]]) -> None:
+    """Print the path-against-previous table."""
+    width = 92
+    print()
+    print(f'  (c) Paired "path" - "previous" on the same {len(TEST_SEEDS)} '
+          f'layouts')
+    print("      negative = the path guard loses fewer packets. Each rl is")
+    print("      evaluated under the guard it was TRAINED with, so that row")
+    print("      compares two differently trained agents.")
+    print("  " + "-" * width)
+    print(f"  {'load':>7}{'rule':>9}{'mean diff':>12}{'std':>9}"
+          f"{'path lower':>13}{'ties':>7}{'p (sign)':>12}{'p (t-test)':>13}")
+    print("  " + "-" * width)
+    for record in records:
+        wins = f"{record['wins']} / {record['n']}"
+        print(f"  {record['load_ms']:>5} ms{record['rule']:>9}"
+              f"{record['mean_diff']*100:>11.2f}%"
+              f"{record['std_diff']*100:>8.2f}%"
+              f"{wins:>13}{record['ties']:>7}"
+              f"{_fmt_p(record['p_sign']):>12}"
+              f"{_fmt_p(record['p_ttest']):>13}")
+    print("  " + "-" * width)
 
 
 def print_paired(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -295,6 +350,8 @@ def main() -> None:
     _check_greedy(rows)
     print_table(rows)
     paired = print_paired(rows)
+    guard_paired = guard_paired_rows(rows)
+    print_guard_paired(guard_paired)
 
     print()
     # These two files cover BOTH guards, so a stamp naming one of them would
@@ -304,11 +361,15 @@ def main() -> None:
     try:
         write_csv(os.path.join(args.out_dir, "1b_loop_guard.csv"), rows,
                   ["loop_guard", "rule", "load_ms", "placement_seed",
-                   "init_seed", "total_loss", *CAUSES, "mean_hops",
+                   "init_seed", "total_loss", *CAUSES, *EXTRAS,
                    "views_agree"], LOADS_MS)
         write_csv(os.path.join(args.out_dir, "1b_loop_guard_paired.csv"),
                   paired, ["load_ms", "comparison", "placement_seed", "diff",
                            "first_loss", "second_loss"], LOADS_MS)
+        write_csv(os.path.join(args.out_dir, "1b_loop_guard_by_guard.csv"),
+                  guard_paired, ["load_ms", "rule", "n", "mean_diff",
+                                 "std_diff", "wins", "ties", "p_sign",
+                                 "p_ttest"], LOADS_MS)
     finally:
         config.LOOP_GUARD = previous_guard
 
