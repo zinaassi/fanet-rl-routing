@@ -11,12 +11,15 @@ Order:
     2. edge_scan.py                 what each candidate link edge does
     3. range_check.py               connectivity at several link cutoffs
     4. experiment_1a.py             the grid, its CSVs and its three figures
-    5. link_cutoff_sensitivity.py   how much the cutoff moves the results
-    6. evaluate_1b.py               Phase 1b on the held-back TEST layouts
-    7. plot_1b.py                   the learning curve, the per-seed curves
+    5. evaluate_1b_large.py         Phase 1b on the 50 held-back TEST layouts
+    6. plot_1b.py                   the learning curve, the per-seed curves
                                     and the validation causes
-    8. queue_size_check.py          the key results at Q = 5, 10 and 20
-    9. report_figures.py            the written report's figures
+    7. queue_size_check.py          the key results at Q = 5, 10 and 20
+
+evaluate_1b.py (the 20-layout evaluation) is kept as a script but is NOT in
+this plan: evaluate_1b_large.py on 50 layouts is the official test.
+report_figures.py is also left out until the written report is rewritten for
+the current channel.
 
 Phase-1b TRAINING is NOT part of the default run: it takes tens of minutes
 and overwrites the saved models. Pass ``--with-training`` to include it,
@@ -114,7 +117,6 @@ def steps(
         script("edge_scan.py"),
         script("range_check.py", takes_placements=True),
         script("experiment_1a.py", takes_placements=True),
-        script("link_cutoff_sensitivity.py", takes_placements=True),
     ]
 
     if with_training:
@@ -125,9 +127,10 @@ def steps(
                            f"rl_seed{seed}.pt")
               for seed in init_seeds]
     if with_training or all(os.path.exists(path) for path in models):
-        plan.append(list(script("evaluate_1b.py")) + ["--init-seeds", *seed_args])
+        plan.append(list(script("evaluate_1b_large.py"))
+                    + ["--init-seeds", *seed_args])
     else:
-        print(f"  (skipping evaluate_1b.py: no trained models in "
+        print(f"  (skipping evaluate_1b_large.py: no trained models in "
               f"out/models/{config.LOOP_GUARD}/ — run with --with-training)")
 
     if with_training or os.path.exists(os.path.join(out_dir, "1b_training_log.csv")):
@@ -136,15 +139,12 @@ def steps(
         print("  (skipping plot_1b.py: no out/1b_training_log.csv yet)")
 
     # The queue-size sweep reruns every rule at three capacities, so it is by
-    # far the longest step; it needs the same trained models as evaluate_1b.
+    # far the longest step; it needs the same models as the 1b evaluation.
     if with_training or all(os.path.exists(path) for path in models):
         plan.append(list(script("queue_size_check.py"))
                     + ["--init-seeds", *seed_args])
     else:
         print("  (skipping queue_size_check.py: no trained models)")
-
-    # Last, so the report folder is filled from figures this run just made.
-    plan.append(script("report_figures.py"))
 
     return plan
 

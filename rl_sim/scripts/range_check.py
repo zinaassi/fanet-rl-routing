@@ -51,8 +51,7 @@ from fanet_sim.envs import channel
 from scripts.stamp import csv_comment, settings_stamp
 
 #: Link cutoffs to compare: a link exists while loss is under this. Covers the
-#: configured value, the two the supervisor asked for, and the ends of the
-#: range used by scripts/link_cutoff_sensitivity.py.
+#: configured value and a spread either side of it, for context.
 CUTOFFS = (0.20, 0.50, 0.90, 0.95, 0.99)
 
 #: A link counts as "good" while its loss is under this.

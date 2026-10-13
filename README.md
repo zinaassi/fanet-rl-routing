@@ -128,8 +128,6 @@ Run `scripts/plot_ploss.py` to see the curve against the one it replaced.
 > very dense (~15 neighbours per drone). That reach was a side effect of the
 > cutoff rather than a deliberate choice, and it handed the RANDOM rule a pile
 > of links losing over 90% of what was sent on them. It is now 0.5.
-> `scripts/link_cutoff_sensitivity.py` measures how much the cutoff moves the
-> results.
 
 ### Link queues
 
@@ -356,13 +354,6 @@ python scripts/experiment_1a.py --placements 5      # quicker smoke run
 python scripts/range_check.py
 ```
 
-**The link-cutoff sensitivity study** — how much `LINK_MAX_LOSS` moves the
-results, at the working load:
-
-```bash
-python scripts/link_cutoff_sensitivity.py
-```
-
 **Everything at once.** After changing anything in `config.py`, rebuild every
 figure and table from the new settings in one go. Each script runs in a fresh
 process, and the run stops at the first failure or any `views_agree` mismatch:
@@ -458,9 +449,8 @@ from the commands above.
 
 Phase 1b writes `1b_*` files and the trained networks under `out/models/`;
 none of them exist at the moment, because Phase 1b has not been re-run since
-the channel changed. `range_check.csv` and `link_cutoff_sensitivity.csv` are
-likewise produced by their own scripts and are not present until those are
-re-run.
+the channel changed. `range_check.csv` is likewise produced by its own script
+and is not present until that is re-run.
 
 `main.py` also writes a JSONL event log per episode under `logs/` (one record
 per packet event, per-step network state and per-drone state).
@@ -674,9 +664,9 @@ A test reproduces greedy and random at seed 1 against the committed
 │   │   │                     agree. Used by main.py and the experiment.
 │   │   ├── experiment_1a.py  The 160-run grid, its CSVs and figures.
 │   │   ├── range_check.py    Connectivity at candidate link cutoffs.
-│   │   ├── link_cutoff_sensitivity.py
-│   │   │                     How much LINK_MAX_LOSS moves the results.
-│   │   ├── plot_ploss.py     The channel-loss curve, new against old.
+│   │   ├── plot_ploss.py     The channel-loss curve.
+│   │   ├── edge_scan.py      What each candidate link edge does to the
+│   │   │                     geometry; report only, changes nothing.
 │   │   ├── train_1b.py       Phase-1b training protocol.
 │   │   ├── evaluate_1b.py    Phase 1b on the 20 held-back TEST layouts.
 │   │   ├── evaluate_1b_large.py
