@@ -6,8 +6,10 @@ written into the report yet.
 
 ## URGENT
 
-- **docs/report/ is STALE: written with the old channel; rewrite after the
-  Phase 1 re-runs.** <!-- source: the commit replacing the channel, 2026-10-13 -->
+- **Sections 7-10 of the report are still unwritten** (Baselines, Improving
+  the Model, The RL Agent, Results). Section 4 (The Simulator) has been
+  brought up to the current channel; the rest of the report has not been
+  written yet. <!-- source: docs/report/phase1_report.md -->
 
 ## Caveats to state in the write-up
 

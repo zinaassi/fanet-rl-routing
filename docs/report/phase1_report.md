@@ -64,44 +64,114 @@ an M-drone is discarded and another is drawn. C-drones are allowed to be
 isolated, since they create no traffic of their own. Figure 1 shows one
 accepted placement.
 
-![One accepted placement](figures/example_layout.png)
+![Example layout](figures/example_layout.png)
 
-**Figure 1.** One accepted placement (placement seed 1). M-drones are blue,
-C-drones green, the ground station is the orange star. Grey lines are links
-between drones and orange lines are links to the GS. The dashed circle is the
-356 m link reach, drawn around the GS for scale. In this placement a drone has
-7.2 neighbours on average (fewest 4, most 11) and 10 of the 25 drones can
-reach the GS in one hop.
-<!-- source: rl_sim/scripts/report_figures.py (plot_example_layout, placement seed 1) -->
+**Figure 1.** One accepted placement (placement seed 1), drawn twice. Panel
+(a) shows only the **good links** — those losing less than 10% of what is sent
+on them, which reaches 249.7 m. Panel (b) shows the **lossy links**, from
+10% up to the 50% cutoff, shaded so that a lighter line means more loss.
+M-drones are blue, C-drones green, and the ground station is the orange star;
+links to it are orange in both panels. The dashed circle is the 350 m link
+reach drawn around the GS. This placement has 53 good links and 40 lossy ones.
+Counting good links only, a drone has 4.00 neighbours on average; counting all
+links it has 6.64. All 18 M-drones can reach the GS using good links alone.
+<!-- source: rl_sim/scripts/report_figures.py (plot_example_layout, placement seed 1); thresholds from rl_sim/fanet_sim/envs/channel.py -->
 
 **The radio.** Whether a transmission arrives depends only on how far apart
-the two drones are. The chance that one transmission is lost is
+the two drones are. We work it out in two steps.
+
+First, how much signal is left. Radio power falls off with distance, and the
+**free-space path loss** says by how much:
 
 ```
-p_loss(d) = 1 / (1 + exp(-s * (d - D50)))
+FSPL_dB(d) = 20·log10(d) + 20·log10(f) + 20·log10(4π/c)
 ```
 
-with `D50 = 356 m` and `s = 0.025` per metre. This is a logistic curve fitted
-to measured UAV links rather than a theoretical path-loss formula.
-[CITE: Rosati et al., "Dynamic Routing for Flying Ad Hoc Networks",
-arXiv:1406.4399] Loss is 0.2% at 100 m, 6.6% at 250 m, 50% at 356 m and 99% at
-540 m. The same curve covers the last hop into the GS.
-<!-- source: rl_sim/fanet_sim/config.py (LOSS_50_DISTANCE_M, LOSS_SLOPE_PER_M); rl_sim/fanet_sim/envs/channel.py (p_loss) -->
+where `f` is the carrier frequency and `c` the speed of light. Subtracting that
+from the transmitted power, and from what the receiver needs to hear anything
+at all, leaves the **margin** `M` — how many decibels of signal are left to
+spare:
+
+```
+M(d) = PT + GT + GR − FSPL_dB(d) − RX_SENSITIVITY
+```
+
+The radio is 1 W (30 dBm) at 2.4 GHz with 2 dBi antennas at both ends, and the
+receiver's sensitivity is −54 dBm. Those numbers come from an earlier UAV
+study. [CITE: Sharvari et al. 2024, IQMR, arXiv:2408.09109]
+
+Second, how often a transmission is lost at that margin. We use an S-curve:
+
+```
+p_loss(M) = 1 / (1 + 9·exp(b·M))
+```
+
+A large positive margin gives almost no loss; a large negative one gives
+almost certain loss; the change is gradual in between. The constant 9 is not
+free: it is what makes the loss exactly 10% when the margin is zero. **The
+sensitivity is the point where one transmission in ten is lost**, which is how
+802.11 OFDM defines it — the power at which the packet error rate reaches 10%
+on 1000-byte frames. [CITE: 802.11 receiver minimum input sensitivity clause]
+With our radio that point is at **249.7 m**. The steepness `b` is not chosen by
+hand either: it is computed so that the loss is exactly 50% at the link edge,
+which gives `b = 0.749` per decibel.
+
+| distance | 100 m | 200 m | 250 m | 300 m | 350 m |
+|---|---|---|---|---|---|
+| margin | +7.95 dB | +1.93 dB | −0.01 dB | −1.59 dB | −2.93 dB |
+| loss | 0.03% | 2.56% | 10.07% | 26.84% | 50.00% |
+
+Loss depends on distance and nothing else — not on how busy the network is,
+not on which way the antennas point, not on what other drones are transmitting
+at the same moment. The same curve covers the last hop into the GS, which is
+just another endpoint.
+<!-- source: rl_sim/fanet_sim/config.py (PT_DBM, GT_DBI, GR_DBI, F_HZ, RX_SENSITIVITY_DBM, SENS_LOSS, LOSS_50_DISTANCE_M); rl_sim/fanet_sim/envs/channel.py (fspl_db, margin_db, p_loss, B_PER_DB) -->
 
 A **link** between two drones exists while that loss stays below 50%, which
-puts the edge at exactly 356 m. The idea behind the number is that a drone
+puts the edge at exactly **350 m**. The idea behind the cutoff is that a drone
 only lists another as a neighbour when at least half of its hello messages get
 through. The same rule is used everywhere: for neighbour sets, for the link
 into the GS, and for the placement filter above. Figure 2 shows the curve and
 the cutoff.
 <!-- source: rl_sim/fanet_sim/config.py (LINK_MAX_LOSS); rl_sim/fanet_sim/envs/channel.py (link_exists, max_link_distance) -->
 
-![Channel loss against distance](figures/channel_loss_curve.png)
+**Why 350 m.** The edge is a choice we made, not a property of the radio. With
+1 W in free space the signal would still be usable kilometres away, so some
+cutoff had to be picked. We compared edges from 300 m to 450 m over 3000
+random placements, with the placement filter switched off so the sample is not
+biased, and looked at two things: how often a layout leaves an M-drone with no
+path to the GS at all, and how many M-drones can reach the GS in one hop. A
+very short edge cuts drones off; a very long one lets most drones talk to the
+GS directly, which leaves almost nothing to route and makes the routing
+question uninteresting.
+
+| edge | layouts connected | M-drones with a direct GS link | neighbours per drone |
+|---|---|---|---|
+| 300 m | 81.0% | 34.9% | 6.16 |
+| 325 m | 90.6% | 41.0% | 7.03 |
+| 345 m | 94.7% | 46.2% | 7.73 |
+| **350 m** | **95.1%** | **47.6%** | **7.91** |
+| 360 m | 96.6% | 50.4% | 8.28 |
+| 375 m | 97.6% | 54.7% | 8.82 |
+| 400 m | 98.8% | 62.1% | 9.75 |
+| 450 m | 99.8% | 78.4% | 11.62 |
+
+We chose **350 m**: it is the smallest round value where about 95% of random
+layouts are connected, and about half of the M-drones (52%) still need a relay
+to reach the GS. The choice was made from geometry alone, before any routing
+experiment was run, and is fixed — it was not adjusted afterwards to suit a
+result.
+<!-- source: rl_sim/out/edge_scan.csv -->
+
+![Channel loss against distance](figures/ploss_curve.png)
 
 **Figure 2.** The chance that one transmission is lost, against the distance
-between the two drones. A link exists only while the loss is under 50%, so no
-link is ever longer than 356 m and the shaded part of the curve is never used.
-<!-- source: rl_sim/scripts/report_figures.py (plot_channel_curve) -->
+between the two drones. The top axis shows the same thing as a margin in
+decibels, which is what actually drives the curve. The first dashed line is the
+receiver sensitivity at 249.7 m, where 10% of transmissions are lost; the
+second is the link edge at 350 m, where half are. Beyond the edge there is no
+link at all, so the shaded part of the curve is never used.
+<!-- source: rl_sim/scripts/plot_ploss.py; rl_sim/fanet_sim/envs/channel.py -->
 
 **Traffic.** Time advances in steps of 100 ms. Each M-drone creates one packet
 every fixed number of steps; we sweep four loads, one packet per M-drone every
@@ -201,25 +271,31 @@ conditional on.
 | `NUM_C_DRONES` | 7 | Communication drones: relay only. | fixed |
 | `STATIC_MODE` | true | Nothing moves during a run (Phase 1). | fixed |
 | `REQUIRE_CONNECTED_M` | true | Only use placements where every M-drone can reach the GS. | fixed |
-| `LOSS_50_DISTANCE_M` | 356 m | Distance at which half of all transmissions are lost. | provisional |
-| `LOSS_SLOPE_PER_M` | 0.025 | How sharply the loss curve rises with distance. | provisional |
-| `LINK_MAX_LOSS` | 0.5 | A link exists while loss stays below this, giving a 356 m reach. | provisional |
+| `PT_DBM` | 30.0 dBm | Transmit power, 1 W. | fixed |
+| `GT_DBI`, `GR_DBI` | 2.0 dBi | Antenna gain at each end. | fixed |
+| `F_HZ` | 2.4 GHz | Carrier frequency. | fixed |
+| `RX_SENSITIVITY_DBM` | −54.0 dBm | The power at which the receiver loses 10% of transmissions. | fixed |
+| `SENS_LOSS` | 0.10 | Loss **at** that sensitivity, following 802.11 OFDM. | fixed |
+| `LOSS_50_DISTANCE_M` | 350 m | Distance at which half of all transmissions are lost; also the link edge. | fixed |
+| `LINK_MAX_LOSS` | 0.5 | A link exists while loss stays below this, giving the 350 m edge. | fixed |
 | `QUEUE_CAPACITY` | 10 | Packets held per **link** queue. | fixed |
 | `MAX_TX_PER_STEP` | 1 | Packets each link queue sends per step. | fixed |
 | `LOOP_GUARD` | `"path"` | A packet may not return to any drone it has visited. | provisional |
 | `PACKET_TTL` | 50 steps | How long a packet lives. | fixed |
 | `MAX_HOPS` | 10 | Most hops a packet may take. | fixed |
-| `PACKET_SIZE` | 512 bytes | Payload size; nothing depends on it. | fixed |
-| `TIMESTEP` | 0.1 s | One simulation step. | fixed |
+| `PACKET_SIZE` | 512 bytes | Payload size; nothing depends on it. | — |
+| `TIMESTEP` | 0.1 s | One simulation step. | — |
 | `MAX_STEPS` | 1000 | Steps per run. | provisional |
 | `PACKET_INTERVAL_STEPS` | 2 (200 ms) | Steps between packets at each M-drone; the working load. | fixed |
-| `TRAFFIC_LOADS_MS` | 1000, 500, 200, 100 | The four loads we sweep. | fixed |
+| `TRAFFIC_LOADS_MS` | 1000, 500, 200, 100 | The four loads we sweep. | — |
 | `RANDOM_TRAFFIC_OFFSETS` | true | Each M-drone gets a random phase in its interval. | provisional |
 | `WARMUP_STEPS` | 50 | Steps skipped at the start of the measurement. | provisional |
 | `DRAIN_STEPS` | 50 | Steps skipped at the end (one packet lifetime). | provisional |
 
-**Table 1.** The simulator's settings. "Provisional" marks a modelling choice
-rather than a fixed requirement.
+**Table 1.** The simulator's settings. "Provisional" marks a value that
+`config.py` flags as still open; "fixed" marks one it flags as decided. Three
+rows — `PACKET_SIZE`, `TIMESTEP` and `TRAFFIC_LOADS_MS` — carry no marker in
+`config.py` and are shown with a dash.
 <!-- source: rl_sim/fanet_sim/config.py -->
 
 ### What we simplified
@@ -242,6 +318,8 @@ leaves out. Each one is a limit on what our results can claim.
   neighbours' positions and link quality, as though it had learned them from
   periodic hello messages that are free and always current.
 - **Energy is tracked but constrains nothing.** No drone ever runs out.
+- **The link edge (350 m) is a design choice made from geometry, not a
+  measured radio range.**
 - **Results are conditional on the placement filter.** Every number describes a
   *connected* deployment, not an arbitrary one.
 
@@ -295,9 +373,12 @@ _To be written after Phase 2._
 
 <!--
 Running list of citations still needed:
-- [CITE: Rosati et al., "Dynamic Routing for Flying Ad Hoc Networks",
-  arXiv:1406.4399] — the measured UAV link study the loss curve is fitted to.
-  Cited in section 4 (The Simulator).
+- [CITE: Sharvari et al. 2024, IQMR, arXiv:2408.09109] — the UAV study the
+  radio constants (1 W, 2.4 GHz, 2 dBi, -54 dBm) and the drone speed range
+  come from. Cited in section 4 (The Simulator).
+- [CITE: 802.11 receiver minimum input sensitivity clause] — the definition
+  of sensitivity as a 10% packet error rate on 1000-byte frames, which is what
+  anchors the loss curve. Cited in section 4.
 - [CITE: a BGP reference for AS_PATH loop detection] — the standard precedent
   for carrying a visited-list in the header. Cited in section 4.
 -->
