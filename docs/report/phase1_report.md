@@ -17,12 +17,11 @@ Advisor: Eran, with Prof. Reuven Cohen
 5. [Goals](#5-goals)
 6. [Timetable](#6-timetable)
 7. [Baselines: Greedy and Random](#7-baselines-greedy-and-random)
-8. [Improving the Model](#8-improving-the-model)
-9. [The RL Agent](#9-the-rl-agent)
-10. [Results](#10-results)
-11. [Summary: Difficulties, Further Work, Conclusion](#11-summary-difficulties-further-work-conclusion)
-12. [References](#12-references)
-13. [Appendix](#13-appendix)
+8. [The RL Agent](#8-the-rl-agent)
+9. [Results](#9-results)
+10. [Summary: Difficulties, Further Work, Conclusion](#10-summary-difficulties-further-work-conclusion)
+11. [References](#11-references)
+12. [Appendix](#12-appendix)
 
 ---
 
@@ -301,31 +300,139 @@ heaviest load where the network is busy but not overloaded:
 
 ---
 
-## 8. Improving the Model
+## 8. The RL Agent
 
-_To be written._
+**The model**
+
+Each drone uses a small neural network to choose the next hop. For
+every possible link, the network gets three inputs, all known to the
+drone itself:
+1. **Delivery rate:** the share of the last 50 packets sent on this
+   link that reached the GS (learned from the end-to-end ACKs).
+2. **Queue fill:** how full the drone's queue for this link is.
+3. **Channel loss:** the loss on this link, from its distance.
+
+The output is the predicted chance that a packet sent on this link
+will reach the GS. The drone picks the link with the highest chance.
+All drones share one network, but each drone decides using only its
+own inputs.
+
+| | |
+|---|---|
+| layers | 3 inputs → 32 → 32 → 1 output |
+| activation | ReLU in the hidden layers, sigmoid at the output (a value between 0 and 1) |
+| loss function | binary cross-entropy |
+| optimizer | Adam, learning rate 0.001 |
+| batch size | 32 decisions |
+| exploration | random link in 10% of decisions while training, none while testing |
+
+**Table 2:** The RL network.
+<!-- source: rl_sim/fanet_sim/config.py (RL_HIDDEN, RL_LEARNING_RATE, RL_BATCH_SIZE, RL_EPSILON_TRAIN, RL_EPSILON_EVAL, DELIVERY_RATE_WINDOW); rl_sim/agents/rl_router.py -->
+
+**Learning**
+
+Every decision is later labelled with what happened to the packet: 1
+if it reached the GS, 0 if it was lost. The network is trained to
+predict these labels, and takes one training step every 32 labelled
+decisions.
+
+**The rate rule**
+
+To see what the network actually learns, we also built a simple rule
+with no learning, called **rate**. It uses the same delivery rates,
+but with a fixed formula: it picks the link with the highest delivery
+rate and skips links whose queue is full. In 5% of decisions it picks
+a random link, so that it keeps measuring links it does not use.
+<!-- source: rl_sim/fanet_sim/config.py (EPSILON_RATE); rl_sim/agents/rate_router.py -->
+
+Comparing the three rules tells us two things:
+- **Rate vs greedy:** how much the delivery rates alone help.
+- **RL vs rate:** how much the learning adds on top of that.
+
+**Training and testing**
+
+We used three separate sets of layouts, so the network is never tested
+on layouts it learned from:
+
+| set | layouts |
+|---|---|
+| training | 200 |
+| validation | 10 |
+| test | 50 |
+
+Each training run uses one layout at 200 ms. Every 10 runs we test the
+network on the validation layouts and keep the best one. Training
+stops when the network has not improved for 5 checks in a row.
+
+We trained three networks, each starting from different random
+weights, to check that the result does not depend on luck.
+<!-- source: rl_sim/scripts/train_1b.py (TRAIN_SEEDS, VALIDATION_SEEDS, TEST_SEEDS, EVALUATE_EVERY, PATIENCE) -->
 
 ---
 
-## 9. The RL Agent
+## 9. Results
 
-_To be written._
+We tested all four rules on the 50 test layouts, which were not used
+in training. The RL result is the average of the three trained
+networks.
+
+| load | random | greedy | rate | RL |
+|---|---|---|---|---|
+| 200 ms | 74.2% | 52.8% | 25.1% | **22.3%** |
+| 500 ms | 74.3% | 27.4% | 21.0% | **12.6%** |
+
+**Table 3:** Total packet loss on the 50 test layouts.
+<!-- source: rl_sim/out/1b_test50_runs.csv -->
+
+RL has the lowest loss at both loads, and the differences are
+statistically significant (p < 0.0001).
+<!-- source: rl_sim/out/1b_test50_paired.csv -->
+
+**What we saw**
+
+**1. RL behaves differently from rate.** Both rules use the same
+delivery rates, but RL loses less on the channel. It avoids bad links
+more often, and in exchange takes slightly longer routes.
+
+| at 200 ms | rate | RL |
+|---|---|---|
+| lost on the channel | 22.9% | 18.5% |
+| lost to full queues | 0.5% | 0.0% |
+| lost for other reasons (dead end, ttl, hop limit) | 1.6% | 3.8% |
+| average hops per packet | 3.1 | 3.5 |
+| channel losses on bad links (over 20% loss) | 55% | 38% |
+
+**Table 4:** How rate and RL lose packets at 200 ms.
+<!-- source: rl_sim/out/1b_test50_runs.csv, rl_sim/out/1b_channel_diagnosis.csv -->
+
+**2. Most of the remaining loss is not caused by routing.** For each
+packet RL lost on the channel, we checked what other links the drone
+had at that moment:
+
+| situation when the packet was lost | share of RL's channel losses |
+|---|---|
+| no better link existed | 46% |
+| a better link existed, but its queue was busy | 7% |
+| a better link existed, but it had a worse delivery rate to the GS | 47% |
+| a better link existed and was better in every way | 0.02% |
+
+**Table 5:** Why RL's packets were lost on the channel (one network,
+200 ms).
+<!-- source: rl_sim/out/1b_channel_diagnosis.csv -->
+
+RL almost never makes a clear mistake. In about half of its channel
+losses, no better link existed. To reduce this loss, the drones'
+positions must change, which is the goal of Phase 2.
 
 ---
 
-## 10. Results
-
-_To be written._
-
----
-
-## 11. Summary: Difficulties, Further Work, Conclusion
+## 10. Summary: Difficulties, Further Work, Conclusion
 
 _To be written after Phase 2._
 
 ---
 
-## 12. References
+## 11. References
 
 _To be written after Phase 2._
 
@@ -346,6 +453,6 @@ Running list of citations still needed:
 
 ---
 
-## 13. Appendix
+## 12. Appendix
 
 _To be written after Phase 2._
