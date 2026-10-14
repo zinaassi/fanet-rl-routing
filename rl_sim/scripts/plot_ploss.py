@@ -111,9 +111,10 @@ def plot(out_path: str, stamp: bool = True) -> str:
 
     # Past the edge there is no link, so that part of the curve is never used.
     ax.axvspan(edge, X_MAX_M, color=GRID_COLOR, alpha=0.8, zorder=1)
-    ax.annotate("no link", ((edge + X_MAX_M) / 2.0, 50.0), ha="center",
-                va="center", color=TEXT_SECONDARY, fontsize=15,
-                fontweight="bold", zorder=2)
+    ax.annotate(f"not a neighbour (loss > {config.LINK_MAX_LOSS:.0%})",
+                ((edge + X_MAX_M) / 2.0, 50.0), ha="center", va="center",
+                color=TEXT_SECONDARY, fontsize=12, fontweight="bold",
+                zorder=2)
 
     ax.plot(distances, losses, color=CURVE_COLOR, linewidth=3.2, zorder=5)
 

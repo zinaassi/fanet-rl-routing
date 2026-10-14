@@ -102,12 +102,19 @@ radios [CITE: IQMR].
 
 ![Loss against distance](figures/ploss_curve.png)
 
-**Figure 2:** Loss per transmission as a function of distance.
+**Figure 2:** Loss per transmission as a function of distance. Beyond
+350 m a drone does not accept the other as a neighbour.
 
 **Links and range**
 
-Two drones have a link if the loss between them is below 50%, which
-means they are less than 350 m apart. The same rule applies to the GS.
+A drone accepts another drone as a neighbour only if more than
+half of its hello messages arrive (loss below 50%), as in routing
+protocols such as OLSR [CITE: RFC 3626]. With our loss curve, the
+loss reaches 50% at 350 m, so drones more than 350 m apart are not
+neighbours. A link losing more than half its packets is rarely
+useful: two 175 m hops lose only 2.2%, while one 350 m hop loses
+50%.
+<!-- source: rl_sim/fanet_sim/envs/channel.py (p_loss): 1.0882% at 175 m, so 2.1646% over two hops; 50.0000% at 350 m -->
 
 We chose 350 m by testing several ranges on 3000 random layouts:
 
@@ -447,6 +454,8 @@ Running list of citations still needed:
 - [CITE: Zuniga & Krishnamachari 2004] — for the claim that real wireless
   links are reliable up to some distance, then degrade gradually, then fail.
   Cited in section 4.
+- [CITE: RFC 3626] — OLSR, for the convention that a neighbour is accepted
+  only when more than half of its hello messages arrive. Cited in section 4.
 - [CITE: BGP AS_PATH] — the standard precedent for carrying a visited-list in
   the packet header. Cited in section 4.
 -->
