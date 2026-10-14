@@ -19,6 +19,32 @@ written into the report yet.
   assertion was added to `train_one_seed` afterwards, so any FUTURE
   training is checked, but the models trained at that step were not. <!-- source: rl_sim/scripts/train_1b.py; commit fe94b73 -->
 
+## For the Summary (after Phase 2)
+
+The list of simplifications, moved out of section 4 of the report. Each one
+is a limit on what the results can claim.
+
+- **Two dimensions.** The drones fly on a plane; there is no altitude.
+- **A static world.** Nothing moves during a run. Movement is Phase 2.
+- **No competition for the radio.** There is no MAC layer, no interference
+  and no collisions. This is exactly why each link gets its own queue and its
+  own per-step budget, and why one drone can send on all of its links at
+  once. A real radio could not do this.
+- **Loss depends on distance alone.** Not on traffic, antenna direction, or
+  what other drones are transmitting at the same moment.
+- **Ideal acknowledgements.** Instant, never lost, and free. Real ones would
+  cost airtime and could themselves go missing.
+- **No retransmissions.** A transmission lost on the radio loses the packet.
+- **Hello messages are not simulated.** Each drone is simply given its
+  neighbours' positions and link quality, as though it had learned them from
+  periodic hello messages that are free and always current.
+- **Energy is tracked but constrains nothing.** No drone ever runs out.
+- **The link edge (350 m) is a design choice made from geometry, not a
+  measured radio range.**
+- **Results are conditional on the placement filter.** Every number describes
+  a *connected* deployment, not an arbitrary one.
+<!-- source: docs/report/phase1_report.md section 4, before the R2 rewrite -->
+
 ## Difficulties we hit
 
 - The channel model was changed twice. An earlier FSPL loss `exp(-0.8*M)`
