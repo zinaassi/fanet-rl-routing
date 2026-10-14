@@ -88,11 +88,14 @@ def print_reference_table() -> None:
           f"(p_loss < {config.LINK_MAX_LOSS})")
 
 
-def plot(out_path: str) -> str:
+def plot(out_path: str, stamp: bool = True) -> str:
     """Draw the loss curve.
 
     Args:
         out_path: Where the PNG goes.
+        stamp:    Whether to print the settings stamp along the bottom. The
+                  copy in out/ keeps it, for traceability; the copy used in
+                  the written report leaves it off.
 
     Returns:
         The path written.
@@ -176,9 +179,10 @@ def plot(out_path: str) -> str:
     fig.suptitle("Packet loss vs distance (FSPL margin, S-curve)",
                  color=TEXT_PRIMARY, fontsize=17, fontweight="bold",
                  x=0.01, ha="left")
-    fig.tight_layout(rect=(0, 0.075, 1, 0.93))
-    fig.text(0.01, 0.015, stamp_lines(width=150), color=TEXT_SECONDARY,
-             fontsize=8.5, va="bottom")
+    fig.tight_layout(rect=(0, 0.075 if stamp else 0.02, 1, 0.93))
+    if stamp:
+        fig.text(0.01, 0.015, stamp_lines(width=150), color=TEXT_SECONDARY,
+                 fontsize=8.5, va="bottom")
     fig.savefig(out_path, facecolor=SURFACE)
     plt.close(fig)
     return out_path

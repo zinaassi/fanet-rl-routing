@@ -58,9 +58,7 @@ LINK_COLOR = "#b9c6d4"
 #: exist in out/; a missing name is reported rather than passed over, so the
 #: report folder can never quietly fall behind.
 COPIED = (
-    "ploss_curve.png",
     "1a_total_loss_vs_load.png",
-    "1a_loss_heatmaps.png",
     "1a_link_matrix_placement1.png",
     "1b_learning_curve.png",
     "1b_learning_curve_seeds.png",
@@ -71,10 +69,11 @@ COPIED = (
     "queue_size_load_curve.png",
 )
 
-#: Figures this script draws itself. None at the moment: the example layout
-#: is a hand-made figure supplied for the report, and is listed under KEEP so
-#: a run of this script neither regenerates nor deletes it.
-OWN: tuple = ()
+#: Figures this script draws itself, from results already computed. These
+#: are the two the report shows without a settings stamp: the report has its
+#: own numbered captions, and the stamp is developer metadata. The stamped
+#: versions in rl_sim/out/ are untouched.
+OWN = ("ploss_curve.png", "1a_loss_heatmaps.png")
 
 #: Figures that live in the report folder but are NOT produced here.
 KEEP = ("example_layout.png",)
@@ -118,6 +117,57 @@ def copy_shared(out_dir: str, figures_dir: str) -> List[str]:
     return missing
 
 
+def draw_unstamped(out_dir: str, figures_dir: str) -> List[str]:
+    """Redraw the report's two stamped figures without their stamp.
+
+    Nothing is re-simulated: the loss curve comes from the channel code, and
+    the heatmap is redrawn from the committed summary CSV.
+
+    Args:
+        out_dir:     Where the project's CSVs live.
+        figures_dir: Where the report's figures go.
+
+    Returns:
+        The names that could not be drawn, with the reason.
+    """
+    from scripts.plot_ploss import plot as plot_curve
+    from scripts.stamp import read_stamped_csv
+
+    problems: List[str] = []
+
+    plot_curve(os.path.join(figures_dir, "ploss_curve.png"), stamp=False)
+    print("  drew ploss_curve.png (no stamp)")
+
+    summary_path = os.path.join(out_dir, "1a_summary.csv")
+    if not os.path.exists(summary_path):
+        problems.append(f"1a_loss_heatmaps.png: no {summary_path}")
+        return problems
+
+    from scripts.experiment_1a import plot_loss_heatmaps
+
+    # The summary CSV holds exactly the <column>_mean / _std records the
+    # heatmap reads, so it can be redrawn without rerunning the grid.
+    summary: List[Dict[str, Any]] = []
+    for raw in read_stamped_csv(summary_path):
+        record: Dict[str, Any] = {}
+        for key, value in raw.items():
+            if key in ("routing",):
+                record[key] = value
+            elif value == "":
+                record[key] = None
+            else:
+                record[key] = float(value)
+        record["load_ms"] = int(record["load_ms"])
+        record["runs"] = int(record["runs"])
+        summary.append(record)
+
+    plot_loss_heatmaps(summary,
+                       os.path.join(figures_dir, "1a_loss_heatmaps.png"),
+                       annotate=False)
+    print("  drew 1a_loss_heatmaps.png (no stamp, no caption)")
+    return problems
+
+
 def prune(figures_dir: str, keep: Sequence[str]) -> List[str]:
     """Delete figures in the report folder that are no longer produced.
 
@@ -156,6 +206,10 @@ def main() -> None:
     figures_dir = os.path.abspath(args.figures_dir)
     os.makedirs(figures_dir, exist_ok=True)
     print(f"Report figures -> {figures_dir}")
+
+    problems = draw_unstamped(args.out_dir, figures_dir)
+    if problems:
+        print("  NOT drawn: " + "; ".join(problems))
 
     missing = copy_shared(args.out_dir, figures_dir)
     if missing:

@@ -80,10 +80,10 @@ distance between the two drones. We compute it in two steps:
 
 Where:
 - d: distance between the drones
-- P_T: transmit power, 1 W [CITE: IQMR]
+- P_T: transmit power, 1 W (30 dBm) [CITE: IQMR]
 - G_T, G_R: antenna gains, 2 dBi
-- S: receiver sensitivity, the power at which 10% of packets are lost
-  [CITE: 802.11 receiver minimum input sensitivity]
+- S: receiver sensitivity, −54 dBm, the power at which 10% of packets
+  are lost [CITE: 802.11 receiver minimum input sensitivity]
 - b: set so that the loss is 50% at 350 m
 
 Real wireless links behave this way: reliable up to some distance,
@@ -190,7 +190,7 @@ simulation.
 
 **Measuring loss**
 
-Our main metric is **total packet loss**: the percentage of created
+Our main metric is total packet loss: the percentage of created
 packets that never reach the GS. Each lost packet has one reason:
 
 | reason | meaning |
@@ -277,13 +277,13 @@ Figure 3 shows the total loss and its causes.
 at each load (mean over 20 layouts, standard deviation in brackets).
 
 Greedy loses much less than random at every load. Most of greedy's
-loss comes from **full queues**: since every drone sends towards the
+loss comes from full queues: since every drone sends towards the
 GS, many packets pass through the same few links and their queues fill
 up. As the load grows, this gets worse (2.9% at 1000 ms, 40% at
 200 ms).
 
 Random loses about 74% at every load. It does not move towards the GS,
-so packets take many hops and most are lost on the **channel** along
+so packets take many hops and most are lost on the channel along
 the way (61%). Its queues never fill up, so the load does not matter.
 <!-- source: rl_sim/out/1a_runs.csv -->
 
@@ -339,7 +339,7 @@ decisions.
 **The rate rule**
 
 To see what the network actually learns, we also built a simple rule
-with no learning, called **rate**. It uses the same delivery rates,
+with no learning, called rate. It uses the same delivery rates,
 but with a fixed formula: it picks the link with the highest delivery
 rate and skips links whose queue is full. In 5% of decisions it picks
 a random link, so that it keeps measuring links it does not use.
@@ -378,8 +378,8 @@ networks.
 
 | load | random | greedy | rate | RL |
 |---|---|---|---|---|
-| 200 ms | 74.2% | 52.8% | 25.1% | **22.3%** |
-| 500 ms | 74.3% | 27.4% | 21.0% | **12.6%** |
+| 200 ms | 74.2% | 52.8% | 25.1% | 22.3% |
+| 500 ms | 74.3% | 27.4% | 21.0% | 12.6% |
 
 **Table 3:** Total packet loss on the 50 test layouts.
 <!-- source: rl_sim/out/1b_test50_runs.csv -->

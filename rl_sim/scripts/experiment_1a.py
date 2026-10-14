@@ -733,7 +733,8 @@ def _draw_panel(
     return image
 
 
-def plot_loss_heatmaps(summary: List[Dict[str, Any]], path: str) -> None:
+def plot_loss_heatmaps(summary: List[Dict[str, Any]], path: str,
+                       annotate: bool = True) -> None:
     """Draw the loss heatmaps: causes per rule, then per-link loss apart.
 
     The cause panels are shares of packets created and share one colour bar.
@@ -742,8 +743,12 @@ def plot_loss_heatmaps(summary: List[Dict[str, Any]], path: str) -> None:
     to.
 
     Args:
-        summary: Output of :func:`summarise`.
-        path:    Output PNG path.
+        summary:  Output of :func:`summarise`.
+        path:     Output PNG path.
+        annotate: Whether to print the explanatory line and the settings
+                  stamp underneath. The copy in out/ keeps both; the copy
+                  used in the written report, which has its own caption,
+                  leaves them off.
     """
     fig = plt.figure(figsize=(16.0, 6.0), dpi=150)
     # Leave room under the axes for the caption and the settings stamp, so
@@ -802,15 +807,17 @@ def plot_loss_heatmaps(summary: List[Dict[str, Any]], path: str) -> None:
         "Loss and its causes, by load and routing rule  —  mean % (std)",
         color=TEXT_PRIMARY, fontsize=13, fontweight="bold", x=0.01, ha="left",
     )
-    fig.text(0.01, 0.085,
-             "Identical seeds for both rules. Left panels: share of packets "
-             "created. Right panel: share of link attempts, pooled over all "
-             "links — a different denominator, hence its own scale.",
-             color=TEXT_SECONDARY, fontsize=8)
-    fig.text(0.01, 0.02,
-             stamp_lines(width=150, loads_ms=LOADS_MS,
-                         placements=summary[0]["runs"]),
-             color=TEXT_SECONDARY, fontsize=7.5, va="bottom")
+    if annotate:
+        fig.text(0.01, 0.085,
+                 "Identical seeds for both rules. Left panels: share of "
+                 "packets created. Right panel: share of link attempts, "
+                 "pooled over all links — a different denominator, hence its "
+                 "own scale.",
+                 color=TEXT_SECONDARY, fontsize=8)
+        fig.text(0.01, 0.02,
+                 stamp_lines(width=150, loads_ms=LOADS_MS,
+                             placements=summary[0]["runs"]),
+                 color=TEXT_SECONDARY, fontsize=7.5, va="bottom")
 
     fig.savefig(path, facecolor=SURFACE)
     plt.close(fig)
