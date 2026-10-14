@@ -29,9 +29,9 @@ logs/
 rl_sim/out/*
 !rl_sim/out/*.png
 !rl_sim/out/1a_summary.csv
-!rl_sim/out/1a_summary_OLD_k08.csv
 !rl_sim/out/1a_paired.csv
 !rl_sim/out/range_check.csv
+!rl_sim/out/edge_scan.csv
 !rl_sim/out/1b_*.csv
 !rl_sim/out/queue_size_paired.csv
 !rl_sim/out/queue_size_1a.csv

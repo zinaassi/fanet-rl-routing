@@ -1,4 +1,4 @@
-# FANET drone-network simulator — Phase 1a
+# FANET drone-network simulator — Phase 1
 
 A simulator for a flying ad-hoc network (FANET): a fleet of drones relays data
 packets back to a single ground station (GS) over multi-hop wireless links.
@@ -15,23 +15,45 @@ previous one is approved:
 
 | Phase | Step | What |
 |---|---|---|
-| 1 — static world | **1a** | Non-learned baselines: GREEDY and RANDOM routing. **← you are here** |
-| | 1b | RL routing agent on every drone. |
+| 1 — static world | **1a** | Non-learned baselines: GREEDY and RANDOM routing. **done** |
+| 1 — static world | **1b** | RL routing agent on every drone. **done ← you are here** |
 | 2 — dynamic world | 2a–2d | M-drones fly; C-drone movement rules, then RL routing and topology agents. |
 
-**Only Phase 1a exists in this repository.** There is no learning of any kind in
-the code, and none of the archived RL code is reused.
+**Phase 1 is complete: both the baselines and the learned router.** The
+Phase-1b agents were written new; none of the archived RL code is reused.
+PyTorch is used only in `rl_sim/agents/`; the simulator itself stays
+torch-free.
 
 ---
 
 ## Status
 
-**Phase 1a and Phase 1b must be re-run.** The channel model was replaced on
-2026-10-13, and every result made with the old one — CSVs, figures, training
-logs and the trained models under `out/models/` — was deleted rather than left
-to look current. The only current outputs are `out/ploss_curve.png` and
-`out/edge_scan.csv`. The written report under `docs/report/` is stale for the
-same reason.
+**Phase 1a and Phase 1b are complete on the current channel model.**
+Everything in `rl_sim/out/` is a current result, and every figure and CSV
+carries the settings stamp of the code that produced it.
+
+Headline, on the 50 held-back TEST layouts at the 200 ms working load, as a
+mean % of the packets created:
+
+| rule | 200 ms | 500 ms |
+|---|---|---|
+| random | 74.17 | 74.28 |
+| greedy | 52.76 | 27.42 |
+| rate | 25.05 | 20.96 |
+| **rl** | **22.29** | **12.56** |
+
+Paired on the same 50 layouts, `rl − rate` is **−2.76 points at 200 ms**,
+lower on **41 of 50** layouts, and **−8.40 points at 500 ms**, lower on
+**50 of 50**; both p < 0.0001 under an exact two-sided sign test and a paired
+t-test.
+
+Supporting checks, all on the current channel: the loop guard (`"path"` loses
+fewer packets than `"previous"` for random, rate and rl, and greedy is
+identical under both), the channel-loss diagnosis, a queue-size sweep at
+Q = 5 / 10 / 20, and the geometry range check.
+
+The written report under `docs/report/` is the one thing still out of date:
+it was written against the previous channel model and is being rewritten.
 
 ---
 
@@ -447,10 +469,27 @@ from the commands above.
 | `1a_loss_heatmaps.png` | Three panels: loss causes for greedy and for random, sharing a "% of packets created" scale, then per-link loss on its own "% of link attempts" scale. Mean % with std beneath. |
 | `1a_link_matrix_placement1.png` | Per-link loss for placement 1: eight matrices (2 rules × 4 loads), senders as rows, receivers plus GS as columns, grey where a link was never used. |
 
-Phase 1b writes `1b_*` files and the trained networks under `out/models/`;
-none of them exist at the moment, because Phase 1b has not been re-run since
-the channel changed. `range_check.csv` is likewise produced by its own script
-and is not present until that is re-run.
+| `range_check.csv` | Fleet connectivity at several link cutoffs over 100 unfiltered random layouts: reach, share of M-drones with a path to the GS, share of layouts stranding one, neighbour counts, good-link counts and hops on the most reliable path. |
+| `1b_training_log.csv` | One row per training run (its total loss and BCE) and per evaluation (validation and train-check total loss, plus the validation loss by cause), with the reference rules measured on the same validation layouts. |
+| `1b_eval_log.csv` | The same evaluations, one row per layout rather than per mean, flagged where a new best model was saved. |
+| `1b_training_log_previous.csv`, `1b_eval_log_previous.csv` | The same two logs for the agent trained under `LOOP_GUARD = "previous"`, used only by the loop-guard comparison. |
+| `1b_learning_curve.png` | Total loss against training runs — validation, train-check, the faint per-run training loss, and dashed reference lines; below it, the BCE per run. |
+| `1b_learning_curve_seeds.png` | The same training with one line per init seed: validation with a standard-error band and a star at every saved checkpoint, train-check beneath it, and the per-run BCE with a moving average. |
+| `1b_validation_causes.png` | Where the validation loss goes at each evaluation: channel, queue_full, no_route, dead_end, ttl+hop. |
+| `1b_test50_runs.csv` | One row per (rule, load, layout, init seed) over the 50 TEST layouts: total loss, all six causes kept apart, and mean hops. |
+| `1b_test50_paired.csv` | Paired comparisons on layouts 1–50, 1–20 and 21–50: mean difference, std, layouts won, sign-test and paired t-test p-values. |
+| `1b_comparison_total_loss_50.png` | Total loss per rule on the 50 TEST layouts, every layout a dot, at both loads. |
+| `1b_loss_heatmaps_50.png` | A panel per rule: total loss and all six causes, both loads, mean with std, on one shared scale. |
+| `1b_loop_guard.csv` | One row per (loop guard, rule, load, layout): total loss, its six causes, the revisit share and mean hops, under both guards. |
+| `1b_loop_guard_paired.csv` | Per-layout differences between rules under `"path"`. |
+| `1b_loop_guard_by_guard.csv` | Paired `"path" − "previous"` per rule and load: mean difference, std, layouts won, and both p-values. |
+| `1b_channel_diagnosis.csv` | Every rl and rate channel loss classified by what the deciding drone was offered — avoidable, congestion-forced or geometry-forced — plus the split of the avoidable ones by delivery rate. |
+| `queue_size_runs.csv` | *(gitignored)* One row per Phase-1b run at each link-queue capacity Q = 5 / 10 / 20. |
+| `queue_size_1a.csv` | The Phase-1a load curve at each Q. |
+| `queue_size_paired.csv` | Paired `rl − rate` and `rl − greedy` at each Q and load, with both p-values. |
+| `queue_size_total_loss.png` | Total loss against Q, one line per rule, one panel per load. |
+| `queue_size_load_curve.png` | Greedy's loss against offered load, one line per Q. |
+| `out/models/<guard>/` | *(gitignored)* The best-validation network per init seed, kept per loop-guard setting. |
 
 `main.py` also writes a JSONL event log per episode under `logs/` (one record
 per packet event, per-step network state and per-drone state).
@@ -459,9 +498,33 @@ per packet event, per-step network state and per-drone state).
 
 ## 5. Observed baseline behaviour
 
-_No current results._ Every Phase-1a result was produced with the channel
-model that has now been replaced, so all of them were deleted rather than
-left to look current. See **Status** below.
+Over 160 runs — two rules, four loads, 20 placements, identical seeds for
+both rules. The two views agreed in every run and no M-drone was ever
+isolated. Mean % of the packets created:
+
+| rule | load | total | channel | queue_full | no_route | dead_end | ttl | hop_limit |
+|---|---|---|---|---|---|---|---|---|
+| greedy | 1000 ms | 11.63 | 8.71 | 2.92 | 0.00 | 0.00 | 0.00 | 0.00 |
+| greedy | 500 ms | 26.47 | 9.91 | 16.55 | 0.00 | 0.00 | 0.00 | 0.00 |
+| greedy | 200 ms | 52.72 | 11.14 | 40.02 | 0.00 | 0.00 | 1.56 | 0.00 |
+| greedy | 100 ms | 66.34 | 13.16 | 51.61 | 0.00 | 0.00 | 1.58 | 0.00 |
+| random | 1000 ms | 74.38 | 60.95 | 0.00 | 0.00 | 4.29 | 0.00 | 9.14 |
+| random | 500 ms | 74.45 | 60.98 | 0.00 | 0.00 | 4.32 | 0.00 | 9.15 |
+| random | 200 ms | 74.51 | 60.98 | 0.00 | 0.00 | 4.23 | 0.00 | 9.31 |
+| random | 100 ms | 74.33 | 60.44 | 0.47 | 0.00 | 4.17 | 0.00 | 9.25 |
+<!-- source: rl_sim/out/1a_runs.csv -->
+
+**Greedy's loss is congestion; random's is the radio.** Greedy sends toward
+whichever qualifying neighbour has the lowest link loss, so traffic converges
+on the drones nearest the GS and `queue_full` grows from 2.92 % at the
+lightest load to 51.61 % at the heaviest. Random spreads traffic over every
+neighbour, so its queues stay empty and its loss is almost all `channel`,
+flat near 74 % whatever the load.
+
+Paired on identical placements, greedy loses less at every load: −62.74
+points at 1000 ms, −47.98 at 500 ms, −21.80 at 200 ms and −7.99 at 100 ms,
+on 20, 20, 20 and 18 of the 20 placements.
+<!-- source: rl_sim/out/1a_paired.csv -->
 
 ---
 
@@ -558,24 +621,72 @@ as a generalisation check.
 
 ```bash
 cd rl_sim
-python scripts/train_1b.py --init-seeds 0 1 2     # tens of minutes
-python scripts/evaluate_1b.py                     # the held-back TEST layouts
-python scripts/plot_1b.py                         # learning curve + causes
+python scripts/train_1b.py --init-seeds 0 1 2       # tens of minutes
+python scripts/evaluate_1b_large.py                # the 50 held-back layouts
+python scripts/plot_1b.py                          # learning curve + causes
 ```
 
-`regenerate_all.py` runs `evaluate_1b.py` and `plot_1b.py` by default and skips
-them when no trained model is present; `--with-training` retrains first.
+`regenerate_all.py` runs `evaluate_1b_large.py` and `plot_1b.py` by default
+and skips them when no trained model is present; `--with-training` retrains
+first. `evaluate_1b.py` (20 layouts) is kept as a script but is not in that
+plan: the 50-layout evaluation is the official test.
 
 ### Results
 
-_No current results._ The Phase-1b results, the loop-guard comparison, the
-channel-loss diagnostics and the trained models under `out/models/` were all
-produced with the replaced channel and have been deleted. See **Status**.
+On the 50 held-back TEST layouts, with `rl` the mean of three init seeds.
+The two views agreed in all 600 runs. Mean % of the packets created:
+
+| load | rule | total | std | channel | queue_full | no_route | dead_end | ttl | hop_limit | hops |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 200 ms | random | 74.17 | 2.77 | 61.85 | 0.00 | 0.00 | 3.36 | 0.00 | 8.96 | 4.32 |
+| 200 ms | greedy | 52.76 | 6.38 | 9.81 | 41.36 | 0.00 | 0.00 | 1.59 | 0.00 | 3.40 |
+| 200 ms | rate | 25.05 | 7.15 | 22.94 | 0.53 | 0.00 | 0.54 | 0.47 | 0.57 | 3.12 |
+| 200 ms | **rl** | **22.29** | 9.59 | 18.48 | 0.03 | 0.00 | 1.03 | 1.48 | 1.27 | 3.46 |
+| 500 ms | random | 74.28 | 2.95 | 61.94 | 0.00 | 0.00 | 3.41 | 0.00 | 8.93 | 4.32 |
+| 500 ms | greedy | 27.42 | 9.55 | 8.04 | 19.34 | 0.00 | 0.00 | 0.05 | 0.00 | 3.84 |
+| 500 ms | rate | 20.96 | 4.31 | 20.13 | 0.03 | 0.00 | 0.36 | 0.00 | 0.44 | 2.97 |
+| 500 ms | **rl** | **12.56** | 5.69 | 11.20 | 0.00 | 0.00 | 0.67 | 0.02 | 0.67 | 3.32 |
+<!-- source: rl_sim/out/1b_test50_runs.csv -->
+
+Paired on the same 50 layouts. The sign test is the exact two-sided binomial
+on the layouts won; the t-test is two-sided on the per-layout differences.
+
+| load | comparison | mean diff | std | wins | p (sign) | p (t-test) |
+|---|---|---|---|---|---|---|
+| 200 ms | rl − rate | −2.76 | 3.15 | 41 / 50 | <0.0001 | <0.0001 |
+| 200 ms | rl − greedy | −30.47 | 9.85 | 50 / 50 | <0.0001 | <0.0001 |
+| 200 ms | rate − greedy | −27.71 | 8.09 | 50 / 50 | <0.0001 | <0.0001 |
+| 200 ms | rate − random | −49.12 | 6.15 | 50 / 50 | <0.0001 | <0.0001 |
+| 500 ms | rl − rate | −8.40 | 2.95 | 50 / 50 | <0.0001 | <0.0001 |
+| 500 ms | rl − greedy | −14.86 | 11.52 | 45 / 50 | <0.0001 | <0.0001 |
+| 500 ms | rate − greedy | −6.46 | 11.12 | 33 / 50 | 0.0328 | 0.0002 |
+| 500 ms | rate − random | −53.32 | 3.94 | 50 / 50 | <0.0001 | <0.0001 |
+<!-- source: rl_sim/out/1b_test50_paired.csv -->
+
+**What the loop guard changed.** `rl` was trained separately under each
+setting, so no model is evaluated under a guard it did not train with.
+`"path"` loses fewer packets than `"previous"` for random (−4.53 points at
+both loads), rate (−1.75 and −2.52) and rl (−2.14 and −3.48), all
+p < 0.0001; greedy is identical under both on every layout. Under
+`"previous"` the share of packets that revisit a drone is 43.0 % for random,
+13.1 % for rl and 6.3 % for rate; under `"path"` it is zero by construction.
+<!-- source: rl_sim/out/1b_loop_guard.csv, rl_sim/out/1b_loop_guard_by_guard.csv -->
+
+**Where rl's channel losses come from.** Of its channel losses at 200 ms,
+45.6 % were geometry-forced — nothing at least 10 points cleaner was allowed
+— 7.1 % congestion-forced, and 47.3 % had a cleaner option whose queue was
+under half full. Within that last group, 99.95 % were trade-offs where the
+cleaner link had a worse measured delivery rate.
+<!-- source: rl_sim/out/1b_channel_diagnosis.csv -->
+
+**Queue size.** Re-running everything at link-queue capacities Q = 5, 10 and
+20 leaves the ordering unchanged: rl beats rate at every Q, on 42, 41 and 35
+of 50 layouts at 200 ms and 50, 50 and 48 at 500 ms.
+<!-- source: rl_sim/out/queue_size_paired.csv -->
 
 ```bash
 cd rl_sim
 python scripts/train_1b.py --init-seeds 0 1 2     # tens of minutes
-python scripts/evaluate_1b.py                     # the 20 TEST layouts
 python scripts/evaluate_1b_large.py               # the 50 TEST layouts
 python scripts/compare_loop_guard.py              # both guards side by side
 python scripts/diagnose_1b_channel.py             # why the channel losses happen

@@ -186,11 +186,33 @@ not to be reused, and the same holds for the Phase-2 agents.
              does not overwrite the previous models.
 
 ## Status
-Phase 1a and Phase 1b: TO RE-RUN WITH THE NEW CHANNEL. Every result
-made with the old channel has been deleted, including the trained
-Phase-1b models under out/models/. Nothing in out/ is a current
-result except ploss_curve.png and edge_scan.csv.
-The written report under docs/report/ is STALE for the same reason.
+Phase 1a and Phase 1b are COMPLETE on the new channel. Everything in
+out/ is a current result; every figure and CSV carries the new stamp.
+
+Headline, 50 TEST layouts at 200 ms, mean % of packets created:
+  rl 22.29   rate 25.05   greedy 52.76   random 74.17
+  rl - rate: -2.76 points, lower on 41 of 50 layouts, p < 0.0001
+    (exact two-sided sign test and paired t-test)
+At 500 ms: rl 12.56, rate 20.96, greedy 27.42, random 74.28; rl - rate
+-8.40 points, 50/50, p < 0.0001.
+
+Supporting checks, all done on the new channel:
+- Loop guard: "path" loses fewer packets than "previous" for random
+  (-4.53 points at both loads), rate (-1.75 / -2.52) and rl (-2.14 /
+  -3.48), all p < 0.0001; greedy is identical under both, on every
+  layout. rl was trained separately under each guard, so no model is
+  evaluated under a guard it did not train with.
+- Channel diagnosis: of rl's channel losses, 45.6% were geometry-forced,
+  7.1% congestion-forced and 47.3% had a cleaner idle option; within
+  that last group 99.95% were trade-offs where the cleaner link had a
+  worse delivery rate. (out/1b_channel_diagnosis.csv)
+- Queue size Q = 5 / 10 / 20: rl beats rate at every Q. Q = 10
+  reproduces the committed results to 1e-12.
+- Range check: at the 350 m edge, 99.7% of M-drones have a path to the
+  GS and 4.0% of random layouts strand at least one.
+
+Next: the written report, then Phase 2. The report under docs/report/
+is still written against the old channel and is rewritten next.
 
 ## Open questions (do NOT decide these; ask)
 - Whether LOOP_GUARD stays "path" (the header-carried visited list);
