@@ -253,7 +253,51 @@ _To be written after Phase 2._
 
 ## 7. Baselines: Greedy and Random
 
-_To be written._
+Before building a learning agent, we tested two simple routing rules
+as baselines:
+
+1. **Greedy:** the drone looks only at neighbours that are closer to
+   the GS than itself, so that every hop makes real progress and the
+   packet does not wander around. Among them, it picks the link with
+   the lowest loss, and skips links whose queue is full. If no
+   neighbour is closer to the GS, the packet is dropped.
+2. **Random:** the drone picks one of its neighbours at random, with no
+   other rule.
+
+Both rules obey the loop guard, and both use only information the
+drone has locally.
+
+**Results**
+
+We ran both rules on 20 random layouts at each of the four loads.
+Figure 3 shows the total loss and its causes.
+
+![Loss and its causes](figures/1a_loss_heatmaps.png)
+
+**Figure 3:** Total packet loss and its causes for greedy and random,
+at each load (mean over 20 layouts, standard deviation in brackets).
+
+Greedy loses much less than random at every load. Most of greedy's
+loss comes from **full queues**: since every drone sends towards the
+GS, many packets pass through the same few links and their queues fill
+up. As the load grows, this gets worse (2.9% at 1000 ms, 40% at
+200 ms).
+
+Random loses about 74% at every load. It does not move towards the GS,
+so packets take many hops and most are lost on the **channel** along
+the way (61%). Its queues never fill up, so the load does not matter.
+<!-- source: rl_sim/out/1a_runs.csv -->
+
+**Choosing the main load**
+
+We use 200 ms as the main load for the rest of the project. It is the
+heaviest load where the network is busy but not overloaded:
+- **Busy:** at 200 ms, 40% of greedy's packets are lost to full
+  queues, so the routing choice matters.
+- **Not overloaded:** greedy still beats random on all 20 layouts. At
+  100 ms it wins on only 18 of 20, and the gap shrinks from 22 to 8
+  points.
+<!-- source: rl_sim/out/1a_runs.csv, rl_sim/out/1a_paired.csv -->
 
 ---
 
