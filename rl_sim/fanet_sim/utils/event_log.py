@@ -103,10 +103,9 @@ class EventLogger:
         """Record per-episode metadata (must include the RNG seed).
 
         Args:
-            anchor: Optional citation for the literature source this setup
-                is anchored to (e.g. IQMR). Embedded verbatim in the record
-                so every log self-documents which paper its parameters
-                were chosen to match.
+            anchor: Optional note on where the setup's parameters come
+                from. Embedded verbatim in the record, so every log carries
+                its own provenance.
         """
         record: Dict[str, Any] = {
             "record_type": "episode_meta",

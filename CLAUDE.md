@@ -108,9 +108,14 @@ not to be reused, and the same holds for the Phase-2 agents.
   GREEDY is unaffected: it only moves strictly closer to the GS, so it
   cannot revisit a drone. Identical results under both settings, which
   tests/test_loop_guard.py checks. RANDOM, rate and rl all change.
-- GREEDY: among neighbors strictly closer to the GS, the lowest link
-  loss; ties: lower channel loss, then closer to the GS; none closer ->
-  drop (no_route).
+- GREEDY [CHANGED 2026-10-16]: classic greedy geographic forwarding.
+  Among neighbours strictly closer to the GS, skip those whose queue for
+  that link is full and take the one CLOSEST TO THE GS; ties: lower
+  channel loss. If every closer neighbour is full, take the closest
+  anyway and the packet drops queue_full on enqueue -- congestion costs
+  the packet but never bends its direction. None closer -> no_route.
+  This REPLACES the earlier greedy, which minimised link loss among the
+  same candidates; that rule is gone.
 - RANDOM: uniform over current neighbors, own random stream.
 - GS: receives without limit.
 - ACKs (ideal in Phase 1): GS end-to-end ACK to the source; hop-by-hop
@@ -136,7 +141,8 @@ not to be reused, and the same holds for the Phase-2 agents.
   simulated.
 - Phase 1b adds two routing rules beside greedy/random: "rate"
   (delivery_rate * (1 - queue_full), NO exploration -- deterministic
-  given the layout and the traffic, like greedy) and "rl" (a shared 3->32->32->1 network scoring each option
+  given the layout and the traffic, like greedy; an unmeasured link is
+  seeded at 1 - channel_loss) and "rl" (a shared 3->32->32->1 network scoring each option
   from 3 local inputs: delivery_rate, own queue fill, channel loss;
   epsilon 0.1 training, 0 at test). Options are the current neighbors
   plus the GS when in range, minus what the loop guard above excludes;

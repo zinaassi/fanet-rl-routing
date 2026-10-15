@@ -180,21 +180,18 @@ for a given run seed, and identical for both routing rules.
 Both rules use local information only. The GS counts as a neighbour whenever it
 is in range, and is not automatically preferred.
 
-**GREEDY.** Consider only neighbours **strictly closer** to the GS than the
-current holder. Among those, minimise
+**GREEDY.** Classic greedy geographic forwarding. Consider only neighbours
+**strictly closer** to the GS than the current holder, skip those whose queue
+for that link is full, and take the one **closest to the GS**. Ties break on
+the lower `channel_loss`.
 
-```
-link_loss    = 1 − (1 − channel_loss) · (1 − queue_full)
-channel_loss = p_loss(that link's distance)   — the S-curve above
-queue_full   = 1 if the holder's OWN queue for that link is at capacity, else 0
-```
+If every closer neighbour's queue is full, the closest is taken anyway and the
+packet is dropped `queue_full` on enqueue: congestion costs the packet but
+never bends its direction. If no neighbour is strictly closer, the packet is
+dropped `no_route`.
 
-Ties break on the lower `channel_loss`, then on the candidate closer to the GS.
-Both inputs are things the drone knows by itself: the channel figure from the
-signal margin it could measure, the queue figure exactly, because the queue is
-its own. So greedy routes around its own congestion when another qualifying link
-still has room. If no neighbour is strictly closer, the packet is dropped
-`no_route`.
+Both inputs are things the drone knows by itself: the distances, and the queue
+figure exactly, because the queue is its own.
 
 **RANDOM.** Uniform over all current neighbours, GS included when in range. No
 progress condition, no regard for queues. It draws from its own random stream,
@@ -444,10 +441,10 @@ defaults and carry a `PROVISIONAL - to confirm` comment in the file.
 `channel.max_link_distance()` derives the 350 m link reach from the loss
 curve, so there is no separate range constant to keep in step.
 
-The radio constants and the speed range come from IQMR (Sharvari et al., 2024,
-arXiv:2408.09109); the 10 % sensitivity definition follows 802.11 OFDM. The
-arena size, the 18 + 7 fleet split, the link edge and the 2-D simplification
-are **our** choices.
+Every parameter here is **our** choice. The radio figures (1 W, 2.4 GHz,
+−54 dBm) are calibration values: they are what puts the loss curve through
+10 % at 250 m and 50 % at 350 m, and those two distances are the actual
+choice. The 10 % sensitivity definition follows 802.11 OFDM.
 
 ---
 
@@ -515,7 +512,7 @@ isolated. Mean % of the packets created:
 <!-- source: rl_sim/out/1a_runs.csv -->
 
 **Greedy's loss is congestion; random's is the radio.** Greedy sends toward
-whichever qualifying neighbour has the lowest link loss, so traffic converges
+whichever qualifying neighbour is closest to the GS, so traffic converges
 on the drones nearest the GS and `queue_full` grows from 2.92 % at the
 lightest load to 51.61 % at the heaviest. Random spreads traffic over every
 neighbour, so its queues stay empty and its loss is almost all `channel`,

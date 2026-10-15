@@ -87,9 +87,15 @@ is a limit on what the results can claim.
 - 802.11 OFDM defines receiver sensitivity as the power giving a 10% packet
   error rate on 1000-octet frames, which is what anchors the S-curve.
   [CITE: the 802.11 clause defining receiver minimum input sensitivity] <!-- source: rl_sim/fanet_sim/config.py -->
-- The radio constants (1 W, 2.4 GHz, -54 dBm) and the drone speed range come
-  from IQMR (Sharvari et al., 2024, arXiv:2408.09109); the speed range is
-  unused while the world is static. <!-- source: rl_sim/fanet_sim/config.py -->
+- The radio figures (1 W, 2.4 GHz, -54 dBm) are OURS: calibration values that
+  put the loss curve through 10% at 250 m and 50% at 350 m. No paper is their
+  source, and no result depends on them separately from those two distances. <!-- source: rl_sim/fanet_sim/config.py -->
+- Greedy is classic greedy geographic forwarding (closest to the GS among the
+  neighbours that make progress, skipping full queues). The earlier rule,
+  which minimised link loss among the same candidates, was replaced on
+  2026-10-16 and is gone. <!-- source: rl_sim/fanet_sim/envs/fanet_env.py (greedy_next_hop) -->
+- "rate" has no exploration: it is deterministic given the layout and the
+  traffic, like greedy. <!-- source: rl_sim/agents/rate_router.py -->
 - BGP's AS_PATH as the standard precedent for a path-carried loop guard. <!-- source: CLAUDE.md loop guard section -->
 
 ## Checkpoint dates and milestones

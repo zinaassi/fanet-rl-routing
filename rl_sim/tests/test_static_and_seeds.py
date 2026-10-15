@@ -64,7 +64,11 @@ def test_placement_seed_alone_fixes_the_layout() -> None:
     assert np.array_equal(a.positions[0], b.positions[0]), "layout must not move"
     assert [d.speed for d in a.env.drones] == [d.speed for d in b.env.drones]
     # The channel/traffic randomness differs, so the outcome should differ.
-    assert len(a.env.delivered) != len(b.env.delivered)
+    # Compared packet by packet rather than by counting deliveries: two runs
+    # can deliver the same NUMBER of packets and still be different runs.
+    fates_a = [(p.packet_id, p.delivered, tuple(p.path)) for p in a.env.all_packets]
+    fates_b = [(p.packet_id, p.delivered, tuple(p.path)) for p in b.env.all_packets]
+    assert fates_a != fates_b
 
 
 def test_placement_seed_changes_the_layout() -> None:

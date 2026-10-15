@@ -76,40 +76,31 @@ def greedy_next_hop(
     gs_position: np.ndarray,
     link_full: Optional[Dict[NextHop, bool]] = None,
 ) -> Optional[NextHop]:
-    """Pick the next hop least likely to lose the packet, among those that progress.
+    """Pick the candidate CLOSEST to the ground station, among those closer.
+
+    Greedy geographic forwarding, as the literature usually means it: take
+    the largest geographic step you can towards the destination.
 
     Two stages:
 
-    1. Keep only the candidates STRICTLY closer to the ground station than the
-       current holder. This is the progress condition; it is what stops a
-       packet circling among peers.
-    2. Among those, minimise the combined link loss
+    1. Keep only the candidates STRICTLY closer to the ground station than
+       the current holder. This is the progress condition; it is what stops
+       a packet circling among peers, and it is why the rule can never
+       revisit a drone.
+    2. Among those whose queue still has room, pick the one closest to the
+       GS. Ties break on the lower channel loss.
 
-           link_loss    = 1 - (1 - channel_loss) * (1 - queue_full)
-           channel_loss = channel.p_loss(link distance)
-           queue_full   = 1 if the holder's OWN queue for that link is at
-                          capacity right now, else 0
+    If every closer candidate has a full queue, the closest is picked anyway
+    and the caller drops the packet "queue_full" on enqueue. A full queue
+    therefore costs the packet, but never steers it in a worse direction.
 
-       Ties break on the lower channel_loss, then on the candidate closer to
-       the GS.
+    Both inputs are things the drone itself knows: the distances from its own
+    position and its neighbours', and the queue figure exactly, because the
+    queue belongs to this drone. Neither reads an ACK counter.
 
-    Both inputs are things the drone itself knows: the channel figure comes
-    from the link distance — the signal margin a radio could measure — and the
-    queue figure is exact, because the queue belongs to this drone. Neither
-    reads an ACK counter.
-
-    A full queue makes that link's loss 1, so greedy routes around its own
-    congestion whenever some other qualifying link still has room. If every
-    qualifying link is full they all score 1, the tie-break picks the cleanest
-    channel, and the packet is dropped "queue_full" on enqueue.
-
-    The ground station counts as a candidate whenever it is in range, keyed by
-    the string ``"GS"``. It always satisfies the progress condition (it is at
-    distance 0 from itself), but it does not automatically win: a nearer
-    neighbour with a cleaner link can beat a marginal direct shot at the GS.
-
-    Returns None — a routing void, which the caller drops as "no_route" — when
-    there are no candidates at all, or when none is strictly closer to the GS.
+    The ground station counts as a candidate whenever it is in range, keyed
+    by the string ``"GS"``. Being at distance 0 from itself it always wins
+    stage 2 when it is present and not full.
 
     Args:
         holder_position: Position of the drone currently holding the packet.
@@ -120,7 +111,9 @@ def greedy_next_hop(
                          link is at capacity. Missing keys count as not full.
 
     Returns:
-        The winning candidate's key, or None.
+        The winning candidate's key, or None when there are no candidates at
+        all or none is strictly closer to the GS — a routing void, which the
+        caller drops as "no_route".
     """
     holder_dist = euclidean_distance(holder_position, gs_position)
     if link_full is None:
@@ -135,75 +128,7 @@ def greedy_next_hop(
     if not closer:
         return None  # routing void: no progress available
 
-    # Stage 2: lowest combined loss; ties on channel, then on distance to GS.
-    def rank(key: NextHop) -> Tuple[float, float, float]:
-        channel_loss = channel.p_loss(
-            euclidean_distance(holder_position, closer[key])
-        )
-        queue_loss = 1.0 if link_full.get(key, False) else 0.0
-        link_loss = 1.0 - (1.0 - channel_loss) * (1.0 - queue_loss)
-        return (
-            link_loss,
-            channel_loss,
-            euclidean_distance(closer[key], gs_position),
-        )
-
-    return min(closer, key=rank)
-
-
-def greedy_classic_next_hop(
-    holder_position: np.ndarray,
-    candidates: Dict[NextHop, np.ndarray],
-    gs_position: np.ndarray,
-    link_full: Optional[Dict[NextHop, bool]] = None,
-) -> Optional[NextHop]:
-    """Pick the candidate CLOSEST to the ground station, among those closer.
-
-    Textbook greedy geographic forwarding: make the largest geographic step
-    you can, and ignore link quality while doing it. This is the rule the
-    literature usually means by "greedy", kept beside
-    :func:`greedy_next_hop` — which minimises link loss instead — so the two
-    can be compared without either being changed.
-
-    Two stages:
-
-    1. Keep only the candidates STRICTLY closer to the ground station than
-       the current holder, exactly as :func:`greedy_next_hop` does.
-    2. Among those whose queue still has room, pick the one closest to the
-       GS. Ties break on the lower channel loss.
-
-    If every closer candidate has a full queue, the closest is picked anyway
-    and the caller drops the packet "queue_full" on enqueue. That keeps the
-    rule's geography pure: unlike :func:`greedy_next_hop`, a full queue never
-    makes it choose a different direction, only a doomed one.
-
-    The ground station counts as a candidate whenever it is in range, keyed
-    by ``"GS"``, and being at distance 0 from itself it always wins stage 2
-    when present and not full.
-
-    Args:
-        holder_position: Position of the drone currently holding the packet.
-        candidates:      Reachable next hops, mapping key → position.
-        gs_position:     Ground-station position as a NumPy array.
-        link_full:       Per candidate, whether the holder's queue for that
-                         link is at capacity. Missing keys count as not full.
-
-    Returns:
-        The winning candidate's key, or None when none is strictly closer —
-        a routing void, which the caller drops as "no_route".
-    """
-    holder_dist = euclidean_distance(holder_position, gs_position)
-    if link_full is None:
-        link_full = {}
-
-    closer = {
-        key: pos
-        for key, pos in candidates.items()
-        if euclidean_distance(pos, gs_position) < holder_dist
-    }
-    if not closer:
-        return None  # routing void: no progress available
-
+    # Stage 2: closest to the GS; ties on the cleaner link.
     def rank(key: NextHop) -> Tuple[float, float]:
         return (
             euclidean_distance(closer[key], gs_position),
@@ -253,7 +178,7 @@ def random_next_hop(
 #: The routing rules this environment can run. "rate" and "rl" live in
 #: rl_sim/agents/ and must be supplied as a *router* object: the simulator
 #: stays torch-free and never imports that package.
-ROUTING_RULES = ("greedy", "greedy_classic", "random", "rate", "rl")
+ROUTING_RULES = ("greedy", "random", "rate", "rl")
 
 #: Rules that need an injected router.
 ROUTER_RULES = ("rate", "rl")
@@ -494,18 +419,11 @@ class FANETEnv:
                 "routing": self.routing,
             },
             anchor={
-                "paper": "IQMR",
-                "citation": "Sharvari et al., 2024",
-                "arxiv": "2408.09109",
-                "section": "V.A",
                 "notes": (
-                    "From IQMR: speed range (10-30 m/s) and the energy budget "
-                    "(11.1 V x 5200 mAh = 207792 J). "
-                    "From IQMR too: the radio (1 W, 2.4 GHz, -54 dBm). "
-                    "NOT from IQMR: the S-curve that turns the FSPL margin "
-                    "into a loss, the 350 m link edge, the 900x900 m arena, "
-                    "the 18 M + 7 C fleet split, and 2D instead of 3D — "
-                    "those are choices for this project."
+                    "Every parameter is a choice made for this project. The "
+                    "radio figures (1 W, 2.4 GHz, -54 dBm) are calibration "
+                    "values that put the loss curve through 10% at 250 m and "
+                    "50% at 350 m; those two distances are the actual choice."
                 ),
             },
         )
@@ -910,10 +828,6 @@ class FANETEnv:
             return random_next_hop(candidates, self._rng_route)
 
         link_full = {key: drone.queue_is_full(key) for key in candidates}
-        if self.routing == "greedy_classic":
-            return greedy_classic_next_hop(
-                drone.position, candidates, self.gs_position, link_full
-            )
         return greedy_next_hop(
             drone.position, candidates, self.gs_position, link_full
         )

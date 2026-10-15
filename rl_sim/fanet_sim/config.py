@@ -10,18 +10,16 @@ Each value is tagged with its status:
                    so it is easy to find and change later.
 
 ----------------------------------------------------------------------------
-Relationship to IQMR (Sharvari et al., 2024, arXiv:2408.09109) §V.A
+Where the numbers come from
 ----------------------------------------------------------------------------
-Earlier versions of this file sized the world to match IQMR's scenario
-(1750 x 1750 m, 36 M + 14 C drones). Phase 1A does NOT: the world is a
-900 x 900 m square with 18 M + 7 C drones, chosen for this project
-(Phase 1A). Those are our numbers, not IQMR's.
+They are OURS. The 900 x 900 m square, the 18 M + 7 C fleet, the queue sizes,
+the loads and the 350 m link edge are choices made for this project, not
+values taken from a paper.
 
-What still comes from IQMR is the speed range (10-30 m/s), the energy
-budget (11.1 V x 5200 mAh = 207792 J) and the radio: 1 W at 2.4 GHz into a
-receiver with -54 dBm sensitivity. The channel turns the free-space margin
-above that sensitivity into an S-curve for the chance a transmission is
-lost, and the link edge is a design choice rather than a power-budget limit.
+The radio figures (1 W at 2.4 GHz into a -54 dBm receiver) are calibration
+values: they are what makes the loss curve pass through 10% at 250 m and 50%
+at 350 m. Those two distances are the real choice; the radio figures follow
+from them and no result depends on them separately.
 
 The simulation is 2-D. There is no MAC layer and no interference model.
 """
@@ -39,8 +37,8 @@ HEIGHT: float = 900.0            # metres                                    [DE
 # ---------------------------------------------------------------------------
 NUM_M_DRONES: int = 18           # mission drones: create AND relay packets  [DECIDED]
 NUM_C_DRONES: int = 7            # communication drones: relay only          [DECIDED]
-DRONE_SPEED_MIN: float = 10.0    # m/s — from IQMR
-DRONE_SPEED_MAX: float = 30.0    # m/s — from IQMR
+DRONE_SPEED_MIN: float = 10.0    # m/s — unused while static
+DRONE_SPEED_MAX: float = 30.0    # m/s — unused while static
 
 # There is no COMM_RANGE constant: how far a link reaches now falls out of the
 # loss curve below. Ask channel.max_link_distance() for the single number.
@@ -76,7 +74,7 @@ MAX_PLACEMENT_DRAWS: int = 10000  # give up rather than loop forever
 # ---------------------------------------------------------------------------
 # Energy
 # ---------------------------------------------------------------------------
-INITIAL_ENERGY: float = 207792.0  # joules  (11.1 V × 5200 mAh, from IQMR)
+INITIAL_ENERGY: float = 207792.0  # joules  (11.1 V × 5200 mAh)
 ENERGY_PER_MOVE: float = 0.1      # joules per meter flown (approximate)
 ENERGY_PER_TX: float = 0.01       # joules per packet transmitted
 ENERGY_PER_RX: float = 0.005      # joules per packet received

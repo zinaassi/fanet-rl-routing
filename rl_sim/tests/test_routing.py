@@ -58,12 +58,12 @@ def test_greedy_rejects_a_neighbour_at_the_same_distance() -> None:
     assert greedy_next_hop(holder, candidates, GS) is None
 
 
-def test_greedy_picks_the_lowest_loss_among_closer_candidates() -> None:
-    """Of the candidates that make progress, the cleanest link wins.
+def test_greedy_takes_the_biggest_geographic_step() -> None:
+    """Of the candidates that make progress, the one closest to the GS wins.
 
-    Candidate 1 is closer to the GS but far from the holder (a lossy link);
-    candidate 2 makes less progress but sits right next to the holder. The
-    redefined rule takes the reliable link.
+    Candidate 1 is closer to the GS but far from the holder, so its link is
+    lossier; candidate 2 makes less progress but sits right next to the
+    holder. Greedy geographic forwarding takes the big step regardless.
     """
     holder = _pos(450.0, 150.0)          # 300 m from the GS
     candidates = {
@@ -71,40 +71,35 @@ def test_greedy_picks_the_lowest_loss_among_closer_candidates() -> None:
         2: _pos(450.0, 170.0),           # 280 m from GS,  20 m hop — clean
     }
     assert channel.p_loss(180.0) > channel.p_loss(20.0)
-    assert greedy_next_hop(holder, candidates, GS) == 2
-
-
-def test_greedy_breaks_ties_toward_the_gs() -> None:
-    """Two equally clean links: the one closer to the GS wins."""
-    holder = _pos(450.0, 250.0)          # 200 m from the GS
-    candidates = {
-        1: _pos(450.0, 300.0),           # 50 m hop (0+50),   150 m from the GS
-        2: _pos(410.0, 280.0),           # 50 m hop (40, 30), ~163 m from the GS
-    }
-    # Both hops are exactly 50 m, so the p_loss stage is an exact tie...
-    assert euclidean_distance(holder, candidates[1]) == pytest.approx(50.0)
-    assert euclidean_distance(holder, candidates[2]) == pytest.approx(50.0)
-    # ...and both make progress, so the tie-break decides.
-    holder_dist = euclidean_distance(holder, GS)
-    assert euclidean_distance(candidates[1], GS) < holder_dist
-    assert euclidean_distance(candidates[2], GS) < holder_dist
-    assert euclidean_distance(candidates[1], GS) < euclidean_distance(
-        candidates[2], GS
-    )
-
     assert greedy_next_hop(holder, candidates, GS) == 1
 
 
-def test_greedy_may_prefer_a_relay_over_a_marginal_direct_gs_shot() -> None:
-    """The GS does not automatically win just for being in range."""
+def test_greedy_breaks_ties_on_channel_loss() -> None:
+    """Two candidates equally close to the GS: the cleaner link wins."""
+    holder = _pos(450.0, 450.0 - 300.0)
+    # Both sit 120 m from the GS, but one is a shorter hop from the holder.
+    near = _pos(450.0, 450.0 - 120.0)
+    far = _pos(450.0 + 120.0, 450.0)
+    assert euclidean_distance(near, GS) == pytest.approx(
+        euclidean_distance(far, GS)
+    )
+    assert euclidean_distance(holder, near) < euclidean_distance(holder, far)
+    assert greedy_next_hop(holder, {1: near, 2: far}, GS) == 1
+
+
+def test_greedy_takes_the_gs_even_over_a_cleaner_relay() -> None:
+    """The GS wins whenever it is in range: nothing is closer to itself.
+
+    The relay hop here is far cleaner, and the old loss-minimising rule took
+    it. Geographic greedy does not: distance to the GS decides.
+    """
     holder = _pos(450.0, 210.0)          # 240 m from the GS — a marginal link
     candidates = {
         "GS": GS,
         1: _pos(450.0, 220.0),           # 10 m hop, 230 m from the GS
     }
-    # The direct shot is far more likely to be lost than the short relay hop.
     assert channel.p_loss(240.0) > channel.p_loss(10.0)
-    assert greedy_next_hop(holder, candidates, GS) == 1
+    assert greedy_next_hop(holder, candidates, GS) == "GS"
 
 
 def test_greedy_takes_the_gs_when_the_link_is_clean() -> None:
@@ -150,12 +145,16 @@ def test_greedy_choices_hold_during_a_real_run() -> None:
         assert choice is not None
         # Stage 1: the choice makes progress.
         assert euclidean_distance(candidates[choice], env.gs_position) < holder_dist
-        # Stage 2: nothing that qualifies scores better.
+        # Stage 2: nothing eligible is closer to the GS. "Eligible" is the
+        # links with room, unless every one is full.
+        with_room = {key: pos for key, pos in closer.items()
+                     if not drone.queue_is_full(key)}
+        eligible = with_room or closer
         best = min(
-            _link_loss(drone, pos, key, env.gs_position)
-            for key, pos in closer.items()
+            euclidean_distance(pos, env.gs_position)
+            for pos in eligible.values()
         )
-        chosen = _link_loss(drone, candidates[choice], choice, env.gs_position)
+        chosen = euclidean_distance(candidates[choice], env.gs_position)
         assert chosen == pytest.approx(best)
         checked += 1
 
@@ -366,31 +365,35 @@ def _env() -> FANETEnv:
 
 
 def test_greedy_avoids_its_own_full_link_queue() -> None:
-    """A full queue makes that link's loss 1, so a non-full link wins.
+    """A full queue loses to a link with room, even a shorter-stepping one.
 
-    Candidate 1 has the cleaner channel and would win outright, but this
-    drone's queue for it is full; candidate 2 still has room.
+    Candidate 2 is closer to the GS and would win outright, but this drone's
+    queue for it is full; candidate 1 still has room.
     """
     holder = _pos(450.0, 150.0)          # 300 m from the GS
     candidates = {
-        1: _pos(450.0, 180.0),           #  30 m hop — clean channel
-        2: _pos(450.0, 230.0),           #  80 m hop — worse channel
+        1: _pos(450.0, 180.0),           # 270 m from the GS
+        2: _pos(450.0, 230.0),           # 220 m from the GS — the big step
     }
-    # With both queues free, the clean channel wins.
-    assert greedy_next_hop(holder, candidates, GS, {1: False, 2: False}) == 1
-    # With link 1's queue full, greedy routes around its own congestion.
-    assert greedy_next_hop(holder, candidates, GS, {1: True, 2: False}) == 2
+    # With both queues free, the bigger step wins.
+    assert greedy_next_hop(holder, candidates, GS, {1: False, 2: False}) == 2
+    # With link 2's queue full, greedy routes around its own congestion.
+    assert greedy_next_hop(holder, candidates, GS, {1: False, 2: True}) == 1
 
 
-def test_greedy_falls_back_to_the_cleanest_channel_when_all_links_are_full() -> None:
-    """If every qualifying link is full they all score 1, so channel decides."""
+def test_greedy_falls_back_to_the_closest_when_all_links_are_full() -> None:
+    """Every qualifying link full: the closest to the GS still wins.
+
+    The packet is then dropped queue_full by the caller, which is the point:
+    congestion costs the packet but never bends its direction.
+    """
     holder = _pos(450.0, 150.0)
     candidates = {
-        1: _pos(450.0, 180.0),           # 30 m hop — cleanest
-        2: _pos(450.0, 230.0),           # 80 m hop
+        1: _pos(450.0, 180.0),           # 270 m from the GS
+        2: _pos(450.0, 230.0),           # 220 m from the GS — closest
     }
     choice = greedy_next_hop(holder, candidates, GS, {1: True, 2: True})
-    assert choice == 1
+    assert choice == 2
 
 
 def test_greedy_full_queue_does_not_override_the_progress_condition() -> None:
@@ -553,113 +556,28 @@ def test_arrivals_are_not_processed_in_drone_id_order() -> None:
     )
 
 
-# ---------------------------------------------------------------------------
-# greedy_classic: textbook geographic forwarding
-# ---------------------------------------------------------------------------
+def test_greedy_keeps_direction_when_every_closer_link_is_full() -> None:
+    """A full queue loses to one with room, but never changes direction.
 
-def test_greedy_classic_takes_the_biggest_geographic_step() -> None:
-    """It picks the candidate closest to the GS, not the cleanest link.
-
-    This is what separates it from greedy: the nearer neighbour has a much
-    cleaner link, and greedy would take it, but classic greedy goes for the
-    largest step towards the GS.
+    When every closer candidate is full the closest still wins, so the caller
+    drops the packet queue_full rather than the rule steering it somewhere
+    geographically worse.
     """
-    from fanet_sim.envs.fanet_env import greedy_classic_next_hop
-
-    holder = _pos(450.0, 100.0)            # 350 m from the GS
-    near = _pos(450.0, 200.0)              # 100 m hop, still 250 m out
-    far = _pos(450.0, 330.0)               # 230 m hop, only 120 m out
-    candidates = {1: near, 2: far}
-
-    assert channel.p_loss(100.0) < channel.p_loss(230.0)
-    assert greedy_classic_next_hop(holder, candidates, GS) == 2
-    # ...and the loss-minimising rule disagrees, which is the point.
-    assert greedy_next_hop(holder, candidates, GS) == 1
-
-
-def test_greedy_classic_needs_strict_progress() -> None:
-    """A candidate no closer to the GS is not a candidate at all."""
-    from fanet_sim.envs.fanet_env import greedy_classic_next_hop
-
-    holder = _pos(450.0, 200.0)
-    sideways = _pos(500.0, 200.0)          # same distance band, not closer
-    backwards = _pos(450.0, 100.0)
-    assert greedy_classic_next_hop(
-        holder, {1: sideways, 2: backwards}, GS
-    ) is None
-
-
-def test_greedy_classic_skips_full_queues_but_keeps_direction() -> None:
-    """A full queue loses to one with room, even if it is closer to the GS.
-
-    When every closer candidate is full it still returns the closest, so the
-    caller drops the packet queue_full rather than the rule quietly steering
-    the packet somewhere worse.
-    """
-    from fanet_sim.envs.fanet_env import greedy_classic_next_hop
-
     holder = _pos(450.0, 100.0)
     closest = _pos(450.0, 330.0)           # 120 m from the GS
     second = _pos(450.0, 280.0)            # 170 m from the GS
     candidates = {1: closest, 2: second}
 
-    assert greedy_classic_next_hop(holder, candidates, GS) == 1
-    assert greedy_classic_next_hop(
-        holder, candidates, GS, link_full={1: True}
-    ) == 2
-    # Both full: the closest still wins, and the caller drops it.
-    assert greedy_classic_next_hop(
+    assert greedy_next_hop(holder, candidates, GS) == 1
+    assert greedy_next_hop(holder, candidates, GS, link_full={1: True}) == 2
+    assert greedy_next_hop(
         holder, candidates, GS, link_full={1: True, 2: True}
     ) == 1
 
 
-def test_greedy_classic_breaks_ties_on_channel_loss() -> None:
-    """Two candidates the same distance from the GS: the cleaner link wins."""
-    from fanet_sim.envs.fanet_env import greedy_classic_next_hop
-
-    holder = _pos(450.0, 450.0 - 300.0)
-    # Both sit 120 m from the GS, but one is a shorter hop from the holder.
-    near = _pos(450.0, 450.0 - 120.0)
-    far = _pos(450.0 + 120.0, 450.0)
-    assert euclidean_distance(near, GS) == pytest.approx(
-        euclidean_distance(far, GS)
-    )
-    assert euclidean_distance(holder, near) < euclidean_distance(holder, far)
-    assert greedy_classic_next_hop(holder, {1: near, 2: far}, GS) == 1
-
-
-def test_greedy_classic_is_selectable_and_runs() -> None:
-    """The rule is wired into the environment and produces a full run."""
-    import os
-
-    from fanet_sim.envs.fanet_env import ROUTING_RULES
-
-    assert "greedy_classic" in ROUTING_RULES
-    trace = run_episode(steps=200, routing="greedy_classic",
-                        placement_seed=3, run_seed=3)
-    assert trace.env.all_packets, "no packets were created"
-    assert trace.max_queue_seen <= config.QUEUE_CAPACITY
-
-
-def test_greedy_classic_leaves_greedy_alone() -> None:
-    """Adding the rule did not change what greedy does.
-
-    Checked on a real layout rather than in the abstract: every decision the
-    two rules face is the same decision, and they are allowed to differ, but
-    greedy must still agree with itself.
-    """
-    import os
-
-    from fanet_sim.envs.fanet_env import FANETEnv
-
-    env = FANETEnv(routing="greedy", log_path=os.devnull,
-                   placement_seed=4, run_seed=4)
-    env.reset()
-    for drone in env.drones:
-        candidates = env._next_hop_candidates(drone)
-        if not candidates:
-            continue
-        link_full = {key: drone.queue_is_full(key) for key in candidates}
-        assert env._select_next_hop(drone, candidates, None) == greedy_next_hop(
-            drone.position, candidates, env.gs_position, link_full
-        )
+def test_greedy_needs_strict_progress() -> None:
+    """A candidate no closer to the GS is not a candidate at all."""
+    holder = _pos(450.0, 200.0)
+    sideways = _pos(500.0, 200.0)          # same distance band, not closer
+    backwards = _pos(450.0, 100.0)
+    assert greedy_next_hop(holder, {1: sideways, 2: backwards}, GS) is None
