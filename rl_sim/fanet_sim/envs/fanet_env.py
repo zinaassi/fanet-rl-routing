@@ -151,6 +151,73 @@ def greedy_next_hop(
     return min(closer, key=rank)
 
 
+def greedy_classic_next_hop(
+    holder_position: np.ndarray,
+    candidates: Dict[NextHop, np.ndarray],
+    gs_position: np.ndarray,
+    link_full: Optional[Dict[NextHop, bool]] = None,
+) -> Optional[NextHop]:
+    """Pick the candidate CLOSEST to the ground station, among those closer.
+
+    Textbook greedy geographic forwarding: make the largest geographic step
+    you can, and ignore link quality while doing it. This is the rule the
+    literature usually means by "greedy", kept beside
+    :func:`greedy_next_hop` — which minimises link loss instead — so the two
+    can be compared without either being changed.
+
+    Two stages:
+
+    1. Keep only the candidates STRICTLY closer to the ground station than
+       the current holder, exactly as :func:`greedy_next_hop` does.
+    2. Among those whose queue still has room, pick the one closest to the
+       GS. Ties break on the lower channel loss.
+
+    If every closer candidate has a full queue, the closest is picked anyway
+    and the caller drops the packet "queue_full" on enqueue. That keeps the
+    rule's geography pure: unlike :func:`greedy_next_hop`, a full queue never
+    makes it choose a different direction, only a doomed one.
+
+    The ground station counts as a candidate whenever it is in range, keyed
+    by ``"GS"``, and being at distance 0 from itself it always wins stage 2
+    when present and not full.
+
+    Args:
+        holder_position: Position of the drone currently holding the packet.
+        candidates:      Reachable next hops, mapping key → position.
+        gs_position:     Ground-station position as a NumPy array.
+        link_full:       Per candidate, whether the holder's queue for that
+                         link is at capacity. Missing keys count as not full.
+
+    Returns:
+        The winning candidate's key, or None when none is strictly closer —
+        a routing void, which the caller drops as "no_route".
+    """
+    holder_dist = euclidean_distance(holder_position, gs_position)
+    if link_full is None:
+        link_full = {}
+
+    closer = {
+        key: pos
+        for key, pos in candidates.items()
+        if euclidean_distance(pos, gs_position) < holder_dist
+    }
+    if not closer:
+        return None  # routing void: no progress available
+
+    def rank(key: NextHop) -> Tuple[float, float]:
+        return (
+            euclidean_distance(closer[key], gs_position),
+            channel.p_loss(
+                euclidean_distance(holder_position, closer[key])
+            ),
+        )
+
+    with_room = {key: pos for key, pos in closer.items()
+                 if not link_full.get(key, False)}
+    # Everything full: still take the closest, and let the caller drop it.
+    return min(with_room or closer, key=rank)
+
+
 def random_next_hop(
     candidates: Dict[NextHop, np.ndarray],
     rng: np.random.Generator,
@@ -186,7 +253,7 @@ def random_next_hop(
 #: The routing rules this environment can run. "rate" and "rl" live in
 #: rl_sim/agents/ and must be supplied as a *router* object: the simulator
 #: stays torch-free and never imports that package.
-ROUTING_RULES = ("greedy", "random", "rate", "rl")
+ROUTING_RULES = ("greedy", "greedy_classic", "random", "rate", "rl")
 
 #: Rules that need an injected router.
 ROUTER_RULES = ("rate", "rl")
@@ -843,6 +910,10 @@ class FANETEnv:
             return random_next_hop(candidates, self._rng_route)
 
         link_full = {key: drone.queue_is_full(key) for key in candidates}
+        if self.routing == "greedy_classic":
+            return greedy_classic_next_hop(
+                drone.position, candidates, self.gs_position, link_full
+            )
         return greedy_next_hop(
             drone.position, candidates, self.gs_position, link_full
         )

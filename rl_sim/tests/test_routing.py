@@ -551,3 +551,115 @@ def test_arrivals_are_not_processed_in_drone_id_order() -> None:
     assert order_seen != [d.drone_id for d in env.drones], (
         "arrivals were processed in drone-id order"
     )
+
+
+# ---------------------------------------------------------------------------
+# greedy_classic: textbook geographic forwarding
+# ---------------------------------------------------------------------------
+
+def test_greedy_classic_takes_the_biggest_geographic_step() -> None:
+    """It picks the candidate closest to the GS, not the cleanest link.
+
+    This is what separates it from greedy: the nearer neighbour has a much
+    cleaner link, and greedy would take it, but classic greedy goes for the
+    largest step towards the GS.
+    """
+    from fanet_sim.envs.fanet_env import greedy_classic_next_hop
+
+    holder = _pos(450.0, 100.0)            # 350 m from the GS
+    near = _pos(450.0, 200.0)              # 100 m hop, still 250 m out
+    far = _pos(450.0, 330.0)               # 230 m hop, only 120 m out
+    candidates = {1: near, 2: far}
+
+    assert channel.p_loss(100.0) < channel.p_loss(230.0)
+    assert greedy_classic_next_hop(holder, candidates, GS) == 2
+    # ...and the loss-minimising rule disagrees, which is the point.
+    assert greedy_next_hop(holder, candidates, GS) == 1
+
+
+def test_greedy_classic_needs_strict_progress() -> None:
+    """A candidate no closer to the GS is not a candidate at all."""
+    from fanet_sim.envs.fanet_env import greedy_classic_next_hop
+
+    holder = _pos(450.0, 200.0)
+    sideways = _pos(500.0, 200.0)          # same distance band, not closer
+    backwards = _pos(450.0, 100.0)
+    assert greedy_classic_next_hop(
+        holder, {1: sideways, 2: backwards}, GS
+    ) is None
+
+
+def test_greedy_classic_skips_full_queues_but_keeps_direction() -> None:
+    """A full queue loses to one with room, even if it is closer to the GS.
+
+    When every closer candidate is full it still returns the closest, so the
+    caller drops the packet queue_full rather than the rule quietly steering
+    the packet somewhere worse.
+    """
+    from fanet_sim.envs.fanet_env import greedy_classic_next_hop
+
+    holder = _pos(450.0, 100.0)
+    closest = _pos(450.0, 330.0)           # 120 m from the GS
+    second = _pos(450.0, 280.0)            # 170 m from the GS
+    candidates = {1: closest, 2: second}
+
+    assert greedy_classic_next_hop(holder, candidates, GS) == 1
+    assert greedy_classic_next_hop(
+        holder, candidates, GS, link_full={1: True}
+    ) == 2
+    # Both full: the closest still wins, and the caller drops it.
+    assert greedy_classic_next_hop(
+        holder, candidates, GS, link_full={1: True, 2: True}
+    ) == 1
+
+
+def test_greedy_classic_breaks_ties_on_channel_loss() -> None:
+    """Two candidates the same distance from the GS: the cleaner link wins."""
+    from fanet_sim.envs.fanet_env import greedy_classic_next_hop
+
+    holder = _pos(450.0, 450.0 - 300.0)
+    # Both sit 120 m from the GS, but one is a shorter hop from the holder.
+    near = _pos(450.0, 450.0 - 120.0)
+    far = _pos(450.0 + 120.0, 450.0)
+    assert euclidean_distance(near, GS) == pytest.approx(
+        euclidean_distance(far, GS)
+    )
+    assert euclidean_distance(holder, near) < euclidean_distance(holder, far)
+    assert greedy_classic_next_hop(holder, {1: near, 2: far}, GS) == 1
+
+
+def test_greedy_classic_is_selectable_and_runs() -> None:
+    """The rule is wired into the environment and produces a full run."""
+    import os
+
+    from fanet_sim.envs.fanet_env import ROUTING_RULES
+
+    assert "greedy_classic" in ROUTING_RULES
+    trace = run_episode(steps=200, routing="greedy_classic",
+                        placement_seed=3, run_seed=3)
+    assert trace.env.all_packets, "no packets were created"
+    assert trace.max_queue_seen <= config.QUEUE_CAPACITY
+
+
+def test_greedy_classic_leaves_greedy_alone() -> None:
+    """Adding the rule did not change what greedy does.
+
+    Checked on a real layout rather than in the abstract: every decision the
+    two rules face is the same decision, and they are allowed to differ, but
+    greedy must still agree with itself.
+    """
+    import os
+
+    from fanet_sim.envs.fanet_env import FANETEnv
+
+    env = FANETEnv(routing="greedy", log_path=os.devnull,
+                   placement_seed=4, run_seed=4)
+    env.reset()
+    for drone in env.drones:
+        candidates = env._next_hop_candidates(drone)
+        if not candidates:
+            continue
+        link_full = {key: drone.queue_is_full(key) for key in candidates}
+        assert env._select_next_hop(drone, candidates, None) == greedy_next_hop(
+            drone.position, candidates, env.gs_position, link_full
+        )

@@ -200,10 +200,11 @@ def test_a_router_rule_without_a_router_fails_loudly(rule: str) -> None:
 
 
 def test_router_rules_are_selectable_like_the_others() -> None:
-    """rate and rl sit in ROUTING_RULES beside greedy and random."""
+    """rate and rl sit in ROUTING_RULES beside the non-learned rules."""
     from fanet_sim.envs.fanet_env import ROUTING_RULES
     assert set(ROUTER_RULES) <= set(ROUTING_RULES)
-    assert {"greedy", "random", "rate", "rl"} == set(ROUTING_RULES)
+    assert {"greedy", "greedy_classic", "random", "rate",
+            "rl"} == set(ROUTING_RULES)
 
 
 def test_phase_1a_results_are_unchanged_by_the_1b_work() -> None:
