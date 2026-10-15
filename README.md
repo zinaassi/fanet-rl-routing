@@ -570,10 +570,10 @@ drop; candidates that the guard removes entirely is a `dead_end` drop.
 score = delivery_rate × (1 − queue_full)
 ```
 
-Highest score wins; ties go to the lower channel loss. With probability
-`EPSILON_RATE` = 0.05 it picks uniformly instead, so links it never chooses
-still get measured. **That exploration is on at test time too**, so `rate`'s
-reported numbers carry noise that greedy's do not.
+Highest score wins; ties go to the lower channel loss. There is no
+exploration: `rate` is deterministic given the layout and the traffic, like
+greedy. A link nobody has sent on yet starts at `1 − channel_loss`, which is
+what keeps an unmeasured link from being invisible.
 
 **`rl`** — one small network, `3 → 32 → 32 → 1` with ReLU and a sigmoid output,
 **shared by every drone**. It scores one option from three local inputs — that
@@ -739,9 +739,6 @@ A test reproduces greedy and random at seed 1 against the committed
 - **The Phase-1b network is shared, and trained on pooled experience.** Each
   drone decides from its own local inputs, but one set of weights is fitted to
   every drone's examples at once. That is an assumption, not a result.
-- **`rate` explores at test time.** Its 5% exploration is on in evaluation as
-  well as training, so its reported numbers carry noise that greedy's and
-  `rl`'s do not.
 - **The Phase-1b ACKs are ideal.** Instant, never lost, no capacity used — the
   return path costs nothing, which a real network could not offer.
 

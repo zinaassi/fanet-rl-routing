@@ -135,8 +135,8 @@ not to be reused, and the same holds for the Phase-2 agents.
   link quality, as if from hello messages; hello messages are not
   simulated.
 - Phase 1b adds two routing rules beside greedy/random: "rate"
-  (delivery_rate * (1 - queue_full), epsilon 0.05 in training AND at
-  test) and "rl" (a shared 3->32->32->1 network scoring each option
+  (delivery_rate * (1 - queue_full), NO exploration -- deterministic
+  given the layout and the traffic, like greedy) and "rl" (a shared 3->32->32->1 network scoring each option
   from 3 local inputs: delivery_rate, own queue fill, channel loss;
   epsilon 0.1 training, 0 at test). Options are the current neighbors
   plus the GS when in range, minus what the loop guard above excludes;

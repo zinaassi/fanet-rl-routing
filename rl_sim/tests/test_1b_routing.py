@@ -267,3 +267,78 @@ def test_phase_1a_results_are_unchanged_by_the_1b_work() -> None:
     finally:
         config.PACKET_INTERVAL_STEPS = previous
         config.LOOP_GUARD = previous_guard
+
+
+# ---------------------------------------------------------------------------
+# "rate" has no exploration
+# ---------------------------------------------------------------------------
+
+def test_rate_is_deterministic() -> None:
+    """Two runs on the same layout and traffic give the same result.
+
+    "rate" used to explore with probability EPSILON_RATE, in training AND at
+    test, so its reported numbers carried noise that greedy's did not. The
+    exploration is gone, so it is now as repeatable as greedy.
+    """
+    from scripts.train_1b import run_once
+
+    first = run_once("rate", 5, 5, 200, training=False)
+    second = run_once("rate", 5, 5, 200, training=False)
+    assert first["total_loss"] == second["total_loss"]
+    for cause in ("channel", "queue_full", "no_route", "dead_end", "ttl",
+                  "hop_limit"):
+        assert first[cause] == second[cause]
+
+
+def test_rate_never_draws_from_its_random_stream() -> None:
+    """The rule makes no random choices at all.
+
+    Checked by watching the stream rather than by inspecting the code: if any
+    decision consumed a draw, the generator's state would move.
+    """
+    router = make_router("rate", run_seed=7, training=False)
+    before = router.rng.bit_generator.state["state"]["state"]
+
+    env = FANETEnv(routing="rate", log_path=os.devnull,
+                   placement_seed=7, run_seed=7, router=router)
+    env.reset()
+    for _ in range(120):
+        env.step()
+    env.close_logger()
+
+    assert router.rng.bit_generator.state["state"]["state"] == before, (
+        "rate consumed a random draw, so it still explores somewhere"
+    )
+
+
+def test_rate_takes_the_highest_delivery_rate_with_room() -> None:
+    """The rule itself: best rate wins, full queues are skipped."""
+    from agents.rate_router import RateRouter
+
+    router = RateRouter(run_seed=0)
+    env = FANETEnv(routing="rate", log_path=os.devnull,
+                   placement_seed=2, run_seed=2, router=router)
+    env.reset()
+    drone = next(d for d in env.drones if len(d.neighbors) >= 2)
+    keys = sorted(drone.neighbors)[:2]
+    rows = [(0.9, 0.0, 0.10), (0.4, 0.0, 0.05)]
+
+    assert router._choose(drone, keys, rows) == keys[0]
+    # Fill the winner's queue and the other one takes it.
+    while not drone.queue_is_full(keys[0]):
+        drone.link_queues[keys[0]].append(object())
+    assert router._choose(drone, keys, rows) == keys[1]
+
+
+def test_rate_breaks_ties_on_channel_loss() -> None:
+    """Equal delivery rates: the cleaner link wins."""
+    from agents.rate_router import RateRouter
+
+    router = RateRouter(run_seed=0)
+    env = FANETEnv(routing="rate", log_path=os.devnull,
+                   placement_seed=2, run_seed=2, router=router)
+    env.reset()
+    drone = next(d for d in env.drones if len(d.neighbors) >= 2)
+    keys = sorted(drone.neighbors)[:2]
+    rows = [(0.7, 0.0, 0.30), (0.7, 0.0, 0.05)]
+    assert router._choose(drone, keys, rows) == keys[1]

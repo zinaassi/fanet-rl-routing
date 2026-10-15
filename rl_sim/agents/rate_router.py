@@ -6,10 +6,13 @@ rate_router.py — The "rate" routing rule, and the plumbing both rules share.
     score = delivery_rate * (1 - queue_full)
 
 where ``queue_full`` is 1 when the drone's own queue for that link is already
-at capacity, and picks the highest; ties go to the lower channel loss. With
-probability ``config.EPSILON_RATE`` it picks uniformly at random instead, so
-links it never chooses still get measured. That exploration is on in training
-AND at test, so its reported numbers carry that noise — unlike greedy's.
+at capacity, and picks the highest; ties go to the lower channel loss. There
+is no exploration: the rule is deterministic given the layout and the
+traffic, like greedy.
+
+A link nobody has sent on yet has no measured delivery rate, so it starts at
+``1 - channel_loss`` — what the radio alone would give. That seed is what
+stops an unmeasured link from being invisible.
 
 :class:`BaseRouter` holds everything the "rl" rule also needs: the option set,
 the three local inputs, the decision store and the hooks the environment
@@ -242,18 +245,14 @@ class RateRouter(BaseRouter):
         self,
         run_seed: int,
         tracker: Optional[Tracker] = None,
-        epsilon: Optional[float] = None,
     ) -> None:
         """Create the rate router.
 
         Args:
             run_seed: The run's channel/traffic seed.
             tracker:  An existing tracker, or None for a fresh one.
-            epsilon:  Exploration probability. Defaults to
-                      ``config.EPSILON_RATE``, and applies at test too.
         """
         super().__init__(run_seed, tracker)
-        self.epsilon = config.EPSILON_RATE if epsilon is None else epsilon
 
     def _choose(
         self,
@@ -261,7 +260,10 @@ class RateRouter(BaseRouter):
         keys: Sequence[NextHop],
         feature_rows: Sequence[Features],
     ) -> NextHop:
-        """Score each option and take the best, or explore.
+        """Score each option and take the best.
+
+        Deterministic: no exploration, so two runs on the same layout and
+        traffic make the same choices.
 
         Args:
             drone:        The drone deciding.
@@ -271,9 +273,6 @@ class RateRouter(BaseRouter):
         Returns:
             The chosen key.
         """
-        if self.epsilon > 0.0 and self.rng.random() < self.epsilon:
-            return keys[int(self.rng.integers(len(keys)))]
-
         def rank(index: int) -> Tuple[float, float]:
             """Higher score first; ties go to the lower channel loss."""
             delivery_rate, _, channel_loss = feature_rows[index]

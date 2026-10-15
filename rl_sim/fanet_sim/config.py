@@ -267,10 +267,6 @@ LOOP_GUARD_MODES: tuple = ("path", "previous")
 # and the router is injected into FANETEnv.
 DELIVERY_RATE_WINDOW: int = 50     # resolved outcomes kept per link  PROVISIONAL - to confirm
 
-# "rate": score = delivery_rate * (1 - queue_full), with this much uniform
-# exploration — in training AND at test, so its numbers carry that noise.
-EPSILON_RATE: float = 0.05         # PROVISIONAL - to confirm
-
 # "rl": a 3 -> RL_HIDDEN -> RL_HIDDEN -> 1 network with ReLU and a sigmoid
 # output, shared by every drone, scoring each option from three local inputs
 # (delivery_rate, own queue fill, channel loss).

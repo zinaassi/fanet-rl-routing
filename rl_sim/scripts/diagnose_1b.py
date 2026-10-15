@@ -18,10 +18,7 @@ Four tables, all on the 20 TEST layouts at the 200 ms working load:
    every transmission, and once over only the hops that delivered packets
    took. Those are different populations and can differ.
 
-3. The same for "rate" with EPSILON_RATE = 0, to separate the loss its
-   exploration causes from the loss its policy causes.
-
-4. A cutoff check: "rate" and "rl" at LINK_MAX_LOSS 0.2 and 0.3.
+3. A cutoff check: "rate" and "rl" at LINK_MAX_LOSS 0.2 and 0.3.
    NOTE: the cutoff also feeds the connected-layout filter, so a tighter one
    can reject a layout and redraw it. The layouts are therefore NOT
    guaranteed identical across cutoffs; the table reports the mean placement
@@ -97,7 +94,6 @@ def profile_run(
     routing: str,
     placement_seed: int,
     state_dict: Optional[Dict[str, Any]] = None,
-    epsilon: Optional[float] = None,
     link_max_loss: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Run one layout and describe the links it chose.
@@ -106,7 +102,6 @@ def profile_run(
         routing:        The rule to run.
         placement_seed: Layout seed; run_seed is the same.
         state_dict:     For "rl", the weights to use.
-        epsilon:        Override the rule's exploration probability.
         link_max_loss:  Override config.LINK_MAX_LOSS for this run only.
 
     Returns:
@@ -123,7 +118,7 @@ def profile_run(
             if routing == "rate":
                 from agents.rate_router import RateRouter
 
-                router = RateRouter(run_seed=placement_seed, epsilon=epsilon)
+                router = RateRouter(run_seed=placement_seed)
             else:
                 from agents import make_router
 
@@ -188,15 +183,15 @@ def profile_run(
 
 def _job(args: Tuple) -> Dict[str, Any]:
     """Worker entry point for one profiled run."""
-    routing, seed, state, epsilon, cutoff = args
-    return profile_run(routing, seed, state, epsilon, cutoff)
+    routing, seed, state, cutoff = args
+    return profile_run(routing, seed, state, cutoff)
 
 
 def profile(
     routing: str,
     state: Optional[Dict[str, Any]],
     workers: int,
-    epsilon: Optional[float] = None,
+
     cutoff: Optional[float] = None,
 ) -> Dict[str, Any]:
     """Run one rule over every TEST layout and pool the profiles.
@@ -205,7 +200,6 @@ def profile(
         routing: The rule.
         state:   For "rl", the weights.
         workers: Parallel workers.
-        epsilon: Exploration override.
         cutoff:  LINK_MAX_LOSS override.
 
     Returns:
@@ -214,7 +208,7 @@ def profile(
     Raises:
         SystemExit: If any run's ACK view disagrees with ground truth.
     """
-    jobs = [(routing, seed, state, epsilon, cutoff) for seed in TEST_SEEDS]
+    jobs = [(routing, seed, state, cutoff) for seed in TEST_SEEDS]
     if workers > 1:
         with ProcessPoolExecutor(max_workers=workers) as pool:
             runs = list(pool.map(_job, jobs))
@@ -275,8 +269,6 @@ def main() -> None:
     for rule in ("greedy", "rate", "rl"):
         cases.append((rule, profile(rule, state if rule == "rl" else None,
                                     args.workers)))
-    cases.append(("rate (eps=0)",
-                  profile("rate", None, args.workers, epsilon=0.0)))
 
     # --- 1 and 3: the chosen links ---
     print()
