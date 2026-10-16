@@ -142,12 +142,12 @@ not to be reused, and the same holds for the Phase-2 agents.
   where the network is congested (queue_full drops are a real part of
   the loss) but not yet saturated (greedy beats random on every
   placement). Chosen by the team after running all four loads, and
-  re-checked after the channel and the greedy change: at 200 ms
-  greedy loses 10.29% of its packets to full queues while the channel
-  is still the main cause (24.56%); at 100 ms full queues take over
-  (29.05% against 23.68%). Greedy beats random on 20/20 placements at
-  every load, so the old "18/20 at 100 ms" saturation argument no
-  longer applies under classic greedy.
+  re-checked after the channel, the greedy and the curve changes: at
+  200 ms greedy loses 14.51% of its packets to full queues against
+  13.81% on the channel, so queues and the channel cost about the same;
+  at 100 ms full queues dominate (35.05% against 13.35%). Greedy beats
+  random on 20/20 placements at every load, so the old "18/20 at 100 ms"
+  saturation argument no longer applies under classic greedy.
 - Seeds: separate placement, channel/traffic and routing streams;
   greedy and random run on identical placement and traffic.
 - Neighbor knowledge: each drone knows its neighbors' positions and
@@ -206,34 +206,37 @@ not to be reused, and the same holds for the Phase-2 agents.
              does not overwrite the previous models.
 
 ## Status
-Phase 1a and Phase 1b are COMPLETE on the new channel. Everything in
-out/ is a current result; every figure and CSV carries the new stamp.
+PHASE 1 IS BEING REDONE on the steeper curve (10% at 300 m). Phase 1a is
+re-run and current. Phase 1b is NOT: the RL models in out/models/ were
+trained on the old curve, so every 1b number and figure in out/ is stale
+until the retraining finishes.
 
-Headline, 50 TEST layouts at 200 ms, mean % of packets created:
-  rl 22.29   rate 24.70   greedy 32.05   random 74.17
-  rl - rate: -2.40 points, lower on 40 of 50 layouts, p < 0.0001
-    (exact two-sided sign test and paired t-test)
-At 500 ms: rl 12.56, rate 15.80, greedy 24.58, random 74.28; rl - rate
--3.24 points, 47/50, p < 0.0001.
+Phase 1a, 20 layouts, mean % of packets created (out/1a_summary.csv):
+  greedy  13.87 / 13.84 / 28.32 / 48.41  at 1000/500/200/100 ms
+          all channel at the two light loads; at 200 ms channel 13.81 and
+          queue_full 14.51; at 100 ms channel 13.35 and queue_full 35.05
+  random  63.99 / 63.89 / 63.79 / 64.09
+          channel ~38.6, dead_end ~5.9, hop_limit ~19.1
+  greedy - random: -50.12 / -50.05 / -35.46 / -15.68 points, greedy lower
+    on 20/20 placements at every load.
+  Hops per delivered packet: greedy 1.55-1.71, random ~4.88.
 
-Supporting checks, all done on the new channel:
-- Loop guard: "path" loses fewer packets than "previous" for random
-  (-4.53 points at both loads), rate (-2.28 / -5.34) and rl (-2.14 /
-  -3.48), all p < 0.0001; greedy is identical under both, on every
-  layout. rl was trained separately under each guard, so no model is
-  evaluated under a guard it did not train with.
-- Channel diagnosis: of rl's channel losses, 45.6% were geometry-forced,
-  7.1% congestion-forced and 47.3% had a cleaner idle option; within
-  that last group 99.95% were trade-offs where the cleaner link had a
-  worse delivery rate. (out/1b_channel_diagnosis.csv)
-- Queue size Q = 5 / 10 / 20: rl beats rate at every Q. Q = 10
-  reproduces the committed results to 1e-12.
+Supporting checks on the new curve:
+- Edge scan: every geometry column is bit-identical to the old curve, as
+  it must be — the 350 m edge did not move. Only b and the loss columns
+  changed. The 300 m row now has no curve at all and its curve columns
+  are blank. (out/edge_scan.csv)
 - Range check: at the 350 m edge, 99.7% of M-drones have a path to the
-  GS and 4.0% of random layouts strand at least one.
+  GS and 4.0% of random layouts strand at least one. A "good" link
+  (under 10% loss) now means 300 m, giving 6.18 good neighbours per
+  drone. (out/range_check.csv)
 
-Next: the rest of the written report, then Phase 2. Sections 4 and
-7-9 of docs/report/phase1_report.md and its citation list are current;
-sections 1, 2, 3, 5, 6, 10 and 12 are written after Phase 2.
+Stale until the retraining lands: out/1b_*, out/queue_size_*, every 1b
+figure, and sections 7-9 of the report.
+
+Next: retrain rl under both loop guards, re-run the 1b checks, then
+rewrite the report. Sections 1, 2, 3, 5, 6, 10 and 12 of the report are
+written after Phase 2.
 
 ## Open questions (do NOT decide these; ask)
 - Whether LOOP_GUARD stays "path" (the header-carried visited list);
