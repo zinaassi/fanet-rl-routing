@@ -422,31 +422,32 @@ networks.
 
 | load | random | greedy | rate | RL |
 |---|---|---|---|---|
-| 200 ms | 74.2% | 32.1% | 24.7% | 22.3% |
-| 500 ms | 74.3% | 24.6% | 15.8% | 12.6% |
+| 200 ms | 63.5% | 25.0% | 11.9% | 10.8% |
+| 500 ms | 63.3% | 13.8% | 5.5% | 4.7% |
 
 **Table 4:** Total packet loss on the 50 test layouts.
 <!-- source: rl_sim/out/1b_test50_runs.csv -->
 
-RL has the lowest loss at both loads, and the differences are
-statistically significant (p < 0.0001). RL was trained at 200 ms only;
-the 500 ms results show how well it generalises.
+RL has the lowest loss at both loads. It beats greedy by far, and
+rate by a small margin: 10.8% against 11.9% at 200 ms, and 4.7%
+against 5.5% at 500 ms. RL was trained at 200 ms only.
 <!-- source: rl_sim/out/1b_test50_paired.csv -->
 
 **What we saw**
 
 **1. RL avoids lossy links.** RL loses fewer packets on the channel
-than rate, and in exchange its routes are slightly longer. Part of
-this comes from RL also using the channel loss of each link, which
-rate does not use.
+than rate. In exchange its routes are slightly longer, and it loses a
+few more packets to full queues and other reasons. Part of this comes
+from RL also using the channel loss of each link, which rate does not
+use.
 
 | at 200 ms | rate | RL |
 |---|---|---|
-| total loss | 24.7% | 22.3% |
-| lost on the channel | 23.3% | 18.5% |
-| lost to full queues | 0.06% | 0.03% |
-| lost for other reasons (dead end, ttl, hop limit) | 1.4% | 3.8% |
-| hops per delivered packet | 2.9 | 3.5 |
+| total loss | 11.9% | 10.8% |
+| lost on the channel | 9.8% | 6.9% |
+| lost to full queues | 0.01% | 0.4% |
+| lost for other reasons (dead end, ttl, hop limit) | 2.2% | 3.5% |
+| hops per delivered packet | 2.9 | 3.1 |
 
 **Table 5:** How rate and RL lose packets at 200 ms (50 test layouts).
 <!-- source: rl_sim/out/1b_test50_runs.csv -->
@@ -457,18 +458,41 @@ moment it chose:
 
 | when the packet was lost | % of RL's channel losses |
 |---|---|
-| the drone had no other link with much lower loss | 46% |
-| a link with much lower loss existed, but its queue was half full or more | 7% |
-| a link with much lower loss existed, but fewer packets sent on it reached the GS | 47% |
-| a link with much lower loss existed and was better in every way | 0.02% |
+| the drone had no other link with much lower loss | 55% |
+| a link with much lower loss existed, but its queue was half full or more | 4% |
+| a link with much lower loss existed, but fewer packets sent on it reached the GS | 41% |
+| a link with much lower loss existed and was better in every way | 0.05% |
 
-**Table 6:** RL's channel losses at 200 ms (one network). "Much lower"
-means at least 10% lower. The rows add up to 100%.
+**Table 6:** RL's channel losses at 200 ms (one network). "Much
+lower" means at least 10 points lower (for example, 5% instead of
+15%). The rows add up to 100%.
 <!-- source: rl_sim/out/1b_channel_diagnosis.csv -->
 
-In about half of these losses, the drone had no other link with much
-lower loss. Moving drones could create such links; Phase 2 tests
-whether this lowers the loss.
+In more than half of these losses (55%), the drone had no other link
+with much lower loss. Moving drones could create such links; Phase 2
+tests whether this lowers the loss.
+
+**Other queue sizes**
+
+We repeated the test with queue sizes of 5 and 20 packets.
+
+| queue size | rule | total loss | channel | full queues | other |
+|---|---|---|---|---|---|
+| 5 | greedy | 25.0% | 13.8% | 11.2% | 0.0% |
+| 5 | rate | 12.0% | 10.2% | 0.05% | 1.7% |
+| 5 | RL | 10.8% | 7.4% | 0.6% | 2.8% |
+| 10 | greedy | 25.0% | 13.8% | 11.2% | 0.0% |
+| 10 | rate | 11.9% | 9.8% | 0.01% | 2.2% |
+| 10 | RL | 10.8% | 6.9% | 0.4% | 3.5% |
+| 20 | greedy | 24.9% | 13.8% | 11.1% | 0.0% |
+| 20 | rate | 13.6% | 9.6% | 0.01% | 4.0% |
+| 20 | RL | 13.3% | 6.7% | 0.2% | 6.3% |
+
+**Table 7:** Loss by queue size at 200 ms (50 test layouts). "Other"
+is dead end, ttl and hop limit.
+<!-- source: rl_sim/out/queue_size_runs.csv -->
+
+RL has the lowest loss at every queue size.
 
 ---
 

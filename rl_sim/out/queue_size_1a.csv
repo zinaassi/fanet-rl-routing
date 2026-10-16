@@ -1,4 +1,4 @@
-# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=5/10/20/link  |  N=1/link/step  |  load=1000/500/200/100 ms  |  placements=20  |  window=[50,950) of 1000  |  commit=0a43c32  |  queue-size check
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=5/10/20/link  |  N=1/link/step  |  load=1000/500/200/100 ms  |  placements=20  |  window=[50,950) of 1000  |  commit=7fa52f8  |  queue-size check
 queue_capacity,rule,load_ms,placement_seed,total_loss,channel,queue_full,no_route,dead_end,ttl,hop_limit,mean_hops,mean_delay_ms,mean_queue,max_queue,views_agree
 5,greedy,1000,1,0.15,0.15,0.0,0.0,0.0,0.0,0.0,1.5156136528685549,76.39796659404503,0.008645510835913313,3,True
 5,random,1000,1,0.6691358024691358,0.4364197530864197,0.0,0.0,0.0345679012345679,0.0,0.19814814814814816,4.598880597014926,376.4925373134329,0.049091954573769706,3,True
