@@ -1,14 +1,14 @@
-# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-54dBm@10%  |  b=0.749/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  placements=50  |  window=[50,950) of 1000  |  commit=91987a8  |  channel-loss diagnosis, seed-0 model
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  placements=50  |  window=[50,950) of 1000  |  commit=0a43c32  |  channel-loss diagnosis, seed-0 model
 rule,table,name,label,count,share_of_total,share_of_class_a,mean_chosen_loss,mean_chosen_rate,mean_cleaner_loss,mean_cleaner_rate
-rl,class,A,"A  avoidable (cleaner option, queue < 0.5)",35939,0.4734484711957739,,0.23980820502168665,,,
-rl,class,B,"B  congestion-forced (cleaner option, queue >= 0.5)",5364,0.0706635576809074,,0.2437641276582281,,,
-rl,class,C,C  geometry-forced (nothing 10+ points cleaner),34606,0.4558879711233187,,0.1035991145483271,,,
-rl,class_a_split,A1,A1  cleaner option's delivery rate >= chosen,17,0.0002239523640148072,0.0004730237346615098,0.15749257243957704,0.808235294117647,0.006862038726410213,0.8188235294117647
-rl,class_a_split,A2,A2  cleaner option's delivery rate <  chosen,35922,0.4732245188317591,0.9995269762653385,0.2398471606965905,0.7636004012719648,0.011381913245186179,0.24164201390359497
-rl,dirty_links,loss_above_20%,channel losses on links losing more than 20%,29059,0.38281363211213426,,,,,
-rate,class,A,"A  avoidable (cleaner option, queue < 0.5)",63803,0.6772207657117383,,0.28728519619946186,,,
-rate,class,B,"B  congestion-forced (cleaner option, queue >= 0.5)",5767,0.06121235922855657,,0.28310675789176964,,,
-rate,class,C,C  geometry-forced (nothing 10+ points cleaner),24643,0.26156687505970516,,0.09154289568270826,,,
+rl,class,A,"A  avoidable (cleaner option, queue < 0.5)",11113,0.4109685292703672,,0.22419079679552184,,,
+rl,class,B,"B  congestion-forced (cleaner option, queue >= 0.5)",1025,0.037905402906697236,,0.2297851591043697,,,
+rl,class,C,C  geometry-forced (nothing 10+ points cleaner),14903,0.5511260678229355,,0.08231101499926909,,,
+rl,class_a_split,A1,A1  cleaner option's delivery rate >= chosen,13,0.0004807514514995747,0.0011698011338072529,0.13116350938153412,0.8261538461538461,0.0016572376140347987,0.8600000000000001
+rl,class_a_split,A2,A2  cleaner option's delivery rate <  chosen,11100,0.41048777781886764,0.9988301988661927,0.22429974767267336,0.7733405610618689,0.0034664381581925993,0.23075189971282817
+rl,dirty_links,loss_above_20%,channel losses on links losing more than 20%,7711,0.285159572501017,,,,,
+rate,class,A,"A  avoidable (cleaner option, queue < 0.5)",22675,0.575522221376177,,0.24443892970801576,,,
+rate,class,B,"B  congestion-forced (cleaner option, queue >= 0.5)",2427,0.06160054823726491,,0.2911868357113822,,,
+rate,class,C,C  geometry-forced (nothing 10+ points cleaner),14297,0.36287723038655806,,0.06947039388642945,,,
 rate,class_a_split,A1,A1  cleaner option's delivery rate >= chosen,0,0.0,0.0,0.0,0.0,0.0,0.0
-rate,class_a_split,A2,A2  cleaner option's delivery rate <  chosen,63803,0.6772207657117383,1.0,0.28728519619946186,0.7512632178922803,0.007585715884523333,0.31252968430941197
-rate,dirty_links,loss_above_20%,channel losses on links losing more than 20%,53057,0.5631600734505854,,,,,
+rate,class_a_split,A2,A2  cleaner option's delivery rate <  chosen,22675,0.575522221376177,1.0,0.24443892970801576,0.773638001851278,0.001932318634810193,0.316612309643264
+rate,dirty_links,loss_above_20%,channel losses on links losing more than 20%,15476,0.39280184776263355,,,,,

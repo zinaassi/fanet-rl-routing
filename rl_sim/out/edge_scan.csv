@@ -1,4 +1,4 @@
-# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  placements=3000  |  window=[50,950) of 1000  |  commit=8e019d6  |  edge scan, no connected-layout filter
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  placements=3000  |  window=[50,950) of 1000  |  commit=0a43c32  |  edge scan, no connected-layout filter
 edge_m,b_per_db,connected_pct,direct_to_gs_pct,mean_neighbours,mean_min_hops,p_loss_200m,p_loss_300m,placements
 300.0,,81.03333333333333,34.931481481481484,6.159626666666667,1.8426573426573427,,,3000
 325.0,3.160373196250102,90.63333333333334,41.00555555555555,7.026479999999999,1.6842793510686118,1.62905883675968e-06,0.1,3000

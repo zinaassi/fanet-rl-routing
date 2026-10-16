@@ -1,4 +1,4 @@
-# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  placements=100  |  window=[50,950) of 1000  |  commit=8e019d6
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  placements=100  |  window=[50,950) of 1000  |  commit=0a43c32
 max_loss,link_reach_m,placements,pct_M_with_path_to_GS,pct_placements_with_isolated_M,mean_neighbors_per_drone,mean_drones_linked_to_GS,mean_good_neighbors_per_drone,mean_drones_with_good_GS_link,mean_hops_most_reliable_path
 0.2,317.5625808810273,100,98.94444444444444,10.0,7.1924,9.89,6.1824,8.84,4.7113980909601345
 0.5,350.0,100,99.66666666666667,4.0,8.376,11.9,6.1824,8.84,4.7157190635451505

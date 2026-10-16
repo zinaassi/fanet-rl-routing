@@ -206,36 +206,47 @@ not to be reused, and the same holds for the Phase-2 agents.
              does not overwrite the previous models.
 
 ## Status
-PHASE 1 IS BEING REDONE on the steeper curve (10% at 300 m). Phase 1a is
-re-run and current. Phase 1b is NOT: the RL models in out/models/ were
-trained on the old curve, so every 1b number and figure in out/ is stale
-until the retraining finishes.
+Phase 1a and Phase 1b are COMPLETE on the steeper curve (10% at 300 m).
+Everything in out/ is a current result stamped 0a43c32; the RL agent was
+retrained from scratch under both loop guards. The old-curve models are
+kept at out/models/old_curve_250/.
 
-Phase 1a, 20 layouts, mean % of packets created (out/1a_summary.csv):
-  greedy  13.87 / 13.84 / 28.32 / 48.41  at 1000/500/200/100 ms
-          all channel at the two light loads; at 200 ms channel 13.81 and
-          queue_full 14.51; at 100 ms channel 13.35 and queue_full 35.05
-  random  63.99 / 63.89 / 63.79 / 64.09
-          channel ~38.6, dead_end ~5.9, hop_limit ~19.1
-  greedy - random: -50.12 / -50.05 / -35.46 / -15.68 points, greedy lower
-    on 20/20 placements at every load.
-  Hops per delivered packet: greedy 1.55-1.71, random ~4.88.
+Headline, 50 TEST layouts at 200 ms, mean % of packets created:
+  rl 10.77   rate 12.10   greedy 24.97   random 63.46
+  rl - rate: -1.33 points, lower on 41 of 50 layouts, p < 0.0001
+    (exact two-sided sign test and paired t-test)
+At 500 ms: rl 4.65, rate 5.45, greedy 13.78, random 63.34; rl - rate
+-0.81 points, 35/50, p = 0.0066 sign / 0.0012 t-test.
+  NOTE: rl still wins everywhere, but the margin over rate is much
+  smaller than on the old curve (-2.40 / -3.24 points there). A cleaner
+  channel leaves less for the agent to avoid. "p < 0.0001" is no longer
+  true of rl - rate at 500 ms or at Q = 20; the other comparisons keep
+  it. rl - greedy went the other way, widening to -14.20 points at
+  200 ms, because greedy's loss is now mostly full queues.
 
-Supporting checks on the new curve:
-- Edge scan: every geometry column is bit-identical to the old curve, as
-  it must be — the 350 m edge did not move. Only b and the loss columns
-  changed. The 300 m row now has no curve at all and its curve columns
-  are blank. (out/edge_scan.csv)
+Supporting checks, all on the new curve:
+- Loop guard: "path" loses fewer packets than "previous" for random
+  (-7.06 / -7.18 points), rate (-1.41 / -4.05) and rl (-1.83 / -1.71),
+  all p < 0.0001; greedy is identical under both, on every layout. rl
+  was trained separately under each guard, so no model is evaluated
+  under a guard it did not train with.
+- Channel diagnosis: of rl's channel losses, 55.1% were geometry-forced,
+  3.8% congestion-forced and 41.1% had a cleaner idle option; within
+  that last group 99.88% were trade-offs where the cleaner link had a
+  worse delivery rate, and only 13 losses in 27041 had a cleaner option
+  that was better in every way. (out/1b_channel_diagnosis.csv)
+- Queue size Q = 5 / 10 / 20: rl beats rate at every Q, but by only
+  0.54 points at Q = 20 (p = 0.033). Q = 10 reproduces the committed
+  results to 1e-12.
 - Range check: at the 350 m edge, 99.7% of M-drones have a path to the
   GS and 4.0% of random layouts strand at least one. A "good" link
-  (under 10% loss) now means 300 m, giving 6.18 good neighbours per
-  drone. (out/range_check.csv)
+  (under 10% loss) now means 300 m: 6.18 good neighbours per drone.
+- Edge scan: every geometry column is bit-identical to the old curve,
+  since the 350 m edge did not move. The 300 m row has no curve at all
+  and its curve columns are blank.
 
-Stale until the retraining lands: out/1b_*, out/queue_size_*, every 1b
-figure, and sections 7-9 of the report.
-
-Next: retrain rl under both loop guards, re-run the 1b checks, then
-rewrite the report. Sections 1, 2, 3, 5, 6, 10 and 12 of the report are
+Next: rewrite the report, which still carries the OLD-curve numbers in
+sections 4 and 7-9, then Phase 2. Sections 1, 2, 3, 5, 6, 10 and 12 are
 written after Phase 2.
 
 ## Open questions (do NOT decide these; ask)
