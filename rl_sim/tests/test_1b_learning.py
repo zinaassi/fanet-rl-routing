@@ -261,38 +261,16 @@ def test_unknown_rule_names_are_rejected() -> None:
 # The non-RL rules must not move when RL is added
 # ---------------------------------------------------------------------------
 
-#: The commit whose 1b_test50_runs.csv holds greedy, random and rate measured
-#: on their own, before any RL run. Those three rules are seeded only by
-#: (rule, placement_seed, run_seed, load), so adding "rl" to the job list must
-#: not move a single one of their numbers.
-RATE_ONLY_COMMIT = "e34383e"
+#: The CSV holding greedy, random and rate as measured with "rl" absent
+#: from the job grid. Those three rules are seeded only by (rule,
+#: placement_seed, run_seed, load), so adding "rl" to the job list must not
+#: move a single one of their numbers. Regenerate it only when one of the
+#: three deliberately changes, with
+#:     python scripts/evaluate_1b_large.py --rules greedy random rate \
+#:         --out-dir <scratch>
+#: and copy that run's 1b_test50_runs.csv over it.
+NONRL_BASELINE = "1b_test50_nonrl_runs.csv"
 REPRODUCED_RULES = ("greedy", "random", "rate")
-
-
-def _committed_csv(commit: str, path: str):
-    """Return the rows of a CSV as it was at *commit*, or None.
-
-    Args:
-        commit: The commit to read from.
-        path:   Repository-relative path.
-
-    Returns:
-        The parsed rows, or None when git cannot produce the file.
-    """
-    import csv as _csv
-    import subprocess
-
-    repo = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    repo = os.path.dirname(repo)
-    try:
-        blob = subprocess.run(
-            ["git", "-C", repo, "show", f"{commit}:{path}"],
-            capture_output=True, text=True, timeout=30, check=True,
-        ).stdout
-    except (subprocess.SubprocessError, OSError):
-        return None
-    lines = [line for line in blob.splitlines() if not line.startswith("#")]
-    return list(_csv.DictReader(lines))
 
 
 def test_adding_rl_does_not_move_greedy_random_or_rate() -> None:
@@ -300,11 +278,11 @@ def test_adding_rl_does_not_move_greedy_random_or_rate() -> None:
 
     Each run is a separate process seeded only by its rule, layout, run seed
     and load, so putting "rl" into the same grid cannot change them. This
-    checks that rather than assuming it, against the CSV committed when the
-    three were measured alone.
+    checks that rather than assuming it, against a CSV measured with "rl"
+    absent from the grid.
 
-    Skips until an RL run exists, since before that the current file IS the
-    committed one and the check would be vacuous.
+    Skips until an RL run exists, since before that the two files hold the
+    same measurement and the check would be vacuous.
     """
     from scripts.stamp import read_stamped_csv
 
@@ -316,15 +294,18 @@ def test_adding_rl_does_not_move_greedy_random_or_rate() -> None:
     current = read_stamped_csv(current_path)
     if not any(row["rule"] == "rl" for row in current):
         pytest.skip(
-            "no rl rows yet: the current file is still the rate-only run, so "
-            "comparing it against itself would prove nothing"
+            "no rl rows yet: the current file is the same measurement as the "
+            "baseline, so comparing them would prove nothing"
         )
 
-    baseline = _committed_csv(
-        RATE_ONLY_COMMIT, "rl_sim/out/1b_test50_runs.csv"
+    baseline_path = os.path.join(here, "out", NONRL_BASELINE)
+    assert os.path.exists(baseline_path), (
+        f"the non-RL baseline out/{NONRL_BASELINE} is missing"
     )
-    if baseline is None:
-        pytest.skip(f"cannot read the CSV committed at {RATE_ONLY_COMMIT}")
+    baseline = read_stamped_csv(baseline_path)
+    assert not any(row["rule"] == "rl" for row in baseline), (
+        f"out/{NONRL_BASELINE} has rl rows: it was not measured without rl"
+    )
 
     fields = ["total_loss", "channel", "queue_full", "no_route", "dead_end",
               "ttl", "hop_limit", "mean_hops"]
