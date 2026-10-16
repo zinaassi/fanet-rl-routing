@@ -273,11 +273,18 @@ class RateRouter(BaseRouter):
         Returns:
             The chosen key.
         """
-        def rank(index: int) -> Tuple[float, float]:
-            """Higher score first; ties go to the lower channel loss."""
+        def rank(index: int) -> Tuple[float, float, float]:
+            """A link with room first, then the best rate, then the cleaner link.
+
+            Queue room comes FIRST, as its own key. Scoring it as
+            ``delivery_rate * (1 - queue_full)`` instead put a full link and
+            a link whose measured delivery rate happens to be 0 on the same
+            score of zero, and the channel-loss tie-break could then hand the
+            packet to the full link, which drops it on enqueue. A full link
+            is now taken only when every option is full.
+            """
             delivery_rate, _, channel_loss = feature_rows[index]
             queue_full = 1.0 if drone.queue_is_full(keys[index]) else 0.0
-            score = delivery_rate * (1.0 - queue_full)
-            return (-score, channel_loss)
+            return (queue_full, -delivery_rate, channel_loss)
 
         return keys[min(range(len(keys)), key=rank)]

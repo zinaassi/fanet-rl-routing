@@ -242,7 +242,10 @@ def plot_learning_curve(log: Dict[str, Any], path: str) -> None:
     for seed in sorted(train):
         runs = [index for index, _, bce in train[seed] if bce is not None]
         values = [bce for _, _, bce in train[seed] if bce is not None]
-        bottom.plot(runs, values, color=RL_COLOR, linewidth=1.2, alpha=0.9,
+        # One hue per seed: drawn in a single colour these three lines were
+        # indistinguishable, which is the opposite of the panel's point.
+        bottom.plot(runs, values, color=SEED_COLORS.get(seed, RL_COLOR),
+                    linewidth=1.2, alpha=0.9,
                     label=f"init seed {seed}" if len(seeds) > 1 else None)
     bottom.set_xlabel("Training runs", color=TEXT_SECONDARY, fontsize=11)
     bottom.set_ylabel("Training loss (BCE)", color=TEXT_SECONDARY, fontsize=11)
@@ -387,13 +390,20 @@ def plot_learning_curve_seeds(log: Dict[str, Any],
             if not saved:
                 continue
             index = {run: position for position, run in enumerate(runs)}
-            ax.scatter([r for r in saved], [means[index[r]] for r in saved],
+            # Seeds often save at the SAME evaluation — two of them did at
+            # run 30 — and at nearly the same loss, so a star drawn exactly
+            # on the point hides the one beneath it. Each seed's stars are
+            # nudged sideways by a fixed share of the evaluation spacing, so
+            # every one stays visible. The lines themselves are not moved.
+            offset = (seeds.index(seed) - (len(seeds) - 1) / 2.0) * 1.8
+            ax.scatter([r + offset for r in saved],
+                       [means[index[r]] for r in saved],
                        marker="*", s=150, color=color, zorder=5,
                        edgecolors=SURFACE, linewidths=0.6)
             # The last save is the model actually kept.
             final = saved[-1]
-            ax.scatter([final], [means[index[final]]], marker="*", s=420,
-                       color=color, zorder=6, edgecolors=SURFACE,
+            ax.scatter([final + offset], [means[index[final]]], marker="*",
+                       s=420, color=color, zorder=6, edgecolors=SURFACE,
                        linewidths=1.0)
 
         if name == "validation":
@@ -423,7 +433,8 @@ def plot_learning_curve_seeds(log: Dict[str, Any],
                    loc="upper left", ncol=len(seeds),
                    bbox_to_anchor=(0.0, 0.80))
     axes[0].annotate(
-        "★ a new best model was saved;  the large ★ is the model kept",
+        "★ a new best model was saved;  the large ★ is the model kept"
+        "  (nudged sideways so none hides another)",
         (0.005, 0.66), xycoords="axes fraction", color=TEXT_SECONDARY,
         fontsize=8.5,
     )

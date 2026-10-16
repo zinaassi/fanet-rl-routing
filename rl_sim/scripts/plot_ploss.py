@@ -134,27 +134,31 @@ def plot(out_path: str, stamp: bool = True) -> str:
 
     # Past the edge there is no link, so that part of the curve is never used.
     ax.axvspan(edge, X_MAX_M, color=GRID_COLOR, alpha=0.8, zorder=1)
-    # High in the shaded band, where the curve has not reached yet: at
-    # y = 50 the label would sit on the curve and on the 350 m marker.
+    # LOW in the shaded band. The curve climbs through this band to 84% by
+    # 450 m, so the top of it is where the curve is; underneath is clear, and
+    # the top is now wanted for the link-edge label.
     ax.annotate(f"not a neighbour\n(loss > {config.LINK_MAX_LOSS:.0%})",
-                ((edge + X_MAX_M) / 2.0, 90.0), ha="center", va="center",
+                ((edge + X_MAX_M) / 2.0, 22.0), ha="center", va="center",
                 color=TEXT_SECONDARY, fontsize=13, fontweight="bold",
                 zorder=2)
 
     ax.plot(distances, losses, color=CURVE_COLOR, linewidth=3.2, zorder=5)
 
-    # Stacked, not side by side: the two marks are only 50 m apart now, so
-    # labels on one line would print over each other.
-    for dist, label, colour, top in (
+    # Back to back along the top, each on its OWN side of its marker: the two
+    # marks are only 50 m apart, so stacking them put the 300 m line straight
+    # through the lower label. Nothing crosses the top strip on either side —
+    # left of 300 m the curve is still on the floor, and right of 350 m it
+    # has not climbed past 84%.
+    band_middle = (edge + X_MAX_M) / 2.0
+    for dist, label, colour, at, align in (
         (sensitivity, f"sensitivity: {config.SENS_LOSS:.0%} loss",
-         SENS_COLOR, 97.0),
+         SENS_COLOR, (sensitivity - 6.0, 97.0), "right"),
         (edge, f"link edge: {config.LINK_MAX_LOSS:.0%} loss",
-         EDGE_COLOR, 80.0),
+         EDGE_COLOR, (band_middle, 48.0), "center"),
     ):
         ax.axvline(dist, color=colour, linestyle="--", linewidth=2.0, zorder=4)
-        ax.annotate(f"{label}\n{dist:.1f} m", (dist - 6, top), ha="right",
-                    va="top", color=colour, fontsize=12, fontweight="bold",
-                    zorder=6)
+        ax.annotate(f"{label}\n{dist:.1f} m", at, ha=align, va="top",
+                    color=colour, fontsize=12, fontweight="bold", zorder=6)
 
     # Where each label goes, per point: below the axis is not an option for
     # the flat part of the curve, where the label would land on the x-axis

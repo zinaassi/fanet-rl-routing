@@ -329,6 +329,38 @@ def test_rate_takes_the_highest_delivery_rate_with_room() -> None:
     assert router._choose(drone, keys, rows) == keys[1]
 
 
+def test_rate_prefers_a_link_with_room_over_a_full_one() -> None:
+    """Queue room beats everything, even a delivery rate of zero.
+
+    The bug this pins: scoring a link as ``delivery_rate * (1 - queue_full)``
+    gave a full link and a link with a measured delivery rate of 0 the same
+    score, and the channel-loss tie-break could then pick the FULL link,
+    which drops the packet on enqueue.
+    """
+    from agents.rate_router import RateRouter
+
+    router = RateRouter(run_seed=0)
+    env = FANETEnv(routing="rate", log_path=os.devnull,
+                   placement_seed=2, run_seed=2, router=router)
+    env.reset()
+    drone = next(d for d in env.drones if len(d.neighbors) >= 2)
+    keys = sorted(drone.neighbors)[:2]
+
+    # Link 0 has room but has never delivered; link 1 is full and cleaner.
+    rows = [(0.0, 0.0, 0.40), (0.9, 1.0, 0.01)]
+    while not drone.queue_is_full(keys[1]):
+        drone.link_queues[keys[1]].append(object())
+
+    assert not drone.queue_is_full(keys[0])
+    assert router._choose(drone, keys, rows) == keys[0]
+
+    # Only when BOTH are full may a full link be chosen; then the normal
+    # order applies and the better delivery rate wins.
+    while not drone.queue_is_full(keys[0]):
+        drone.link_queues[keys[0]].append(object())
+    assert router._choose(drone, keys, rows) == keys[1]
+
+
 def test_rate_breaks_ties_on_channel_loss() -> None:
     """Equal delivery rates: the cleaner link wins."""
     from agents.rate_router import RateRouter
