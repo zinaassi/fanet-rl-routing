@@ -97,7 +97,7 @@ def test_the_experiment_seeds_need_few_draws() -> None:
 def test_the_filter_rejects_layouts_when_links_are_short() -> None:
     """The filter mechanism still works — shown by shortening the links.
 
-    With the reach cut to ~250 m (the old model's range) some random layouts
+    With the reach cut to ~250 m, well inside the 350 m edge, some layouts
     DO strand an M-drone, so the filter has to draw again. This exercises the
     rejection path, which the current parameters never reach.
     """

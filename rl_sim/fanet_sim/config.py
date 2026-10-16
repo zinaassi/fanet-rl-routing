@@ -16,13 +16,16 @@ They are OURS. The 900 x 900 m square, the 18 M + 7 C fleet, the queue sizes,
 the loads and the 350 m link edge are choices made for this project, not
 values taken from a paper.
 
-The radio figures (1 W at 2.4 GHz into a -54 dBm receiver) are calibration
-values: they are what makes the loss curve pass through 10% at 250 m and 50%
-at 350 m. Those two distances are the real choice; the radio figures follow
-from them and no result depends on them separately.
+The radio figures (1 W at 2.4 GHz, and the receiver sensitivity) are
+calibration values: they are what makes the loss curve pass through 10% at
+300 m and 50% at 350 m. Those two distances are the real choice; the radio
+figures follow from them and no result depends on them separately. The
+sensitivity is not even typed in: it is DERIVED from the 300 m anchor.
 
 The simulation is 2-D. There is no MAC layer and no interference model.
 """
+
+import math
 
 # ---------------------------------------------------------------------------
 # Space
@@ -117,7 +120,7 @@ MAX_TX_PER_STEP: int = 1          # packets each LINK queue may send per step,
                                   # oldest first                             [DECIDED]
 
 # ---------------------------------------------------------------------------
-# Channel loss and link existence                      [DECIDED 2026-10-13]
+# Channel loss and link existence                      [DECIDED 2026-10-16]
 # ---------------------------------------------------------------------------
 # A free-space path loss budget gives each link a MARGIN above the receiver's
 # sensitivity, and that margin drives an S-curve for the chance one
@@ -129,23 +132,41 @@ MAX_TX_PER_STEP: int = 1          # packets each LINK queue may send per step,
 #
 # The sensitivity is NOT a wall. It is the point where 10% of transmissions
 # are lost, following 802.11 OFDM, which defines receiver sensitivity as the
-# power giving 10% packet error rate on 1000-octet frames. That puts the 10%
-# point at 249.69 m. Links beyond it have a NEGATIVE margin and still exist;
-# they simply lose more. The same curve covers the last hop into the GS, and a
-# lost transmission is dropped with reason "channel".
+# power giving 10% packet error rate on 1000-octet frames. Links beyond it
+# have a NEGATIVE margin and still exist; they simply lose more. The same
+# curve covers the last hop into the GS, and a lost transmission is dropped
+# with reason "channel".
 #
-# b is DERIVED, never hardcoded: it is whatever value puts 50% loss at
-# LOSS_50_DISTANCE_M. See channel.py.
+# The curve is pinned by TWO DISTANCES, and nothing else is typed in:
+#     SENS_DISTANCE_M      where the loss is SENS_LOSS (10%)
+#     LOSS_50_DISTANCE_M   where the loss is 50%, which is also the edge
+# RX_SENSITIVITY_DBM is DERIVED from the first and b is DERIVED from the
+# second. Neither is ever hardcoded: move a distance and both follow.
 #
 # History: an earlier FSPL model took loss as exp(-0.8 * M), which reaches
-# 100% loss right at the sensitivity and so put a wall at 250 m; it is
-# replaced by this S-curve, where the sensitivity means 10% loss.
+# 100% loss right at the sensitivity and so put a wall at 250 m; it was
+# replaced by this S-curve, where the sensitivity means 10% loss. The 10%
+# anchor itself sat at 249.69 m until 2026-10-16, when it moved out to 300 m
+# to make the transition from a good link to no link steeper.
 PT_DBM: float = 30.0               # transmit power, 1 W                [DECIDED]
 GT_DBI: float = 2.0                # transmit antenna gain              [DECIDED]
 GR_DBI: float = 2.0                # receive antenna gain               [DECIDED]
 F_HZ: float = 2.4e9                # carrier frequency                  [DECIDED]
-RX_SENSITIVITY_DBM: float = -54.0  # receiver sensitivity               [DECIDED]
 SENS_LOSS: float = 0.10            # loss AT the sensitivity point      [DECIDED]
+SPEED_OF_LIGHT: float = 299_792_458.0   # m/s, for the FSPL constant
+
+# Where the loss is exactly SENS_LOSS. One of the curve's two anchors.
+SENS_DISTANCE_M: float = 300.0     #                                    [DECIDED]
+
+# DERIVED, never hardcoded: the sensitivity is the power that arrives from
+# SENS_DISTANCE_M away, so the margin is 0 and the loss is exactly SENS_LOSS
+# there. Move SENS_DISTANCE_M and this follows. Currently -55.594433 dBm.
+RX_SENSITIVITY_DBM: float = (
+    PT_DBM + GT_DBI + GR_DBI
+    - (20.0 * math.log10(SENS_DISTANCE_M)
+       + 20.0 * math.log10(F_HZ)
+       + 20.0 * math.log10(4.0 * math.pi / SPEED_OF_LIGHT))
+)
 
 # The distance where half of all transmissions are lost, which is also the
 # link edge. A DESIGN CHOICE, not a physical constant: with 1 W in free space

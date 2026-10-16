@@ -20,29 +20,30 @@ from fanet_sim import config
 from fanet_sim.envs import channel
 
 #: Distances spanning short links, the sensitivity point, the edge and beyond.
-DISTANCES = [0.0, 1e-12, 1.0, 10.0, 50.0, 100.0, 150.0, 200.0, 249.689108,
-             250.0, 300.0, 322.0, 350.0, 400.0, 450.0, 500.0, 800.0, 2000.0,
+DISTANCES = [0.0, 1e-12, 1.0, 10.0, 50.0, 100.0, 150.0, 200.0, 250.0,
+             300.0, 322.0, 325.0, 350.0, 400.0, 450.0, 500.0, 800.0, 2000.0,
              1e6]
 
 #: Reference values computed independently from the specification. Every one
 #: must hold to 1e-5; they are what pins the model down.
 REFERENCE = {
-    50.0: (13.968592, 0.000003),
-    100.0: (7.947992, 0.000288),
-    150.0: (4.426167, 0.004019),
-    200.0: (1.927392, 0.025558),
-    249.689108: (0.000000, 0.100000),
-    250.0: (-0.010808, 0.100731),
-    300.0: (-1.594433, 0.268367),
-    322.0: (-2.209125, 0.367608),
-    350.0: (-2.933369, 0.500000),
+    50.0: (15.563025, 0.000000),
+    100.0: (9.542425, 0.000000),
+    150.0: (6.020600, 0.000006),
+    200.0: (3.521825, 0.000343),
+    250.0: (1.583625, 0.008195),
+    300.0: (0.000000, 0.100000),
+    322.0: (-0.614692, 0.233527),
+    325.0: (-0.695242, 0.258014),
+    350.0: (-1.338936, 0.500000),
 }
 
 #: The derived constants, also computed independently.
 FSPL_CONST_DB = 40.052008
-SENSITIVITY_DISTANCE_M = 249.689108
-MARGIN_AT_EDGE_DB = -2.933369
-B_PER_DB = 0.749045
+RX_SENSITIVITY_DBM = -55.594433
+SENSITIVITY_DISTANCE_M = 300.0
+MARGIN_AT_EDGE_DB = -1.338936
+B_PER_DB = 1.641023
 
 
 # ---------------------------------------------------------------------------
@@ -52,6 +53,47 @@ B_PER_DB = 0.749045
 def test_the_fspl_frequency_constant() -> None:
     """The distance-independent part of free-space path loss."""
     assert channel.FSPL_CONST_DB == pytest.approx(FSPL_CONST_DB, abs=1e-5)
+
+
+def test_the_sensitivity_is_derived_from_the_300_m_anchor() -> None:
+    """The sensitivity is the power arriving from SENS_DISTANCE_M away.
+
+    It is not typed into config: moving the anchor must move it.
+    """
+    assert config.RX_SENSITIVITY_DBM == pytest.approx(
+        RX_SENSITIVITY_DBM, abs=1e-5
+    )
+    assert channel.margin_db(config.SENS_DISTANCE_M) == pytest.approx(
+        0.0, abs=1e-12
+    )
+
+
+def test_the_curve_passes_through_both_of_its_anchors() -> None:
+    """10% loss at 300 m and 50% loss at 350 m, which is the whole curve.
+
+    These two distances are the only inputs. Everything else about the
+    curve — the sensitivity, b, the link edge — is derived from them, so if
+    both anchors hold the curve is the intended one.
+    """
+    assert channel.p_loss(300.0) == pytest.approx(0.10, abs=1e-12)
+    assert channel.p_loss(350.0) == pytest.approx(0.50, abs=1e-12)
+    assert config.SENS_DISTANCE_M == 300.0
+    assert config.LOSS_50_DISTANCE_M == 350.0
+
+
+def test_the_transition_is_steeper_than_the_old_curve() -> None:
+    """10% to 50% now takes 50 m, where the 250 m anchor took 100 m.
+
+    The point of the 2026-10-16 change. Stated as a property rather than as
+    a pair of numbers, so it survives a later move of either anchor.
+    """
+    assert channel.distance_for_loss(0.10) == pytest.approx(300.0, abs=1e-6)
+    assert channel.distance_for_loss(0.50) == pytest.approx(350.0, abs=1e-6)
+
+    width = channel.distance_for_loss(0.50) - channel.distance_for_loss(0.10)
+    assert width == pytest.approx(50.0, abs=1e-6)
+    # A link well inside the anchor is now almost clean.
+    assert channel.p_loss(200.0) < 0.001
 
 
 def test_the_sensitivity_distance_is_where_the_margin_is_zero() -> None:
@@ -114,11 +156,11 @@ def test_b_is_derived_from_the_edge() -> None:
     A hardcoded b would pass every other test in this file while quietly
     putting the 50% point somewhere other than the configured edge.
     """
-    for edge in (300.0, 325.0, 400.0, 450.0):
+    for edge in (325.0, 350.0, 400.0, 450.0):
         assert channel.p_loss(edge, edge_m=edge) == pytest.approx(0.5, abs=1e-9)
 
     # And the derived steepness really differs between edges.
-    steepnesses = [channel._slope_for_edge(e) for e in (300.0, 350.0, 450.0)]
+    steepnesses = [channel._slope_for_edge(e) for e in (325.0, 350.0, 450.0)]
     assert len(set(steepnesses)) == len(steepnesses)
     # A nearer edge means a steeper curve.
     assert steepnesses == sorted(steepnesses, reverse=True)
@@ -132,9 +174,22 @@ def test_moving_the_edge_in_config_moves_b() -> None:
     )
 
 
+def test_an_edge_at_or_inside_the_sensitivity_is_refused() -> None:
+    """50% loss cannot be asked for where the curve already loses 10%.
+
+    At the sensitivity the slope would divide by zero; inside it b comes out
+    negative and the curve inverts. Both are refused rather than returned.
+    """
+    for bad_edge in (250.0, 299.9, config.SENS_DISTANCE_M):
+        with pytest.raises(ValueError):
+            channel._slope_for_edge(bad_edge)
+        with pytest.raises(ValueError):
+            channel.p_loss(100.0, edge_m=bad_edge)
+
+
 def test_the_sensitivity_point_does_not_move_with_the_edge() -> None:
     """Whatever the edge, zero margin still means SENS_LOSS."""
-    for edge in (300.0, 350.0, 450.0):
+    for edge in (325.0, 350.0, 450.0):
         assert channel.p_loss(
             channel.SENSITIVITY_DISTANCE_M, edge_m=edge
         ) == pytest.approx(config.SENS_LOSS, abs=1e-9)
@@ -168,7 +223,7 @@ def test_links_past_the_sensitivity_have_a_negative_margin_and_still_exist() -> 
 
     This is the point of the change: the sensitivity is not a wall.
     """
-    for dist in (260.0, 300.0, 322.0, 349.0):
+    for dist in (305.0, 322.0, 335.0, 349.0):
         assert channel.margin_db(dist) < 0.0
         assert channel.link_exists(dist)
         assert config.SENS_LOSS < channel.p_loss(dist) < config.LINK_MAX_LOSS
@@ -177,15 +232,27 @@ def test_links_past_the_sensitivity_have_a_negative_margin_and_still_exist() -> 
 def test_p_loss_approaches_one_but_never_exceeds_it() -> None:
     """Loss stays strictly under 1 at every distance the arena can produce.
 
-    Mathematically the curve only approaches 1. In float64 the exponential
-    underflows eventually and p_loss becomes exactly 1.0, but that happens
-    around 99 km — about 78 times the arena diagonal, so the simulator can
-    never reach it. The diagonal is the longest link that can exist.
+    Mathematically the curve only approaches 1. In float64 it rounds to
+    exactly 1.0 at about 4.6 km — some 3.6 times the arena diagonal, so the
+    simulator can never reach it. The diagonal is the longest link that can
+    exist. The steeper curve of 2026-10-16 brought that point in from 99 km,
+    which is why it is measured here rather than assumed.
     """
     diagonal = math.hypot(config.WIDTH, config.HEIGHT)
     assert channel.p_loss(diagonal) < 1.0
     assert channel.p_loss(diagonal) > 0.99
     assert channel.p_loss(1e6) <= 1.0
+
+    # Where it saturates, found by bisection on the loss itself.
+    low, high = diagonal, 1e9
+    while high / low > 1.0 + 1e-9:
+        middle = math.sqrt(low * high)
+        if channel.p_loss(middle) >= 1.0:
+            high = middle
+        else:
+            low = middle
+    assert high == pytest.approx(4606.7, rel=1e-3)
+    assert high > 3.0 * diagonal
 
 
 def test_p_loss_is_zero_at_touching_range() -> None:
@@ -291,7 +358,7 @@ def test_the_curve_parameters_are_the_configured_ones() -> None:
 
 def test_a_farther_edge_means_less_loss_everywhere_past_the_sensitivity() -> None:
     """Moving the edge out flattens the curve beyond the sensitivity point."""
-    for dist in [300.0, 350.0, 400.0]:
+    for dist in [305.0, 350.0, 400.0]:
         assert channel.p_loss(dist, edge_m=450.0) < channel.p_loss(
             dist, edge_m=350.0
         )

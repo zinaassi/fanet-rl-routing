@@ -17,22 +17,32 @@ transmission is lost:
             p_loss is exactly 0.5 at the link edge. Never hardcode it: change
             LOSS_50_DISTANCE_M and b follows.
 
+Two distances pin the whole curve, and nothing else is typed in:
+``config.SENS_DISTANCE_M`` (300 m), where the loss is 10%, and
+``config.LOSS_50_DISTANCE_M`` (350 m), where it is 50% and the link ends.
+``config.RX_SENSITIVITY_DBM`` is derived from the first, ``b`` from the
+second.
+
 The receiver sensitivity is NOT a wall. It is the point where 10% of
 transmissions are lost, following 802.11 OFDM, which defines sensitivity as
-the power giving a 10% packet error rate on 1000-octet frames. With the
-configured constants that point is 249.69 m:
+the power giving a 10% packet error rate on 1000-octet frames. It is placed
+at 300 m by construction:
 
-    d (m)      50     100     150     200   249.7     250     300     350
-    p_loss  0.0000  0.0003  0.0040  0.0256  0.1000  0.1007  0.2684  0.5000
+    d (m)      50     100     150     200     250     300     325     350
+    p_loss  0.0000  0.0000  0.0000  0.0003  0.0082  0.1000  0.2580  0.5000
 
-Links between 249.69 m and the edge have a NEGATIVE margin and still exist;
-they simply lose more. The same curve governs the last hop into the ground
+Links between 300 m and the edge have a NEGATIVE margin and still exist; they
+simply lose more. The same curve governs the last hop into the ground
 station — the GS is just another endpoint.
 
+The transition is deliberately narrow: the loss climbs from 10% to 50% over
+the last 50 m. It used to run from 249.69 m, over 100 m; the anchor moved out
+on 2026-10-16.
+
 p_loss returns exactly 0.0 at zero distance, where the margin is infinite.
-Mathematically it only approaches 1 and never reaches it; in float64 the
-exponential underflows around 99 km and it becomes exactly 1.0, which is far
-beyond any distance this arena can produce.
+Mathematically it only approaches 1 and never reaches it; in float64 it
+rounds to exactly 1.0 some kilometres out, which is still far beyond any
+distance this arena can produce. tests/test_channel.py pins where that is.
 
 Link existence
 --------------
@@ -66,7 +76,9 @@ from fanet_sim import config
 # ---------------------------------------------------------------------------
 # The loss curve
 # ---------------------------------------------------------------------------
-SPEED_OF_LIGHT = 299_792_458.0
+# Kept as a module name for readers of the formula above; the value lives in
+# config, because the sensitivity is derived from the same constant.
+SPEED_OF_LIGHT = config.SPEED_OF_LIGHT
 
 # The distance-independent part of free-space path loss, in dB.
 FSPL_CONST_DB = (
@@ -107,7 +119,8 @@ def margin_db(dist_m: float) -> float:
 
 
 # Where the margin is exactly zero, i.e. the sensitivity point. Everything
-# else is anchored to it, so it is computed once here.
+# else is anchored to it, so it is computed once here. It comes back to
+# config.SENS_DISTANCE_M, which is what the sensitivity was derived from.
 SENSITIVITY_DISTANCE_M = 10.0 ** (
     (config.PT_DBM + config.GT_DBI + config.GR_DBI
      - config.RX_SENSITIVITY_DBM - FSPL_CONST_DB) / 20.0
@@ -117,13 +130,30 @@ SENSITIVITY_DISTANCE_M = 10.0 ** (
 def _slope_for_edge(edge_m: float) -> float:
     """The S-curve steepness b that puts 50% loss at *edge_m*.
 
+    The edge has to lie strictly beyond the sensitivity distance, where the
+    loss is already SENS_LOSS and the margin is zero. Asking for 50% loss at
+    or inside that point has no answer: at the sensitivity itself the
+    division is by zero, and inside it b comes out negative, which turns the
+    curve upside down. Since the anchor moved out to 300 m this is close
+    enough to the edges people scan to be worth refusing out loud.
+
     Args:
         edge_m: The distance that should lose half of what is sent on it.
 
     Returns:
         b, in units of 1/dB.
+
+    Raises:
+        ValueError: If *edge_m* is at or inside the sensitivity distance.
     """
-    return math.log(A) / (-margin_db(edge_m))
+    margin = margin_db(edge_m)
+    if margin >= 0.0:
+        raise ValueError(
+            f"the 50% edge must lie beyond the {config.SENS_DISTANCE_M} m "
+            f"sensitivity distance, where the loss is already "
+            f"{config.SENS_LOSS:.0%}; got {edge_m} m (margin {margin:+.3f} dB)"
+        )
+    return math.log(A) / (-margin)
 
 
 # DERIVED, never hardcoded: move LOSS_50_DISTANCE_M and b follows.

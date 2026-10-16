@@ -58,25 +58,36 @@ not to be reused, and the same holds for the Phase-2 agents.
   arrives, the drone picks the next hop and puts it in that link's
   queue. Arrivals within a step are processed in random (reproducible)
   order. Arrived packets wait at least one step.
-- Channel loss [DECIDED 2026-10-13]: a free-space path loss budget gives
+- Channel loss [DECIDED 2026-10-16]: a free-space path loss budget gives
   each link a MARGIN above the receiver's sensitivity, and that margin
   drives an S-curve:
       FSPL_dB(d) = 20*log10(d) + 20*log10(F_HZ) + 20*log10(4*pi/c)
       M(d)       = PT_DBM + GT_DBI + GR_DBI - FSPL_dB(d) - RX_SENSITIVITY_DBM
       p_loss(M)  = 1 / (1 + A * exp(b * M)),  A = (1 - SENS_LOSS)/SENS_LOSS
   with PT_DBM = 30 (1 W), GT_DBI = GR_DBI = 2, F_HZ = 2.4e9,
-  RX_SENSITIVITY_DBM = -54, SENS_LOSS = 0.10, LOSS_50_DISTANCE_M = 350.
-  A = 9 and b = 0.749045 per dB; b is DERIVED at import time from the edge
-  and must never be hardcoded.
+  SENS_LOSS = 0.10, SENS_DISTANCE_M = 300, LOSS_50_DISTANCE_M = 350.
+  TWO DISTANCES pin the curve and nothing else is typed in:
+    SENS_DISTANCE_M = 300 gives RX_SENSITIVITY_DBM = -55.594433 dBm, the
+      power arriving from 300 m, so the margin is 0 and the loss is 10%
+      there;
+    LOSS_50_DISTANCE_M = 350 gives b = 1.641023 per dB.
+  A = 9. Both the sensitivity and b are DERIVED at import time and must
+  never be hardcoded.
   The sensitivity is NOT a wall: it is the point where 10% of transmissions
   are lost, following 802.11 OFDM (10% packet error rate on 1000-octet
-  frames). That point is 249.689108 m. Links between 249.7 m and 350 m have
-  a NEGATIVE margin and still exist; they simply lose more. Loss is 0.03%
-  at 100 m, 2.6% at 200 m, 10% at 249.7 m, 26.8% at 300 m, 50% at 350 m.
+  frames). Links between 300 m and 350 m have a NEGATIVE margin and still
+  exist; they simply lose more. Loss is 0.00003% at 100 m, 0.03% at 200 m,
+  0.82% at 250 m, 10% at 300 m, 25.8% at 325 m, 50% at 350 m.
   The same curve covers the last hop into the GS.
+  An edge at or inside 300 m has no curve (b would divide by zero or go
+  negative); channel._slope_for_edge refuses it, and edge_scan reports the
+  geometry for such a row but leaves its curve columns blank.
   History: an earlier FSPL loss exp(-0.8*M) put 100% loss at the
   sensitivity, a wall at 250 m; replaced by an S-curve where the
-  sensitivity means 10% loss (802.11).
+  sensitivity means 10% loss (802.11), with the 10% anchor at 249.689 m.
+  On 2026-10-16 that anchor moved out to 300 m, so the loss climbs from
+  10% to 50% over 50 m instead of 100 m. Every result before that date was
+  measured on the old curve and has been re-run.
 - Link existence: a link exists while p_loss < LINK_MAX_LOSS = 0.5, i.e.
   out to exactly LOSS_50_DISTANCE_M = 350 m. ONE rule everywhere:
   neighbours, the GS link, the connected-layout filter and the range check.

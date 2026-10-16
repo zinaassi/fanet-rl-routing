@@ -100,22 +100,36 @@ M(d)       = PT_DBM + GT_DBI + GR_DBI − FSPL_dB(d) − RX_SENSITIVITY_DBM
 p_loss(M)  = 1 / (1 + A · exp(b · M))        A = (1 − SENS_LOSS)/SENS_LOSS
 ```
 
-with 1 W at 2.4 GHz, 2 dBi antennas and a −54 dBm receiver. `A` = 9 and
-`b` = 0.749045 per dB. **`b` is derived, never written down**: it is whatever
-value puts 50 % loss at the link edge, computed when `channel.py` is imported,
-so moving the edge moves `b` with it.
+with 1 W at 2.4 GHz and 2 dBi antennas. `A` = 9.
+
+**Two distances pin the curve, and nothing else is typed in.**
+`SENS_DISTANCE_M` = 300 m is where the loss is 10 %, and
+`LOSS_50_DISTANCE_M` = 350 m is where it is 50 %, which is also the link edge.
+`RX_SENSITIVITY_DBM` = −55.594433 dBm is *derived* from the first — it is the
+power that arrives from 300 m away, so the margin there is zero — and
+`b` = 1.641023 per dB is *derived* from the second. Both are computed at
+import; neither is ever written down, so moving an anchor moves them with it.
 
 The receiver sensitivity is **not a wall**. It is the point where 10 % of
 transmissions are lost, following 802.11 OFDM, which defines sensitivity as
 the power giving a 10 % packet error rate on 1000-octet frames. That point is
-**249.7 m**.
+**300 m** by construction.
 
-| d (m) | 50 | 100 | 150 | 200 | 249.7 | 250 | 300 | 350 |
+| d (m) | 50 | 100 | 150 | 200 | 250 | 300 | 325 | 350 |
 |---|---|---|---|---|---|---|---|---|
-| margin (dB) | 13.97 | 7.95 | 4.43 | 1.93 | 0.00 | −0.01 | −1.59 | −2.93 |
-| p_loss | 0.000 | 0.000 | 0.004 | 0.026 | 0.100 | 0.101 | 0.268 | 0.500 |
+| margin (dB) | 15.56 | 9.54 | 6.02 | 3.52 | 1.58 | 0.00 | −0.70 | −1.34 |
+| p_loss | 0.000 | 0.000 | 0.000 | 0.0003 | 0.008 | 0.100 | 0.258 | 0.500 |
 
-Links between 249.7 m and the edge have a **negative margin and still exist**;
+The loss climbs from 10 % to 50 % over the last **50 m**. It used to run from
+249.7 m, over 100 m; the anchor moved out on 2026-10-16 to make the
+transition steeper, and every result was re-run on the new curve.
+
+An edge at or inside the 10 % anchor has no curve at all — `b` would divide by
+zero at 300 m and go negative inside it — so `channel._slope_for_edge` refuses
+it, and `edge_scan` leaves the curve columns of such a row blank while still
+reporting its geometry.
+
+Links between 300 m and the edge have a **negative margin and still exist**;
 they simply lose more. The GS uses the same model — it is just another
 endpoint, and the last hop into it draws like any other.
 
@@ -441,10 +455,11 @@ defaults and carry a `PROVISIONAL - to confirm` comment in the file.
 `channel.max_link_distance()` derives the 350 m link reach from the loss
 curve, so there is no separate range constant to keep in step.
 
-Every parameter here is **our** choice. The radio figures (1 W, 2.4 GHz,
-−54 dBm) are calibration values: they are what puts the loss curve through
-10 % at 250 m and 50 % at 350 m, and those two distances are the actual
-choice. The 10 % sensitivity definition follows 802.11 OFDM.
+Every parameter here is **our** choice. The radio figures (1 W, 2.4 GHz, and
+the receiver sensitivity) are calibration values: they are what puts the loss
+curve through 10 % at 300 m and 50 % at 350 m, and those two distances are the
+actual choice. The sensitivity is not even typed in — it is derived from the
+300 m anchor. The 10 % sensitivity definition follows 802.11 OFDM.
 
 ---
 

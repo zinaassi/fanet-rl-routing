@@ -17,6 +17,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import sys
 from typing import Dict, Tuple
@@ -45,6 +46,28 @@ X_MAX_M = 450.0
 REFERENCE_DISTANCES = (50.0, 100.0, 150.0, 200.0,
                        channel.SENSITIVITY_DISTANCE_M,
                        250.0, 300.0, 322.0, config.LOSS_50_DISTANCE_M)
+
+
+def _loss_text(loss_pct: float) -> str:
+    """Format a loss for a point label, keeping two significant figures.
+
+    The curve is very flat on its left now: at 100 m the loss is 0.00003%,
+    which two decimals would print as "0.00%". The number of decimals follows
+    the magnitude so that every label says something.
+
+    Args:
+        loss_pct: The loss as a percentage.
+
+    Returns:
+        The label text, percent sign included.
+    """
+    if loss_pct >= 1.0:
+        return f"{loss_pct:.1f}%"
+    if loss_pct >= 0.01:
+        return f"{loss_pct:.2f}%"
+    # Below this the digits are noise on a figure; at 100 m the loss is
+    # 0.0000018%, which no reader needs to the digit.
+    return "<0.01%"
 
 
 def parse_args() -> argparse.Namespace:
@@ -120,12 +143,16 @@ def plot(out_path: str, stamp: bool = True) -> str:
 
     ax.plot(distances, losses, color=CURVE_COLOR, linewidth=3.2, zorder=5)
 
-    for dist, label, colour in (
-        (sensitivity, f"sensitivity: {config.SENS_LOSS:.0%} loss", SENS_COLOR),
-        (edge, f"link edge: {config.LINK_MAX_LOSS:.0%} loss", EDGE_COLOR),
+    # Stacked, not side by side: the two marks are only 50 m apart now, so
+    # labels on one line would print over each other.
+    for dist, label, colour, top in (
+        (sensitivity, f"sensitivity: {config.SENS_LOSS:.0%} loss",
+         SENS_COLOR, 97.0),
+        (edge, f"link edge: {config.LINK_MAX_LOSS:.0%} loss",
+         EDGE_COLOR, 80.0),
     ):
         ax.axvline(dist, color=colour, linestyle="--", linewidth=2.0, zorder=4)
-        ax.annotate(f"{label}\n{dist:.1f} m", (dist - 6, 97), ha="right",
+        ax.annotate(f"{label}\n{dist:.1f} m", (dist - 6, top), ha="right",
                     va="top", color=colour, fontsize=12, fontweight="bold",
                     zorder=6)
 
@@ -135,16 +162,15 @@ def plot(out_path: str, stamp: bool = True) -> str:
     label_offsets: Dict[float, Tuple[Tuple[int, int], str]] = {
         100.0: ((0, 15), "center"),
         200.0: ((0, 15), "center"),
-        250.0: ((14, -6), "left"),
-        300.0: ((-12, 12), "right"),
-        350.0: ((-12, 12), "right"),
+        250.0: ((0, 18), "center"),
+        300.0: ((-14, 6), "right"),
+        350.0: ((-14, 6), "right"),
     }
     for dist, (offset, align) in label_offsets.items():
         loss = channel.p_loss(dist) * 100.0
         ax.scatter([dist], [loss], s=70, color=CURVE_COLOR, zorder=7,
                    edgecolors=SURFACE, linewidths=1.4)
-        # Two decimals under 1%, where one would round a real value to 0.0.
-        text = f"{loss:.2f}%" if loss < 1.0 else f"{loss:.1f}%"
+        text = _loss_text(loss)
         ax.annotate(text, (dist, loss), textcoords="offset points",
                     xytext=offset, ha=align, color=TEXT_PRIMARY, fontsize=13,
                     fontweight="bold", zorder=8)

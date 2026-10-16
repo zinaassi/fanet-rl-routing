@@ -40,18 +40,21 @@ is a limit on what the results can claim.
   periodic hello messages that are free and always current.
 - **Energy is tracked but constrains nothing.** No drone ever runs out.
 - **The link edge (350 m) is a design choice made from geometry, not a
-  measured radio range.**
+  measured radio range.** So is the 300 m point where the loss reaches 10%:
+  together the two fix how steep the curve is.
 - **Results are conditional on the placement filter.** Every number describes
   a *connected* deployment, not an arbitrary one.
 <!-- source: docs/report/phase1_report.md section 4, before the R2 rewrite -->
 
 ## Difficulties we hit
 
-- The channel model was changed twice. An earlier FSPL loss `exp(-0.8*M)`
-  put 100% loss at the receiver sensitivity, a wall at 250 m. A curve in
-  distance replaced it, and was itself replaced on 2026-10-13 by the current
+- The channel model was changed three times. An earlier FSPL loss
+  `exp(-0.8*M)` put 100% loss at the receiver sensitivity, a wall at 250 m. A
+  curve in distance replaced it, and was itself replaced on 2026-10-13 by an
   S-curve on the FSPL margin, where the sensitivity means 10% loss (802.11
-  OFDM). Every result from the first two models was deleted. <!-- source: rl_sim/fanet_sim/config.py; rl_sim/fanet_sim/envs/channel.py -->
+  OFDM). On 2026-10-16 the 10% anchor moved from 249.69 m out to 300 m, so
+  the loss now climbs from 10% to 50% over 50 m instead of 100 m. Every
+  result from each earlier model was deleted or re-run. <!-- source: rl_sim/fanet_sim/config.py; rl_sim/fanet_sim/envs/channel.py -->
 - The link edge is a design choice, not a physical constant, and had to be
   chosen from geometry alone before any routing experiment so that it could
   not be tuned to a result. <!-- source: rl_sim/out/edge_scan.csv; CLAUDE.md -->
@@ -87,9 +90,11 @@ is a limit on what the results can claim.
 - 802.11 OFDM defines receiver sensitivity as the power giving a 10% packet
   error rate on 1000-octet frames, which is what anchors the S-curve.
   [CITE: the 802.11 clause defining receiver minimum input sensitivity] <!-- source: rl_sim/fanet_sim/config.py -->
-- The radio figures (1 W, 2.4 GHz, -54 dBm) are OURS: calibration values that
-  put the loss curve through 10% at 250 m and 50% at 350 m. No paper is their
-  source, and no result depends on them separately from those two distances. <!-- source: rl_sim/fanet_sim/config.py -->
+- The radio figures (1 W, 2.4 GHz, and the receiver sensitivity) are OURS:
+  calibration values that put the loss curve through 10% at 300 m and 50% at
+  350 m. The sensitivity is not typed in at all — it is derived from the
+  300 m anchor. No paper is their source, and no result depends on them
+  separately from those two distances. <!-- source: rl_sim/fanet_sim/config.py -->
 - Greedy is classic greedy geographic forwarding (closest to the GS among the
   neighbours that make progress, skipping full queues). The earlier rule,
   which minimised link loss among the same candidates, was replaced on

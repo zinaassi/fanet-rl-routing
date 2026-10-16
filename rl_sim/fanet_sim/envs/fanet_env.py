@@ -421,9 +421,10 @@ class FANETEnv:
             anchor={
                 "notes": (
                     "Every parameter is a choice made for this project. The "
-                    "radio figures (1 W, 2.4 GHz, -54 dBm) are calibration "
-                    "values that put the loss curve through 10% at 250 m and "
-                    "50% at 350 m; those two distances are the actual choice."
+                    "radio figures (1 W, 2.4 GHz, and the receiver "
+                    "sensitivity) are calibration values that put the loss "
+                    "curve through 10% at 300 m and 50% at 350 m; those two "
+                    "distances are the actual choice."
                 ),
             },
         )

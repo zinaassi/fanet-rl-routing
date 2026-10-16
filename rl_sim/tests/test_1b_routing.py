@@ -275,9 +275,9 @@ def test_phase_1a_results_are_unchanged_by_the_1b_work() -> None:
 def test_rate_is_deterministic() -> None:
     """Two runs on the same layout and traffic give the same result.
 
-    "rate" used to explore with probability EPSILON_RATE, in training AND at
-    test, so its reported numbers carried noise that greedy's did not. The
-    exploration is gone, so it is now as repeatable as greedy.
+    "rate" used to explore a fixed share of its decisions, in training AND
+    at test, so its reported numbers carried noise that greedy's did not.
+    The exploration is gone, so it is now as repeatable as greedy.
     """
     from scripts.train_1b import run_once
 

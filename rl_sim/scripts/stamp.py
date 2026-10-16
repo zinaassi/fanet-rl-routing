@@ -78,7 +78,7 @@ def settings_stamp(
         f"f={config.F_HZ / 1e9:.1f}GHz",
         f"Pt={config.PT_DBM:.0f}dBm",
         f"G={config.GT_DBI:.0f}dBi",
-        f"sens={config.RX_SENSITIVITY_DBM:.0f}dBm@{config.SENS_LOSS:.0%}",
+        f"sens={config.RX_SENSITIVITY_DBM:.1f}dBm@{config.SENS_LOSS:.0%}",
         f"b={channel.B_PER_DB:.3f}/dB",
         f"edge={channel.max_link_distance():.0f}m",
         f"loop_guard={config.LOOP_GUARD}",

@@ -32,7 +32,7 @@ import os
 import statistics
 import sys
 from concurrent.futures import ProcessPoolExecutor
-from typing import Any, Dict, List, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -48,17 +48,53 @@ PLACEMENTS = 3000
 REPORT_DISTANCES = (200.0, 300.0)
 
 
-def b_for_edge(edge_m: float) -> float:
+def curve_is_defined(edge_m: float) -> bool:
+    """Whether a 50% point at *edge_m* describes a curve at all.
+
+    The 10% anchor sits at ``config.SENS_DISTANCE_M``. An edge at or inside
+    it would have to lose half of what it sends where the curve already loses
+    only a tenth, which has no solution. Since the anchor moved out to 300 m
+    the scanned edges straddle it, so the geometry columns are still reported
+    for those rows and only the curve columns are left blank.
+
+    Args:
+        edge_m: The candidate 50% distance, in metres.
+
+    Returns:
+        Whether b exists for this edge.
+    """
+    return edge_m > config.SENS_DISTANCE_M
+
+
+def b_for_edge(edge_m: float) -> Optional[float]:
     """The S-curve steepness that puts 50% loss at *edge_m*.
 
     Derived, never hardcoded: the sensitivity point stays at SENS_LOSS and
     the edge moves, so b follows from the edge.
+
+    Args:
+        edge_m: The 50% distance, in metres.
+
+    Returns:
+        b in 1/dB, or None where the curve is not defined.
     """
+    if not curve_is_defined(edge_m):
+        return None
     return math.log(channel.A) / (-channel.margin_db(edge_m))
 
 
-def p_loss_at(dist_m: float, edge_m: float) -> float:
-    """Loss at *dist_m* for the curve whose 50% point is at *edge_m*."""
+def p_loss_at(dist_m: float, edge_m: float) -> Optional[float]:
+    """Loss at *dist_m* for the curve whose 50% point is at *edge_m*.
+
+    Args:
+        dist_m: Distance between endpoints, in metres.
+        edge_m: The 50% distance, in metres.
+
+    Returns:
+        The loss, or None where the curve is not defined.
+    """
+    if not curve_is_defined(edge_m):
+        return None
     return channel.p_loss(dist_m, edge_m=edge_m)
 
 
@@ -193,7 +229,8 @@ def print_table(rows: Sequence[Dict[str, Any]]) -> None:
     print(f"  {config.NUM_M_DRONES}M + {config.NUM_C_DRONES}C in "
           f"{config.WIDTH:.0f}x{config.HEIGHT:.0f} m, GS at the centre; the "
           f"{config.SENS_LOSS:.0%} point stays at "
-          f"{channel.SENSITIVITY_DISTANCE_M:.1f} m and b follows from the edge")
+          f"{channel.SENSITIVITY_DISTANCE_M:.1f} m and b follows from the "
+          f"edge, where one exists")
     print("  " + "-" * width)
     print(f"  {'edge (m)':>9}{'b (/dB)':>10}{'connected':>12}"
           f"{'M direct to GS':>17}{'neighbours':>13}{'min hops':>11}"
@@ -202,11 +239,18 @@ def print_table(rows: Sequence[Dict[str, Any]]) -> None:
     for row in rows:
         hops = ("    n/a" if row["mean_min_hops"] is None
                 else f"{row['mean_min_hops']:>7.2f}")
-        print(f"  {row['edge_m']:>9.0f}{row['b_per_db']:>10.4f}"
+        # An edge at or inside the 10% anchor has no curve; the geometry
+        # columns beside it are still real, so the row stays.
+        slope = ("     n/a" if row["b_per_db"] is None
+                 else f"{row['b_per_db']:>8.4f}")
+        loss_200 = ("     n/a" if row["p_loss_200m"] is None
+                    else f"{row['p_loss_200m'] * 100:>10.2f}%")
+        loss_300 = ("     n/a" if row["p_loss_300m"] is None
+                    else f"{row['p_loss_300m'] * 100:>10.2f}%")
+        print(f"  {row['edge_m']:>9.0f}{slope:>10}"
               f"{row['connected_pct']:>11.1f}%{row['direct_to_gs_pct']:>16.1f}%"
               f"{row['mean_neighbours']:>13.2f}{hops:>11}"
-              f"{row['p_loss_200m']*100:>12.2f}%"
-              f"{row['p_loss_300m']*100:>12.2f}%")
+              f"{loss_200:>13}{loss_300:>13}")
     print("  " + "-" * width)
 
 
