@@ -5,8 +5,9 @@ Q = 10 is a PROVISIONAL choice, so every conclusion drawn at Q = 10 is
 conditional on it. This reruns the key results at Q = 5, 10 and 20 and puts
 them side by side.
 
-Nothing is trained and no model changes. The "rl" models are the CHECKPOINT-12
-"path" models, trained at Q = 10 and used unchanged at every Q. Note that
+Nothing is trained and no model changes. The "rl" models are the current
+out/models/path/ networks, trained at Q = 10 and used unchanged at every Q.
+Note that
 rl's second input is the queue FILL, length / Q, computed with the Q of the
 run — so at Q = 5 a queue holding 3 reads as 0.6 where at Q = 20 it reads as
 0.15. The network was fitted against fills computed at Q = 10.
@@ -310,7 +311,7 @@ def print_1a_table(rows: Sequence[Dict[str, Any]]) -> None:
 # ---------------------------------------------------------------------------
 
 def check_baseline(rows: Sequence[Dict[str, Any]], out_dir: str) -> bool:
-    """Check that Q = 10 reproduces the committed CHECKPOINT-13 numbers.
+    """Check that Q = 10 reproduces the committed 50-layout numbers.
 
     Compared per layout, not on the means, so a compensating pair of errors
     cannot hide.
@@ -346,7 +347,7 @@ def check_baseline(rows: Sequence[Dict[str, Any]], out_dir: str) -> bool:
                        f"{row['total_loss']!r}")
 
     print()
-    print(f"  Q = {BASELINE_Q} against the committed CHECKPOINT-13 runs: "
+    print(f"  Q = {BASELINE_Q} against the committed 50-layout runs: "
           f"{checked} runs compared per layout")
     if bad:
         print(f"  MISMATCH in {len(bad)} of them:")

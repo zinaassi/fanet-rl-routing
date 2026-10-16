@@ -230,6 +230,14 @@ def test_checkpoint_11_is_reproduced_under_the_previous_guard() -> None:
 
     Checked against out/1b_test_runs_PREVIOUS.csv and the models kept in
     out/models/previous/, so the pre-guard results stay falsifiable.
+
+    This has SKIPPED since the channel model changed: that CSV was measured
+    on the pre-2026-10-13 channel and was deleted with the rest of its
+    results, and the curve has moved again since. It cannot come back as it
+    stands — the models now in out/models/previous/ were trained on the
+    current curve, so they would not reproduce an old-curve CSV even if one
+    were restored. It is kept because the shape of the check is still the
+    one we would want for any future frozen baseline.
     """
     from scripts.stamp import read_stamped_csv
     from scripts.train_1b import run_once
@@ -238,7 +246,11 @@ def test_checkpoint_11_is_reproduced_under_the_previous_guard() -> None:
     csv_path = os.path.join(here, "out", "1b_test_runs_PREVIOUS.csv")
     model_dir = os.path.join(here, "out", "models", "previous")
     if not os.path.exists(csv_path) or not os.path.isdir(model_dir):
-        pytest.skip("CHECKPOINT-11 artefacts are not present")
+        pytest.skip(
+            "CHECKPOINT-11 artefacts are not present: out/1b_test_runs_"
+            "PREVIOUS.csv was measured on a superseded channel and deleted "
+            "with it. This check is permanently skipped, not pending."
+        )
 
     rows = read_stamped_csv(csv_path)
     checked = 0

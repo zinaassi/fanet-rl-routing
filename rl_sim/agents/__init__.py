@@ -8,7 +8,8 @@ calls it through five duck-typed hooks.
 Two rules live here:
 
 * ``rate`` — no network. Picks the link with the best measured delivery rate
-  that still has queue room, with a little exploration.
+  that still has queue room. No exploration: it is deterministic given the
+  layout and the traffic, like greedy.
 * ``rl``   — a small network shared by every drone, scoring each option from
   three local inputs and learning from end-to-end ACKs.
 

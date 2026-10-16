@@ -76,8 +76,8 @@ not to be reused, and the same holds for the Phase-2 agents.
   The sensitivity is NOT a wall: it is the point where 10% of transmissions
   are lost, following 802.11 OFDM (10% packet error rate on 1000-octet
   frames). Links between 300 m and 350 m have a NEGATIVE margin and still
-  exist; they simply lose more. Loss is 0.00003% at 100 m, 0.03% at 200 m,
-  0.82% at 250 m, 10% at 300 m, 25.8% at 325 m, 50% at 350 m.
+  exist; they simply lose more. Loss is 0.0000018% at 100 m, 0.034% at
+  200 m, 0.82% at 250 m, 10% at 300 m, 25.8% at 325 m, 50% at 350 m.
   The same curve covers the last hop into the GS.
   An edge at or inside 300 m has no curve (b would divide by zero or go
   negative); channel._slope_for_edge refuses it, and edge_scan reports the
@@ -213,31 +213,39 @@ kept at out/models/old_curve_250/.
 
 Headline, 50 TEST layouts at 200 ms, mean % of packets created:
   rl 10.77   rate 12.10   greedy 24.97   random 63.46
-  rl - rate: -1.33 points, lower on 41 of 50 layouts, p < 0.0001
-    (exact two-sided sign test and paired t-test)
+  rl - rate: -1.33 points, lower on 41 of 50 layouts,
+    p = 5.6e-6 sign / 1.3e-5 t-test
 At 500 ms: rl 4.65, rate 5.45, greedy 13.78, random 63.34; rl - rate
 -0.81 points, 35/50, p = 0.0066 sign / 0.0012 t-test.
   NOTE: rl still wins everywhere, but the margin over rate is much
   smaller than on the old curve (-2.40 / -3.24 points there). A cleaner
-  channel leaves less for the agent to avoid. "p < 0.0001" is no longer
-  true of rl - rate at 500 ms or at Q = 20; the other comparisons keep
-  it. rl - greedy went the other way, widening to -14.20 points at
-  200 ms, because greedy's loss is now mostly full queues.
+  channel leaves less for the agent to avoid. Do NOT write "p < 0.0001"
+  across the board any more; every rl - rate p-value is listed here and
+  three of them are above it (500 ms 0.0066/0.0012, Q = 20 0.033/0.034,
+  and under the "previous" guard at 200 ms the t-test gives 0.158 with
+  the sign test at 0.0009). rl - greedy went the other way, widening to
+  -14.20 points at 200 ms, because greedy's loss is now mostly full
+  queues; it stays below 1e-13 everywhere.
 
 Supporting checks, all on the new curve:
 - Loop guard: "path" loses fewer packets than "previous" for random
-  (-7.06 / -7.18 points), rate (-1.41 / -4.05) and rl (-1.83 / -1.71),
-  all p < 0.0001; greedy is identical under both, on every layout. rl
-  was trained separately under each guard, so no model is evaluated
-  under a guard it did not train with.
+  (-7.06 / -7.18 points at 200 / 500 ms), rate (-1.41 / -4.05) and rl
+  (-1.83 / -1.71). Every one is p < 0.0001 on the sign test, and on the
+  t-test too EXCEPT rate at 200 ms, which gives 0.0003. Greedy is
+  identical under both, on every layout. rl was trained separately under
+  each guard, so no model is evaluated under a guard it did not train
+  with. Under "previous" the rl - rate gap at 200 ms is -0.91 points,
+  37/50, p = 0.0009 sign but 0.158 on the t-test: not significant there.
 - Channel diagnosis: of rl's channel losses, 55.1% were geometry-forced,
   3.8% congestion-forced and 41.1% had a cleaner idle option; within
   that last group 99.88% were trade-offs where the cleaner link had a
   worse delivery rate, and only 13 losses in 27041 had a cleaner option
   that was better in every way. (out/1b_channel_diagnosis.csv)
-- Queue size Q = 5 / 10 / 20: rl beats rate at every Q, but by only
-  0.54 points at Q = 20 (p = 0.033). Q = 10 reproduces the committed
-  results to 1e-12.
+- Queue size Q = 5 / 10 / 20: rl beats rate at every Q, by -1.24 /
+  -1.33 / -0.54 points at 200 ms (37, 41 and 33 of 50 layouts) and
+  -1.15 / -0.81 / -0.55 at 500 ms. The weakest is Q = 20: p = 0.033 on
+  the sign test at both loads, 0.034 and 0.026 on the t-test. Q = 10
+  reproduces the committed results to 1e-12.
 - Range check: at the 350 m edge, 99.7% of M-drones have a path to the
   GS and 4.0% of random layouts strand at least one. A "good" link
   (under 10% loss) now means 300 m: 6.18 good neighbours per drone.

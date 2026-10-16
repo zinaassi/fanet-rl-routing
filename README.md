@@ -28,32 +28,37 @@ torch-free.
 
 ## Status
 
-**Phase 1a and Phase 1b are complete on the current channel model.**
-Everything in `rl_sim/out/` is a current result, and every figure and CSV
-carries the settings stamp of the code that produced it.
+**Phase 1a and Phase 1b are complete on the current channel model**, the
+steeper curve of 2026-10-16 (10 % loss at 300 m, 50 % at 350 m). Everything
+in `rl_sim/out/` is a current result, and every figure and CSV carries the
+settings stamp of the code that produced it.
 
-Headline, on the 50 held-back TEST layouts at the 200 ms working load, as a
-mean % of the packets created:
+Headline, on the 50 held-back TEST layouts, as a mean % of the packets
+created:
 
 | rule | 200 ms | 500 ms |
 |---|---|---|
-| random | 74.17 | 74.28 |
-| greedy | 52.76 | 27.42 |
-| rate | 25.05 | 20.96 |
-| **rl** | **22.29** | **12.56** |
+| random | 63.46 | 63.34 |
+| greedy | 24.97 | 13.78 |
+| rate | 12.10 | 5.45 |
+| **rl** | **10.77** | **4.65** |
 
-Paired on the same 50 layouts, `rl − rate` is **−2.76 points at 200 ms**,
-lower on **41 of 50** layouts, and **−8.40 points at 500 ms**, lower on
-**50 of 50**; both p < 0.0001 under an exact two-sided sign test and a paired
-t-test.
+Paired on the same 50 layouts, `rl − rate` is **−1.33 points at 200 ms**,
+lower on **41 of 50** layouts (p = 5.6e-6 sign, 1.3e-5 t-test), and **−0.81
+points at 500 ms**, lower on **35 of 50** (p = 0.0066 sign, 0.0012 t-test).
+Both are significant, but the margin is far smaller than on the earlier,
+lossier curve: a cleaner channel leaves the agent less to avoid. Against
+greedy the gap went the other way, −14.20 points at 200 ms, because greedy's
+loss is now mostly full queues.
 
-Supporting checks, all on the current channel: the loop guard (`"path"` loses
-fewer packets than `"previous"` for random, rate and rl, and greedy is
-identical under both), the channel-loss diagnosis, a queue-size sweep at
-Q = 5 / 10 / 20, and the geometry range check.
+Supporting checks, all on the current curve: the loop guard, the channel-loss
+diagnosis, a queue-size sweep at Q = 5 / 10 / 20, and the geometry range
+check. CLAUDE.md carries the current summary of each, and `rl_sim/out/` the
+tables themselves.
 
 The written report under `docs/report/` is the one thing still out of date:
-it was written against the previous channel model and is being rewritten.
+sections 4 and 7-9 carry the previous curve's numbers and are being
+rewritten.
 
 ---
 
@@ -84,7 +89,7 @@ not of the routing, and it swamps the comparison. It does **not** remove every
 the GS but no neighbour closer to it. `scripts/range_check.py` deliberately
 runs **unfiltered**, since measuring how often isolation happens is its job.
 
-At the current 350 m edge about **5 % of random layouts** strand at least one
+At the current 350 m edge about **4 % of random layouts** strand at least one
 M-drone (`out/edge_scan.csv`, 3000 layouts), so the filter is rarely invoked
 but not inert.
 
@@ -146,9 +151,12 @@ a relay to reach the ground station. Shorter edges often leave drones cut off;
 longer edges let most drones reach the GS directly, which leaves little to
 route. Chosen from geometry alone, before any routing experiment, and fixed.
 
-At this cutoff, across the 20 experiment layouts, a drone has about **7.9
-neighbours** and **12.2 of 25** drones hold a direct link to the GS. The range
-check, which samples 100 layouts and does not filter them, gives 8.6 and 12.4.
+At this cutoff, across the 20 experiment layouts, a drone has about **7.6
+neighbours** and **11.6 of 25** drones hold a direct link to the GS. The range
+check, which samples 100 layouts and does not filter them, gives 8.4 and 11.9.
+A *good* link — one losing under 10 %, so reaching 300 m — is rarer: 6.2 good
+neighbours per drone, and 8.8 of 25 with a good link straight to the GS.
+<!-- source: rl_sim/out/1a_summary.csv, rl_sim/out/range_check.csv -->
 
 Run `scripts/plot_ploss.py` to see the curve against the one it replaced.
 
@@ -191,8 +199,10 @@ channel/traffic stream. Processing by drone id would hand the same low-id drones
 the last free slot in a nearly full queue every step. The order is reproducible
 for a given run seed, and identical for both routing rules.
 
-Both rules use local information only. The GS counts as a neighbour whenever it
-is in range, and is not automatically preferred.
+Both rules use local information only. The GS counts as a neighbour whenever
+it is in range. Under greedy it then wins outright, being at distance 0 from
+itself, unless its queue is full and another closer neighbour has room. Under
+random it is simply one more candidate.
 
 **GREEDY.** Classic greedy geographic forwarding. Consider only neighbours
 **strictly closer** to the GS than the current holder, skip those whose queue
@@ -490,6 +500,7 @@ from the commands above.
 | `1b_validation_causes.png` | Where the validation loss goes at each evaluation: channel, queue_full, no_route, dead_end, ttl+hop. |
 | `1b_test50_runs.csv` | One row per (rule, load, layout, init seed) over the 50 TEST layouts: total loss, all six causes kept apart, and mean hops. |
 | `1b_test50_paired.csv` | Paired comparisons on layouts 1–50, 1–20 and 21–50: mean difference, std, layouts won, sign-test and paired t-test p-values. |
+| `1b_test50_nonrl_runs.csv` | The same 300 greedy / random / rate runs measured with `rl` absent from the grid. The baseline for the test that adding `rl` moves none of them; regenerate it only when one of the three deliberately changes. |
 | `1b_comparison_total_loss_50.png` | Total loss per rule on the 50 TEST layouts, every layout a dot, at both loads. |
 | `1b_loss_heatmaps_50.png` | A panel per rule: total loss and all six causes, both loads, mean with std, on one shared scale. |
 | `1b_loop_guard.csv` | One row per (loop guard, rule, load, layout): total loss, its six causes, the revisit share and mean hops, under both guards. |
@@ -514,28 +525,30 @@ Over 160 runs — two rules, four loads, 20 placements, identical seeds for
 both rules. The two views agreed in every run and no M-drone was ever
 isolated. Mean % of the packets created:
 
-| rule | load | total | channel | queue_full | no_route | dead_end | ttl | hop_limit |
-|---|---|---|---|---|---|---|---|---|
-| greedy | 1000 ms | 11.63 | 8.71 | 2.92 | 0.00 | 0.00 | 0.00 | 0.00 |
-| greedy | 500 ms | 26.47 | 9.91 | 16.55 | 0.00 | 0.00 | 0.00 | 0.00 |
-| greedy | 200 ms | 52.72 | 11.14 | 40.02 | 0.00 | 0.00 | 1.56 | 0.00 |
-| greedy | 100 ms | 66.34 | 13.16 | 51.61 | 0.00 | 0.00 | 1.58 | 0.00 |
-| random | 1000 ms | 74.38 | 60.95 | 0.00 | 0.00 | 4.29 | 0.00 | 9.14 |
-| random | 500 ms | 74.45 | 60.98 | 0.00 | 0.00 | 4.32 | 0.00 | 9.15 |
-| random | 200 ms | 74.51 | 60.98 | 0.00 | 0.00 | 4.23 | 0.00 | 9.31 |
-| random | 100 ms | 74.33 | 60.44 | 0.47 | 0.00 | 4.17 | 0.00 | 9.25 |
-<!-- source: rl_sim/out/1a_runs.csv -->
+| rule | load | total | std | channel | queue_full | no_route | dead_end | ttl | hop_limit |
+|---|---|---|---|---|---|---|---|---|---|
+| greedy | 1000 ms | 13.87 | 5.50 | 13.87 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| greedy | 500 ms | 13.84 | 5.17 | 13.84 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| greedy | 200 ms | 28.32 | 9.74 | 13.81 | 14.51 | 0.00 | 0.00 | 0.00 | 0.00 |
+| greedy | 100 ms | 48.41 | 9.10 | 13.35 | 35.05 | 0.00 | 0.00 | 0.00 | 0.00 |
+| random | 1000 ms | 63.99 | 3.55 | 39.06 | 0.00 | 0.00 | 6.06 | 0.00 | 18.86 |
+| random | 500 ms | 63.89 | 3.15 | 38.64 | 0.00 | 0.00 | 5.99 | 0.00 | 19.26 |
+| random | 200 ms | 63.79 | 3.38 | 38.61 | 0.00 | 0.00 | 5.87 | 0.00 | 19.31 |
+| random | 100 ms | 64.09 | 3.46 | 38.22 | 1.17 | 0.00 | 5.77 | 0.00 | 18.94 |
+<!-- source: rl_sim/out/1a_summary.csv -->
 
 **Greedy's loss is congestion; random's is the radio.** Greedy sends toward
-whichever qualifying neighbour is closest to the GS, so traffic converges
-on the drones nearest the GS and `queue_full` grows from 2.92 % at the
-lightest load to 51.61 % at the heaviest. Random spreads traffic over every
-neighbour, so its queues stay empty and its loss is almost all `channel`,
-flat near 74 % whatever the load.
+whichever qualifying neighbour is closest to the GS, so traffic converges on
+the drones nearest the GS. Its channel loss barely moves with the load —
+13.87 % down to 13.35 % — while `queue_full` goes from nothing at the two
+light loads to 14.51 % at 200 ms and 35.05 % at 100 ms. Random spreads
+traffic over every neighbour, so its queues stay nearly empty and its loss is
+flat near 64 % whatever the load: about 39 points of `channel` over roughly
+4.9 hops, plus 19 points of `hop_limit` and 6 of `dead_end`.
 
-Paired on identical placements, greedy loses less at every load: −62.74
-points at 1000 ms, −47.98 at 500 ms, −21.80 at 200 ms and −7.99 at 100 ms,
-on 20, 20, 20 and 18 of the 20 placements.
+Paired on identical placements, greedy loses less at every load: −50.12
+points at 1000 ms, −50.05 at 500 ms, −35.46 at 200 ms and −15.68 at 100 ms,
+on **20 of 20 placements at every load** (exact sign test, p = 1.9e-6).
 <!-- source: rl_sim/out/1a_paired.csv -->
 
 ---
@@ -650,14 +663,14 @@ The two views agreed in all 600 runs. Mean % of the packets created:
 
 | load | rule | total | std | channel | queue_full | no_route | dead_end | ttl | hop_limit | hops |
 |---|---|---|---|---|---|---|---|---|---|---|
-| 200 ms | random | 74.17 | 2.77 | 61.85 | 0.00 | 0.00 | 3.36 | 0.00 | 8.96 | 4.32 |
-| 200 ms | greedy | 52.76 | 6.38 | 9.81 | 41.36 | 0.00 | 0.00 | 1.59 | 0.00 | 3.40 |
-| 200 ms | rate | 25.05 | 7.15 | 22.94 | 0.53 | 0.00 | 0.54 | 0.47 | 0.57 | 3.12 |
-| 200 ms | **rl** | **22.29** | 9.59 | 18.48 | 0.03 | 0.00 | 1.03 | 1.48 | 1.27 | 3.46 |
-| 500 ms | random | 74.28 | 2.95 | 61.94 | 0.00 | 0.00 | 3.41 | 0.00 | 8.93 | 4.32 |
-| 500 ms | greedy | 27.42 | 9.55 | 8.04 | 19.34 | 0.00 | 0.00 | 0.05 | 0.00 | 3.84 |
-| 500 ms | rate | 20.96 | 4.31 | 20.13 | 0.03 | 0.00 | 0.36 | 0.00 | 0.44 | 2.97 |
-| 500 ms | **rl** | **12.56** | 5.69 | 11.20 | 0.00 | 0.00 | 0.67 | 0.02 | 0.67 | 3.32 |
+| 200 ms | random | 63.46 | 3.81 | 39.95 | 0.00 | 0.00 | 4.83 | 0.00 | 18.68 | 4.83 |
+| 200 ms | greedy | 24.97 | 9.40 | 13.78 | 11.19 | 0.00 | 0.00 | 0.00 | 0.00 | 1.62 |
+| 200 ms | rate | 12.10 | 7.83 | 9.73 | 0.03 | 0.00 | 0.63 | 0.97 | 0.74 | 2.93 |
+| 200 ms | **rl** | **10.77** | 8.62 | 6.87 | 0.41 | 0.00 | 0.84 | 1.47 | 1.18 | 3.11 |
+| 500 ms | random | 63.34 | 3.79 | 39.79 | 0.00 | 0.00 | 4.84 | 0.00 | 18.70 | 4.83 |
+| 500 ms | greedy | 13.78 | 4.20 | 13.78 | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 | 1.53 |
+| 500 ms | rate | 5.45 | 3.86 | 4.41 | 0.00 | 0.00 | 0.38 | 0.02 | 0.64 | 3.14 |
+| 500 ms | **rl** | **4.65** | 3.31 | 3.46 | 0.00 | 0.00 | 0.50 | 0.03 | 0.66 | 3.11 |
 <!-- source: rl_sim/out/1b_test50_runs.csv -->
 
 Paired on the same 50 layouts. The sign test is the exact two-sided binomial
@@ -665,35 +678,43 @@ on the layouts won; the t-test is two-sided on the per-layout differences.
 
 | load | comparison | mean diff | std | wins | p (sign) | p (t-test) |
 |---|---|---|---|---|---|---|
-| 200 ms | rl − rate | −2.76 | 3.15 | 41 / 50 | <0.0001 | <0.0001 |
-| 200 ms | rl − greedy | −30.47 | 9.85 | 50 / 50 | <0.0001 | <0.0001 |
-| 200 ms | rate − greedy | −27.71 | 8.09 | 50 / 50 | <0.0001 | <0.0001 |
-| 200 ms | rate − random | −49.12 | 6.15 | 50 / 50 | <0.0001 | <0.0001 |
-| 500 ms | rl − rate | −8.40 | 2.95 | 50 / 50 | <0.0001 | <0.0001 |
-| 500 ms | rl − greedy | −14.86 | 11.52 | 45 / 50 | <0.0001 | <0.0001 |
-| 500 ms | rate − greedy | −6.46 | 11.12 | 33 / 50 | 0.0328 | 0.0002 |
-| 500 ms | rate − random | −53.32 | 3.94 | 50 / 50 | <0.0001 | <0.0001 |
+| 200 ms | rl − rate | −1.33 | 1.94 | 41 / 50 | 5.6e-6 | 1.3e-5 |
+| 200 ms | rl − greedy | −14.20 | 6.39 | 49 / 50 | <0.0001 | <0.0001 |
+| 200 ms | rate − greedy | −12.87 | 6.57 | 49 / 50 | <0.0001 | <0.0001 |
+| 200 ms | rate − random | −51.36 | 6.62 | 50 / 50 | <0.0001 | <0.0001 |
+| 500 ms | rl − rate | −0.81 | 1.65 | 35 / 50 | 0.0066 | 0.0012 |
+| 500 ms | rl − greedy | −9.13 | 3.49 | 49 / 50 | <0.0001 | <0.0001 |
+| 500 ms | rate − greedy | −8.33 | 3.84 | 49 / 50 | <0.0001 | <0.0001 |
+| 500 ms | rate − random | −57.88 | 4.06 | 50 / 50 | <0.0001 | <0.0001 |
+
+The two `rl − rate` rows are the weakest in the table, and deliberately shown
+to four digits rather than as `<0.0001`: on this curve the agent's edge over
+the fixed rule is about a point, and at 500 ms it wins 35 layouts of 50.
 <!-- source: rl_sim/out/1b_test50_paired.csv -->
 
 **What the loop guard changed.** `rl` was trained separately under each
 setting, so no model is evaluated under a guard it did not train with.
-`"path"` loses fewer packets than `"previous"` for random (−4.53 points at
-both loads), rate (−1.75 and −2.52) and rl (−2.14 and −3.48), all
-p < 0.0001; greedy is identical under both on every layout. Under
-`"previous"` the share of packets that revisit a drone is 43.0 % for random,
-13.1 % for rl and 6.3 % for rate; under `"path"` it is zero by construction.
+`"path"` loses fewer packets than `"previous"` for random (−7.06 and −7.18
+points at 200 and 500 ms), rate (−1.41 and −4.05) and rl (−1.83 and −1.71);
+every one is significant on the sign test at p < 0.0001, and on the t-test
+too except rate at 200 ms, which gives 0.0003. Greedy is identical under both
+on every layout. Under `"previous"` the share of packets that revisit a drone
+is 56.6 % for random, 9.2 % for rl and 4.4 % for rate; under `"path"` it is
+zero by construction.
 <!-- source: rl_sim/out/1b_loop_guard.csv, rl_sim/out/1b_loop_guard_by_guard.csv -->
 
 **Where rl's channel losses come from.** Of its channel losses at 200 ms,
-45.6 % were geometry-forced — nothing at least 10 points cleaner was allowed
-— 7.1 % congestion-forced, and 47.3 % had a cleaner option whose queue was
-under half full. Within that last group, 99.95 % were trade-offs where the
-cleaner link had a worse measured delivery rate.
+55.1 % were geometry-forced — nothing at least 10 points cleaner was allowed
+— 3.8 % congestion-forced, and 41.1 % had a cleaner option whose queue was
+under half full. Within that last group, 99.88 % were trade-offs where the
+cleaner link had a worse measured delivery rate; only 13 losses out of 27 041
+had a cleaner option that was better in every way.
 <!-- source: rl_sim/out/1b_channel_diagnosis.csv -->
 
 **Queue size.** Re-running everything at link-queue capacities Q = 5, 10 and
-20 leaves the ordering unchanged: rl beats rate at every Q, on 42, 41 and 35
-of 50 layouts at 200 ms and 50, 50 and 48 at 500 ms.
+20 leaves the ordering unchanged — rl < rate < greedy < random at every Q and
+both loads — but the rl-over-rate margin narrows as Q grows: −1.24, −1.33 and
+−0.54 points at 200 ms, on 37, 41 and 33 of 50 layouts, the last at p = 0.033.
 <!-- source: rl_sim/out/queue_size_paired.csv -->
 
 ```bash
@@ -738,7 +759,7 @@ A test reproduces greedy and random at seed 1 against the committed
   for the dynamic Phase 2.
 - **Layouts are filtered, so the results are conditional.** Only placements in
   which every M-drone can reach the GS are simulated. At the current 350 m
-  edge about 5% of random layouts strand at least one M-drone
+  edge about 4% of random layouts strand at least one M-drone
   (`out/edge_scan.csv`), and those layouts are excluded. Every number here
   therefore describes a *connected* deployment, not an arbitrary one.
 - **The loop guard is a design assumption.** We assert that the header can

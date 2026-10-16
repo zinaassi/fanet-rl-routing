@@ -6,7 +6,11 @@ Protocol, all at the 200 ms working load:
     TRAINING    placement seeds 101-300, cycled in order (run_seed = seed)
     VALIDATION  seeds 301-310, never trained on
     TRAIN-CHECK seeds 101-110, for the overfitting check only
-    TEST        seeds 1-20, held back for evaluate_1b.py
+    TEST        seeds 1-50, held back for evaluate_1b_large.py
+
+``TEST_SEEDS`` below is the first 20 of those, kept because the superseded
+evaluate_1b.py and the exploratory diagnose_1b*.py scripts still import it.
+The official test set is the 50 of evaluate_1b_large.py.
 
 A training run is one layout for 1000 steps with learning on and exploration
 at ``config.RL_EPSILON_TRAIN``. Every ``EVALUATE_EVERY`` runs the network is

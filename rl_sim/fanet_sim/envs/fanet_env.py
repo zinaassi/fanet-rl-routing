@@ -7,11 +7,19 @@ core.  In phase 1A the *actions* argument to step() is ignored and the
 selected non-learned routing rule runs internally.
 
 Routing rules implemented here, both using local information only:
-    - "greedy": among the neighbours strictly closer to the GS, take the one
-      with the lowest combined link loss (channel loss, plus certain loss if
-      this drone's own queue for that link is already full).
+    - "greedy": classic greedy geographic forwarding. Among the neighbours
+      strictly closer to the GS, skip those whose queue for that link is
+      full and take the one CLOSEST to the GS; ties break on the lower
+      channel loss. If every closer neighbour is full the closest is taken
+      anyway and the packet drops "queue_full" on enqueue, so congestion
+      costs the packet but never bends its direction.
     - "random": uniform over all current neighbours.
-The GS counts as a neighbour whenever it is in range.
+The GS counts as a neighbour whenever it is in range. Being at distance 0
+from itself it always wins greedy's comparison when present and not full.
+
+The two Phase-1b rules, "rate" and "rl", are NOT implemented here: they live
+in agents/ and are injected as a router object, which this module calls
+through five duck-typed hooks.
 
 Both rules choose the next hop when a packet is CREATED at a drone or ARRIVES
 at one, and the packet then waits in that link's queue. The choice is not
