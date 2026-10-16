@@ -82,24 +82,30 @@ Where:
 - d: distance between the drones
 - P_T: transmit power, 1 W
 - G_T, G_R: antenna gains, 2 dBi
-- S: receiver sensitivity, −54 dBm: the power at which 10% of packets
-  are lost [CITE: 802.11 receiver minimum input sensitivity]
+- S: receiver sensitivity, −55.6 dBm: the power at which 10% of
+  packets are lost [CITE: 802.11 receiver minimum input sensitivity]
 - b: set so that the loss is 50% at 350 m
 
 Real wireless links behave this way: reliable up to some distance,
 then a gradual rise in loss, then no connection [CITE: Zúñiga &
 Krishnamachari 2004].
 
-The curve is set by two distances that we chose: 10% loss at 250 m
-and 50% loss at 350 m. The 350 m comes from the layout scan below. The
-250 m makes the loss rise gradually, at a rate within what has been
-measured on real wireless links [CITE: Halperin 2012]. The radio
-values (1 W, 2.4 GHz, 2 dBi, −54 dBm) are calibration values that
-produce this curve; they do not affect the results.
+The curve is set by two distances that we chose: 10% loss at 300 m
+and 50% loss at 350 m. The 350 m comes from the layout scan below.
+With these two points, links work well for most of their range, and
+the loss rises quickly only in the last 50 m.
 
-| distance | 100 m | 200 m | 250 m | 300 m | 350 m |
-|---|---|---|---|---|---|
-| loss | 0.03% | 2.6% | 10% | 27% | 50% |
+A similar quick rise was measured on a real Wi-Fi link connected by
+cable, where the signal is steady [CITE: Halperin 2013]. In the open
+air the signal changes from moment to moment, so the rise is slower.
+We do not model these changes.
+
+The radio values (1 W, 2.4 GHz, 2 dBi, −55.6 dBm) are calibration
+values that produce this curve; they do not affect the results.
+
+| distance | 100 m | 200 m | 250 m | 300 m | 325 m | 350 m |
+|---|---|---|---|---|---|---|
+| loss | <0.01% | 0.03% | 0.8% | 10% | 26% | 50% |
 <!-- source: rl_sim/fanet_sim/envs/channel.py (p_loss); rl_sim/fanet_sim/config.py -->
 
 ![Loss against distance](figures/ploss_curve.png)
@@ -107,11 +113,10 @@ produce this curve; they do not affect the results.
 **Figure 2:** Loss per transmission as a function of distance. Beyond
 350 m a drone does not accept the other as a neighbour.
 
-**Why channel loss is high:** a lost transmission is not resent, so
-one lost hop loses the packet. Links can lose up to 50%, and with 25
-drones in 900×900 m some drones have only long links. Real Wi-Fi
-resends lost packets, so its loss would be much lower. Adding resends
-is left for later.
+**No resends:** a lost transmission is not resent, so one lost hop
+loses the packet. Links up to 350 m are allowed, and the last 50 m
+lose 10–50%. Real Wi-Fi resends lost packets, so a real network
+would lose fewer packets on the channel.
 
 **Links and range**
 
@@ -121,8 +126,8 @@ choice; real routing protocols such as OLSR also use link-quality
 thresholds for their neighbours [CITE: RFC 3626]. With our loss curve,
 the loss reaches 50% at 350 m, so drones more than 350 m apart are not
 neighbours. A link losing more than half its packets is rarely useful:
-two 175 m hops lose only 2.2%, while one 350 m hop loses 50%.
-<!-- source: rl_sim/fanet_sim/envs/channel.py (p_loss): 1.0882% at 175 m, so 2.1646% over two hops; 50.0000% at 350 m -->
+two 175 m hops lose only 0.01%, while one 350 m hop loses 50%.
+<!-- source: rl_sim/fanet_sim/envs/channel.py (p_loss): 0.0051% at 175 m, so 0.0102% over two hops; 50.0000% at 350 m -->
 
 We chose 350 m by testing several ranges on 3000 random layouts:
 
@@ -239,7 +244,7 @@ reproduced from its random seeds.
 | transmit power | 1 W |
 | frequency | 2.4 GHz |
 | antenna gain | 2 dBi |
-| receiver sensitivity | −54 dBm (10% loss at 250 m) |
+| receiver sensitivity | −55.6 dBm (10% loss at 300 m) |
 | link range | 350 m (50% loss) |
 | queue size | 10 packets per link |
 | sends per queue per step | 1 |
@@ -248,7 +253,7 @@ reproduced from its random seeds.
 | packet rate per M-drone | 1 every 200 ms (also tested: 1000, 500, 100 ms) |
 | packet lifetime | 5 s |
 | max hops | 10 |
-| packet size | 512 bytes |
+| packet size | 512 bytes (does not affect the loss) |
 
 **Table 1:** Simulation parameters.
 <!-- source: rl_sim/fanet_sim/config.py -->
@@ -293,22 +298,23 @@ Figure 3 shows the total loss and its causes.
 at each load (mean over 20 layouts, standard deviation in brackets).
 
 Greedy loses much less than random at every load, on all 20 layouts.
-At light loads almost all of greedy's loss is on the channel (24.6%),
+At light loads all of greedy's loss is on the channel (13.9%),
 because it takes few, long hops. As the load grows, its queues fill
 up.
 
-Random loses about 74% at every load. It does not move towards the
-GS, so packets take many hops and most are lost on the channel along
-the way (61%). Its queues never fill up, so the load does not matter.
+Random loses about 64% at every load. It does not move towards the
+GS, so packets take many hops: many are lost on the channel (39%),
+and many use up all 10 hops (19%). Its queues almost never fill up,
+so the load does not matter.
 <!-- source: rl_sim/out/1a_summary.csv -->
 
 **Choosing the main load**
 
-We use 200 ms as the main load for the rest of the project:
-- **Busy:** at 200 ms, 10.3% of greedy's packets are lost to full
-  queues, so the routing choice matters.
-- **Channel still the main cause:** 24.6% of greedy's packets are lost
-  on the channel. At 100 ms, full queues become the main cause (29.0%).
+We use 200 ms as the main load for the rest of the project. At this
+load, greedy loses about as many packets to full queues (14.5%) as on
+the channel (13.8%), so the routing has to deal with both. At 500 ms
+no packets are lost to full queues, and at 100 ms full queues are the
+main cause of loss (35.1%).
 <!-- source: rl_sim/out/1a_summary.csv, rl_sim/out/1a_paired.csv -->
 
 ---
@@ -387,15 +393,20 @@ on layouts it learned from:
 
 | set | layouts |
 |---|---|
-| training | 200 |
+| training | 200 available, one new layout per run |
 | validation | 10 |
 | test | 50 |
 
-Each training run uses one layout at 200 ms. Every 10 runs we test the
-network on the validation layouts. We save this version only if its
-loss is at least 0.5% lower than the best version so far (for example,
-from 22.2% to 21.7%). Training stops when the network has not improved
-for 5 checks in a row.
+Each training run uses one training layout at 200 ms. Every 10 runs
+we test the network on the validation layouts. We save this version
+only if its loss is at least 0.5% lower than the best version so far
+(for example, from 8.6% to 8.1%). Training stops when the network has
+not improved for 5 checks in a row.
+
+Training stopped after 80, 80 and 90 runs, so each network used only
+80 to 90 of the 200 training layouts. The versions we kept were saved
+after 30, 30 and 40 runs.
+<!-- source: rl_sim/out/1b_training_log.csv, rl_sim/out/1b_eval_log.csv -->
 
 We trained three networks, each starting from different random
 weights, to check that the result does not depend on luck.
@@ -481,8 +492,9 @@ Running list of citations still needed:
   Cited in section 4.
 - [CITE: RFC 3626] — OLSR, as an example of a routing protocol that uses
   link-quality thresholds for its neighbours. Cited in section 4.
-- [CITE: Halperin 2012] — arXiv:1301.6644, the measured width of the loss
-  transition on real wireless links. Cited in section 4.
+- [CITE: Halperin 2013] — D. Halperin, PhD thesis, arXiv:1301.6644.
+  The rise from lossy to reliable takes 2–4 dB on a cabled link and
+  10 dB or more over the air. Cited in section 4.
 - [CITE: BGP AS_PATH] — the standard precedent for carrying a visited-list in
   the packet header. Cited in section 4.
 -->
