@@ -463,9 +463,7 @@ moment it chose:
 | a link with much lower loss existed, but fewer packets sent on it reached the GS | 41% |
 | a link with much lower loss existed and was better in every way | 0.05% |
 
-**Table 6:** RL's channel losses at 200 ms (one network). "Much
-lower" means at least 10 points lower (for example, 5% instead of
-15%). The rows add up to 100%.
+**Table 6:** RL's channel losses at 200 ms (one network). 
 <!-- source: rl_sim/out/1b_channel_diagnosis.csv -->
 
 In more than half of these losses (55%), the drone had no other link
