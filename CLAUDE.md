@@ -131,9 +131,12 @@ not to be reused, and the same holds for the Phase-2 agents.
   where the network is congested (queue_full drops are a real part of
   the loss) but not yet saturated (greedy beats random on every
   placement). Chosen by the team after running all four loads, and
-  re-checked after the channel change: at 200 ms greedy queue_full =
-  40.0% and greedy beats random on 20/20 placements by 21.8 points; at
-  100 ms only 18/20 (saturated).
+  re-checked after the channel and the greedy change: at 200 ms
+  greedy loses 10.29% of its packets to full queues while the channel
+  is still the main cause (24.56%); at 100 ms full queues take over
+  (29.05% against 23.68%). Greedy beats random on 20/20 placements at
+  every load, so the old "18/20 at 100 ms" saturation argument no
+  longer applies under classic greedy.
 - Seeds: separate placement, channel/traffic and routing streams;
   greedy and random run on identical placement and traffic.
 - Neighbor knowledge: each drone knows its neighbors' positions and
@@ -196,15 +199,15 @@ Phase 1a and Phase 1b are COMPLETE on the new channel. Everything in
 out/ is a current result; every figure and CSV carries the new stamp.
 
 Headline, 50 TEST layouts at 200 ms, mean % of packets created:
-  rl 22.29   rate 25.05   greedy 52.76   random 74.17
-  rl - rate: -2.76 points, lower on 41 of 50 layouts, p < 0.0001
+  rl 22.29   rate 24.70   greedy 32.05   random 74.17
+  rl - rate: -2.40 points, lower on 40 of 50 layouts, p < 0.0001
     (exact two-sided sign test and paired t-test)
-At 500 ms: rl 12.56, rate 20.96, greedy 27.42, random 74.28; rl - rate
--8.40 points, 50/50, p < 0.0001.
+At 500 ms: rl 12.56, rate 15.80, greedy 24.58, random 74.28; rl - rate
+-3.24 points, 47/50, p < 0.0001.
 
 Supporting checks, all done on the new channel:
 - Loop guard: "path" loses fewer packets than "previous" for random
-  (-4.53 points at both loads), rate (-1.75 / -2.52) and rl (-2.14 /
+  (-4.53 points at both loads), rate (-2.28 / -5.34) and rl (-2.14 /
   -3.48), all p < 0.0001; greedy is identical under both, on every
   layout. rl was trained separately under each guard, so no model is
   evaluated under a guard it did not train with.
@@ -217,8 +220,9 @@ Supporting checks, all done on the new channel:
 - Range check: at the 350 m edge, 99.7% of M-drones have a path to the
   GS and 4.0% of random layouts strand at least one.
 
-Next: the written report, then Phase 2. The report under docs/report/
-is still written against the old channel and is rewritten next.
+Next: the rest of the written report, then Phase 2. Sections 4 and
+7-9 of docs/report/phase1_report.md and its citation list are current;
+sections 1, 2, 3, 5, 6, 10 and 12 are written after Phase 2.
 
 ## Open questions (do NOT decide these; ask)
 - Whether LOOP_GUARD stays "path" (the header-carried visited list);

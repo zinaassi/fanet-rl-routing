@@ -80,9 +80,9 @@ distance between the two drones. We compute it in two steps:
 
 Where:
 - d: distance between the drones
-- P_T: transmit power, 1 W (30 dBm) [CITE: IQMR]
+- P_T: transmit power, 1 W
 - G_T, G_R: antenna gains, 2 dBi
-- S: receiver sensitivity, −54 dBm, the power at which 10% of packets
+- S: receiver sensitivity, −54 dBm: the power at which 10% of packets
   are lost [CITE: 802.11 receiver minimum input sensitivity]
 - b: set so that the loss is 50% at 350 m
 
@@ -90,10 +90,12 @@ Real wireless links behave this way: reliable up to some distance,
 then a gradual rise in loss, then no connection [CITE: Zúñiga &
 Krishnamachari 2004].
 
-Free space alone would give a range of kilometres, because it ignores
-the ground, obstacles and interference. We therefore set S = −54 dBm,
-so that the loss is 10% at 250 m, the range reported for 1 W drone
-radios [CITE: IQMR].
+The curve is set by two distances that we chose: 10% loss at 250 m
+and 50% loss at 350 m. The 350 m comes from the layout scan below. The
+250 m makes the loss rise gradually, at a rate within what has been
+measured on real wireless links [CITE: Halperin 2012]. The radio
+values (1 W, 2.4 GHz, 2 dBi, −54 dBm) are calibration values that
+produce this curve; they do not affect the results.
 
 | distance | 100 m | 200 m | 250 m | 300 m | 350 m |
 |---|---|---|---|---|---|
@@ -105,15 +107,21 @@ radios [CITE: IQMR].
 **Figure 2:** Loss per transmission as a function of distance. Beyond
 350 m a drone does not accept the other as a neighbour.
 
+**Why channel loss is high:** a lost transmission is not resent, so
+one lost hop loses the packet. Links can lose up to 50%, and with 25
+drones in 900×900 m some drones have only long links. Real Wi-Fi
+resends lost packets, so its loss would be much lower. Adding resends
+is left for later.
+
 **Links and range**
 
-A drone accepts another drone as a neighbour only if more than
-half of its hello messages arrive (loss below 50%), as in routing
-protocols such as OLSR [CITE: RFC 3626]. With our loss curve, the
-loss reaches 50% at 350 m, so drones more than 350 m apart are not
-neighbours. A link losing more than half its packets is rarely
-useful: two 175 m hops lose only 2.2%, while one 350 m hop loses
-50%.
+A drone accepts another drone as a neighbour only if more than half of
+its hello messages arrive (loss below 50%). This is our own design
+choice; real routing protocols such as OLSR also use link-quality
+thresholds for their neighbours [CITE: RFC 3626]. With our loss curve,
+the loss reaches 50% at 350 m, so drones more than 350 m apart are not
+neighbours. A link losing more than half its packets is rarely useful:
+two 175 m hops lose only 2.2%, while one 350 m hop loses 50%.
 <!-- source: rl_sim/fanet_sim/envs/channel.py (p_loss): 1.0882% at 175 m, so 2.1646% over two hops; 50.0000% at 350 m -->
 
 We chose 350 m by testing several ranges on 3000 random layouts:
@@ -139,9 +147,9 @@ Time moves in steps of 100 ms. Each M-drone creates one packet every
 100 ms. The drones do not all send at the same moment: each one starts
 at a random offset.
 
-A packet may take at most 10 hops and is dropped if it is not
-delivered within (TTL) of 5 seconds (50 steps). The choice of 200 ms is
-explained in section 7.
+A packet may take at most 10 hops. Each packet has a time to live
+(TTL) of 5 seconds (50 steps); if it is not delivered by then, it is
+dropped. The choice of 200 ms is explained in section 7.
 <!-- source: rl_sim/fanet_sim/config.py (TIMESTEP, PACKET_INTERVAL_STEPS, TRAFFIC_LOADS_MS, RANDOM_TRAFFIC_OFFSETS, MAX_HOPS, PACKET_TTL) -->
 
 **Queues**
@@ -149,8 +157,9 @@ explained in section 7.
 Each drone has a separate queue for every link: one per neighbour, and
 one for the GS if it is in range. Each queue holds up to 10 packets
 and sends one packet per step. All of a drone's queues can send in the
-same step, since we do not model interference between transmissions.
-A packet that arrives at a full queue is dropped.
+same step, since we assume each link has its own transmitter. A real
+drone with a single radio could not do this, and our results depend on
+this assumption. A packet that arrives at a full queue is dropped.
 <!-- source: rl_sim/fanet_sim/config.py (QUEUE_CAPACITY, MAX_TX_PER_STEP) -->
 
 **Routing**
@@ -169,7 +178,8 @@ in circles. A similar idea is used in Internet routing (BGP)
 **One time step**
 
 In each 100 ms step:
-1. Packets older than 5 seconds are dropped.
+1. Packets older than 5 seconds, or that used all 10 hops, are
+   dropped.
 2. M-drones create new packets and choose a next hop for each one.
 3. Each queue sends its first packet. The packet may be lost on the
    way.
@@ -187,8 +197,8 @@ Drones learn what happened to their packets from acknowledgements
 2. **End-to-end ACK:** when a packet reaches the GS, an ACK goes back
    along its route, so every drone that forwarded it learns it was
    delivered.
-3. **No ACK:** if no ACK arrives within 5 seconds, each drone that
-   forwarded the packet counts it as lost.
+3. **No ACK:** if the packet is not delivered within its 5-second
+   lifetime (TTL), each drone that forwarded it counts it as lost.
 
 In Phase 1, ACKs are ideal: they arrive instantly, are never lost and
 use no capacity. In every run used for a result, we check that what
@@ -204,7 +214,7 @@ packets that never reach the GS. Each lost packet has one reason:
 |---|---|
 | channel | lost on the way between two drones |
 | queue_full | arrived at a full queue |
-| no_route | the drone had no neighbour to send to |
+| no_route | no allowed neighbour to send to (for greedy: none closer to the GS) |
 | dead_end | all neighbours were already visited (loop guard) |
 | ttl | not delivered within 5 seconds |
 | hop_limit | used all 10 hops |
@@ -262,11 +272,10 @@ _To be written after Phase 2._
 Before building a learning agent, we tested two simple routing rules
 as baselines:
 
-1. **Greedy:** the drone looks only at neighbours that are closer to
-   the GS than itself, so that every hop makes real progress and the
-   packet does not wander around. Among them, it picks the link with
-   the lowest loss, and skips links whose queue is full. If no
-   neighbour is closer to the GS, the packet is dropped.
+1. **Greedy:** the drone sends each packet to the neighbour closest to
+   the GS, and skips neighbours whose queue is full. It only uses
+   neighbours closer to the GS than itself, so every hop makes
+   progress. If no neighbour is closer, the packet is dropped.
 2. **Random:** the drone picks one of its neighbours at random, with no
    other rule.
 
@@ -283,27 +292,24 @@ Figure 3 shows the total loss and its causes.
 **Figure 3:** Total packet loss and its causes for greedy and random,
 at each load (mean over 20 layouts, standard deviation in brackets).
 
-Greedy loses much less than random at every load. Most of greedy's
-loss comes from full queues: since every drone sends towards the
-GS, many packets pass through the same few links and their queues fill
-up. As the load grows, this gets worse (2.9% at 1000 ms, 40% at
-200 ms).
+Greedy loses much less than random at every load, on all 20 layouts.
+At light loads almost all of greedy's loss is on the channel (24.6%),
+because it takes few, long hops. As the load grows, its queues fill
+up.
 
-Random loses about 74% at every load. It does not move towards the GS,
-so packets take many hops and most are lost on the channel along
+Random loses about 74% at every load. It does not move towards the
+GS, so packets take many hops and most are lost on the channel along
 the way (61%). Its queues never fill up, so the load does not matter.
-<!-- source: rl_sim/out/1a_runs.csv -->
+<!-- source: rl_sim/out/1a_summary.csv -->
 
 **Choosing the main load**
 
-We use 200 ms as the main load for the rest of the project. It is the
-heaviest load where the network is busy but not overloaded:
-- **Busy:** at 200 ms, 40% of greedy's packets are lost to full
+We use 200 ms as the main load for the rest of the project:
+- **Busy:** at 200 ms, 10.3% of greedy's packets are lost to full
   queues, so the routing choice matters.
-- **Not overloaded:** greedy still beats random on all 20 layouts. At
-  100 ms it wins on only 18 of 20, and the gap shrinks from 22 to 8
-  points.
-<!-- source: rl_sim/out/1a_runs.csv, rl_sim/out/1a_paired.csv -->
+- **Channel still the main cause:** 24.6% of greedy's packets are lost
+  on the channel. At 100 ms, full queues become the main cause (29.0%).
+<!-- source: rl_sim/out/1a_summary.csv, rl_sim/out/1a_paired.csv -->
 
 ---
 
@@ -363,16 +369,16 @@ takes one training step every 32 decisions.
 
 **The rate rule**
 
-To see what the network actually learns, we also built a simple rule
-with no learning, called rate. It uses the same delivery rates,
-but with a fixed formula: it picks the link with the highest delivery
-rate and skips links whose queue is full. In 5% of decisions it picks
-a random link, so that it keeps measuring links it does not use.
-<!-- source: rl_sim/fanet_sim/config.py (EPSILON_RATE); rl_sim/agents/rate_router.py -->
+To compare against, we also use a simple rule with no learning, called
+**rate**. Rate picks the link with the highest delivery rate and skips
+links whose queue is full. Before a link has any measured packets, its
+delivery rate is estimated from its channel loss.
 
-Comparing the three rules tells us two things:
-- **Rate vs greedy:** how much the delivery rates alone help.
-- **RL vs rate:** how much the learning adds on top of that.
+Rate uses only the delivery rate and avoids full queues. RL also uses
+the channel loss and how full each queue is, and learns how to combine
+them. So RL's advantage over rate comes from both the extra
+information and the learning.
+<!-- source: rl_sim/agents/rate_router.py -->
 
 **Training and testing**
 
@@ -386,12 +392,14 @@ on layouts it learned from:
 | test | 50 |
 
 Each training run uses one layout at 200 ms. Every 10 runs we test the
-network on the validation layouts and keep the best one. Training
-stops when the network has not improved for 5 checks in a row.
+network on the validation layouts. We save this version only if its
+loss is at least 0.5% lower than the best version so far (for example,
+from 22.2% to 21.7%). Training stops when the network has not improved
+for 5 checks in a row.
 
 We trained three networks, each starting from different random
 weights, to check that the result does not depend on luck.
-<!-- source: rl_sim/scripts/train_1b.py (TRAIN_SEEDS, VALIDATION_SEEDS, TEST_SEEDS, EVALUATE_EVERY, PATIENCE) -->
+<!-- source: rl_sim/scripts/train_1b.py (TRAIN_SEEDS, VALIDATION_SEEDS, TEST_SEEDS, EVALUATE_EVERY, PATIENCE, MIN_IMPROVEMENT) -->
 
 ---
 
@@ -403,51 +411,53 @@ networks.
 
 | load | random | greedy | rate | RL |
 |---|---|---|---|---|
-| 200 ms | 74.2% | 52.8% | 25.1% | 22.3% |
-| 500 ms | 74.3% | 27.4% | 21.0% | 12.6% |
+| 200 ms | 74.2% | 32.1% | 24.7% | 22.3% |
+| 500 ms | 74.3% | 24.6% | 15.8% | 12.6% |
 
 **Table 4:** Total packet loss on the 50 test layouts.
 <!-- source: rl_sim/out/1b_test50_runs.csv -->
 
 RL has the lowest loss at both loads, and the differences are
-statistically significant (p < 0.0001).
+statistically significant (p < 0.0001). RL was trained at 200 ms only;
+the 500 ms results show how well it generalises.
 <!-- source: rl_sim/out/1b_test50_paired.csv -->
 
 **What we saw**
 
-**1. RL behaves differently from rate.** Both rules use the same
-delivery rates, but RL loses less on the channel. It avoids bad links
-more often, and in exchange takes slightly longer routes.
+**1. RL avoids lossy links.** RL loses fewer packets on the channel
+than rate, and in exchange its routes are slightly longer. Part of
+this comes from RL also using the channel loss of each link, which
+rate does not use.
 
 | at 200 ms | rate | RL |
 |---|---|---|
-| lost on the channel | 22.9% | 18.5% |
-| lost to full queues | 0.5% | 0.0% |
-| lost for other reasons (dead end, ttl, hop limit) | 1.6% | 3.8% |
-| average hops per packet | 3.1 | 3.5 |
-| channel losses on bad links (over 20% loss) | 55% | 38% |
+| total loss | 24.7% | 22.3% |
+| lost on the channel | 23.3% | 18.5% |
+| lost to full queues | 0.06% | 0.03% |
+| lost for other reasons (dead end, ttl, hop limit) | 1.4% | 3.8% |
+| hops per delivered packet | 2.9 | 3.5 |
 
-**Table 5:** How rate and RL lose packets at 200 ms.
-<!-- source: rl_sim/out/1b_test50_runs.csv, rl_sim/out/1b_channel_diagnosis.csv -->
+**Table 5:** How rate and RL lose packets at 200 ms (50 test layouts).
+<!-- source: rl_sim/out/1b_test50_runs.csv -->
 
-**2. Most of the remaining loss is not caused by routing.** For each
-packet RL lost on the channel, we checked what other links the drone
-had at that moment:
+**2. Where RL loses packets on the channel.** For each packet RL lost
+on the channel, we looked at the other links the drone had at the
+moment it chose:
 
-| situation when the packet was lost | share of RL's channel losses |
+| when the packet was lost | % of RL's channel losses |
 |---|---|
-| no better link existed | 46% |
-| a better link existed, but its queue was busy | 7% |
-| a better link existed, but it had a worse delivery rate to the GS | 47% |
-| a better link existed and was better in every way | 0.02% |
+| the drone had no other link with much lower loss | 46% |
+| a link with much lower loss existed, but its queue was half full or more | 7% |
+| a link with much lower loss existed, but fewer packets sent on it reached the GS | 47% |
+| a link with much lower loss existed and was better in every way | 0.02% |
 
-**Table 6:** Why RL's packets were lost on the channel (one network,
-200 ms).
+**Table 6:** RL's channel losses at 200 ms (one network). "Much lower"
+means at least 10% lower. The rows add up to 100%.
 <!-- source: rl_sim/out/1b_channel_diagnosis.csv -->
 
-RL almost never makes a clear mistake. In about half of its channel
-losses, no better link existed. To reduce this loss, the drones'
-positions must change, which is the goal of Phase 2.
+In about half of these losses, the drone had no other link with much
+lower loss. Moving drones could create such links; Phase 2 tests
+whether this lowers the loss.
 
 ---
 
@@ -463,17 +473,16 @@ _To be written after Phase 2._
 
 <!--
 Running list of citations still needed:
-- [CITE: IQMR] — Sharvari et al. 2024, arXiv:2408.09109. The UAV study the
-  radio constants come from: 1 W transmit power, and the 250 m range quoted
-  for 1 W drone radios. Cited twice in section 4 (The Simulator).
 - [CITE: 802.11 receiver minimum input sensitivity] — the clause defining
   sensitivity as the power giving a 10% packet error rate, which is what
   anchors the loss curve. Cited in section 4.
 - [CITE: Zuniga & Krishnamachari 2004] — for the claim that real wireless
   links are reliable up to some distance, then degrade gradually, then fail.
   Cited in section 4.
-- [CITE: RFC 3626] — OLSR, for the convention that a neighbour is accepted
-  only when more than half of its hello messages arrive. Cited in section 4.
+- [CITE: RFC 3626] — OLSR, as an example of a routing protocol that uses
+  link-quality thresholds for its neighbours. Cited in section 4.
+- [CITE: Halperin 2012] — arXiv:1301.6644, the measured width of the loss
+  transition on real wireless links. Cited in section 4.
 - [CITE: BGP AS_PATH] — the standard precedent for carrying a visited-list in
   the packet header. Cited in section 4.
 -->
