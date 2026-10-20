@@ -143,6 +143,50 @@ def test_the_static_results_are_unchanged(rule: str, seed: int) -> None:
         ), f"{rule} seed {seed} moved on {cause}"
 
 
+@pytest.mark.parametrize("rule", ("rate", "rl"))
+def test_the_learned_rules_are_unchanged_too(rule: str) -> None:
+    """rate and rl still reproduce their committed Phase-1b numbers.
+
+    greedy and random are covered above; these two go through the agents,
+    which is a different path into the simulator. "rl" needs its trained
+    network, so the check skips when the models are not present.
+    """
+    from scripts.stamp import read_stamped_csv
+
+    here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    path = os.path.join(here, "out", "1b_test50_runs.csv")
+    if not os.path.exists(path):
+        pytest.skip("out/1b_test50_runs.csv is not present")
+
+    init_seed = 0 if rule == "rl" else -1
+    state = None
+    if rule == "rl":
+        model = os.path.join(here, "out", "models", config.LOOP_GUARD,
+                             f"rl_seed{init_seed}.pt")
+        if not os.path.exists(model):
+            pytest.skip(f"no trained model at {model}")
+        import torch
+
+        state = torch.load(model, map_location="cpu", weights_only=True)
+
+    expected = next(
+        r for r in read_stamped_csv(path)
+        if r["rule"] == rule and r["load_ms"] == "200"
+        and r["placement_seed"] == "1" and int(r["init_seed"]) == init_seed
+    )
+
+    from scripts.train_1b import run_once
+
+    assert config.STATIC_MODE, "the Phase-1b numbers are the static ones"
+    kwargs = {"state_dict": state, "init_seed": init_seed} if state else {}
+    result = run_once(rule, 1, 1, 200, training=False, **kwargs)
+
+    assert result["views_agree"], result["discrepancies"]
+    assert result["total_loss"] == pytest.approx(
+        float(expected["total_loss"]), abs=1e-12
+    ), f"{rule} no longer reproduces its committed Phase-1b result"
+
+
 def test_the_reference_covers_every_phase_1a_layout() -> None:
     """The frozen files describe all 20 layouts and both rules.
 

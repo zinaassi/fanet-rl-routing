@@ -40,8 +40,8 @@ HEIGHT: float = 900.0            # metres                                    [DE
 # ---------------------------------------------------------------------------
 NUM_M_DRONES: int = 18           # mission drones: create AND relay packets  [DECIDED]
 NUM_C_DRONES: int = 7            # communication drones: relay only          [DECIDED]
-DRONE_SPEED_MIN: float = 10.0    # m/s — unused while static
-DRONE_SPEED_MAX: float = 30.0    # m/s — unused while static
+DRONE_SPEED_MIN: float = 10.0    # m/s — M-drone flight speed    [DECIDED]
+DRONE_SPEED_MAX: float = 30.0    # m/s — drawn per M-drone        [DECIDED]
 
 # There is no COMM_RANGE constant: how far a link reaches now falls out of the
 # loss curve below. Ask channel.max_link_distance() for the single number.
@@ -49,11 +49,14 @@ DRONE_SPEED_MAX: float = 30.0    # m/s — unused while static
 # ---------------------------------------------------------------------------
 # Static world (Phase 1A)
 # ---------------------------------------------------------------------------
-# In Phase 1A nothing moves: drones are placed uniformly at random once per run
-# and hold that position for the whole episode. The mobility code in drone.py
-# (Drone.step_move / Drone.apply_velocity) is kept for Phase 1B and is simply
-# not called while this flag is True.
-STATIC_MODE: bool = True         # no movement during a run                  [DECIDED]
+# In Phase 1 nothing moves: drones are placed uniformly at random once per run
+# and hold that position for the whole episode. Phase 2a sets this False, and
+# then the M-drones fly (see the mobility block below). C-drones hover in
+# Phase 2a step 1 either way: Drone.step_move only moves M-drones.
+#
+# With this True the mobility stream is never drawn from at all, so a run is
+# bit-for-bit what Phase 1 produced. tests/test_2a_reference.py pins that.
+STATIC_MODE: bool = True         # no movement during a run    PROVISIONAL - to confirm
 
 # ---------------------------------------------------------------------------
 # Layout filter
@@ -243,13 +246,30 @@ def is_warm(step: int) -> bool:
 GS_POSITION: tuple = (450.0, 450.0)   # centre of the 900 x 900 m arena      [DECIDED]
 
 # ---------------------------------------------------------------------------
-# M-drone mobility (Phase 1B; unused while STATIC_MODE is True)
+# M-drone mobility (Phase 2a; unused while STATIC_MODE is True)
 # ---------------------------------------------------------------------------
-# Each M-drone is given a random start point (its initial position) and a
-# random end point at episode start; it flies the straight line between them
-# and then stops.
+# Each M-drone starts at its Phase-1 position A, waits out a random start
+# delay, then flies a straight line at constant speed to B and hovers there
+# for the rest of the run. B is where a uniformly random direction leaves the
+# arena, pulled back by BORDER_MARGIN_M so it always lands inside.
+#
+# Every one of those draws — direction, speed, start delay — comes from the
+# MOBILITY stream and nothing else. The placement stream still makes exactly
+# the draws it made in Phase 1, including the per-drone speed draw that is now
+# ballast (see FANETEnv._assign_mobility), so the layouts do not move.
 M_DRONE_MOBILITY: str = "straight_line"
-WAYPOINT_ARRIVAL_THRESHOLD: float = 2.0  # metres — drone is "at" its end point when this close
+
+#: Tag for the mobility stream, in the style of AGENT_STREAM_TAG: the stream
+#: is SeedSequence([placement_seed, MOBILITY_STREAM_TAG]) and is NOT spawned
+#: off the placement or channel streams.                                [DECIDED]
+MOBILITY_STREAM_TAG: int = 0x2B117
+
+#: Each M-drone waits a time drawn uniformly from [0, this] before it starts
+#: flying, in SECONDS. 0 makes every drone start together.
+MAX_START_DELAY_S: float = 50.0  #                             PROVISIONAL - to confirm
+
+#: How far inside the border B is placed, in metres.           PROVISIONAL - to confirm
+BORDER_MARGIN_M: float = 10.0
 
 # ---------------------------------------------------------------------------
 # Loop guard

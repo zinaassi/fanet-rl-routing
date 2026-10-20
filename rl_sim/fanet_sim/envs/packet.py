@@ -26,6 +26,9 @@ class DropReason(Enum):
                            # already visited and the GS is out of range
     TTL = auto()           # packet lived longer than PACKET_TTL steps
     HOP_LIMIT = auto()     # packet already took MAX_HOPS hops
+    LINK_BROKEN = auto()   # Phase 2a: the link it was queued on went away
+                           # while it waited, and the re-route found nowhere
+                           # else to put it
 
     @property
     def label(self) -> str:
@@ -55,6 +58,11 @@ class Packet:
         drop_reason:    Why the packet was dropped, if applicable.
         delivered_at:   Timestep at which delivery occurred (None if not yet).
         path:           Ordered list of drone IDs the packet has visited.
+        source_connected: Whether the source had SOME path to the GS at the
+                        moment this packet was created. Phase 2a: "loss while
+                        connected" counts only packets for which this is True,
+                        so a drone that has flown out of the network is not
+                        charged for packets it never had any way to deliver.
     """
 
     packet_id: int
@@ -71,6 +79,7 @@ class Packet:
     drop_reason: Optional[DropReason] = field(default=None, init=False)
     delivered_at: Optional[int] = field(default=None, init=False)
     path: List[int | str] = field(default_factory=list, init=False)
+    source_connected: bool = field(default=True, init=False)
 
     def __post_init__(self) -> None:
         self.current_holder = self.source_id

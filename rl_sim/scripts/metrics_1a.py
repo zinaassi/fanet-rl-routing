@@ -40,7 +40,7 @@ from __future__ import annotations
 import os
 import statistics
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -209,6 +209,43 @@ def ground_truth_view(env: FANETEnv) -> Dict[str, Any]:
         "links": _link_summary(env.link_stats_measured),
         "mean_queue": _mean([float(q) for q in env.queue_samples]),
         "max_queue": max(env.queue_samples) if env.queue_samples else None,
+        # --- Phase 2a: what the moving world adds ---
+        # Mean over M-drones of the share of measured steps on which that
+        # drone had SOME path to the GS. 1.0 in the static world.
+        "pct_time_connected": _mean([
+            count / env.measured_steps
+            for count in env.connected_steps.values()
+        ]) if env.measured_steps else None,
+        # Loss over the packets whose source could still reach the GS when it
+        # created them. Separates "the routing lost it" from "there was
+        # nowhere for it to go".
+        **_connected_loss(packets),
+        "reroutes": env.reroutes,
+        "link_broken_drops": env.link_broken_drops,
+    }
+
+
+def _connected_loss(packets: Sequence[Packet]) -> Dict[str, Any]:
+    """Return the loss counted only over packets created while connected.
+
+    A packet whose source had no path to the GS at the moment it was created
+    could never have been delivered by any routing rule, so charging it to the
+    routing says nothing. This reports the loss with those packets set aside,
+    beside how many were set aside.
+
+    Args:
+        packets: The packets inside the measurement window.
+
+    Returns:
+        ``created_while_connected``, ``lost_while_connected`` and
+        ``loss_while_connected`` (the rate).
+    """
+    connected = [p for p in packets if p.source_connected]
+    lost = [p for p in connected if not p.delivered]
+    return {
+        "created_while_connected": len(connected),
+        "lost_while_connected": len(lost),
+        "loss_while_connected": _rate(len(lost), len(connected)),
     }
 
 
@@ -251,6 +288,9 @@ def ack_view(env: FANETEnv) -> Dict[str, Any]:
             r["dropped_queue_full"] for r in link_stats.values()
         ),
         "lost_channel": sum(r["lost_channel"] for r in link_stats.values()),
+        "lost_link_broken": sum(
+            r["dropped_link_broken"] for r in link_stats.values()
+        ),
         "expired_in_queue": sum(
             r["expired_in_queue"] for r in link_stats.values()
         ),

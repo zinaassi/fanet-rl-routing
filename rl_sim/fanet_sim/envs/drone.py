@@ -81,6 +81,11 @@ LINK_FIELDS = (
     "acked",
     "lost_channel",
     "expired_in_queue",
+    # Phase 2a: the link went away while packets were still queued on it and
+    # the rescue found nowhere to put them. Local knowledge — the drone owns
+    # the queue and sees its own neighbour set shrink — so it belongs in the
+    # ACK-side book as well as the simulator's.
+    "dropped_link_broken",
 )
 
 
@@ -153,6 +158,12 @@ class Drone:
             self.position.copy() if end_point is None else end_point.astype(np.float64)
         )
         self.arrived: bool = False
+        # Phase 2a. ``start_delay_s`` is how long this drone waits before it
+        # starts flying; until then step_move does nothing. Both are set by
+        # FANETEnv._assign_mobility from the mobility stream, and stay at
+        # these defaults while config.STATIC_MODE is True.
+        self.start_delay_s: float = 0.0
+        self.distance_flown: float = 0.0
         # Energy is tracked as two independent budgets so the topology agent's
         # motion cost (Phase 4) does not get hidden inside the radio cost.
         self.energy_radio: float = config.INITIAL_ENERGY
@@ -187,17 +198,25 @@ class Drone:
     # Movement
     # ------------------------------------------------------------------
 
-    def step_move(self, dt: float = config.TIMESTEP) -> float:
-        """Advance an M-drone one timestep in a straight line toward its end.
+    def step_move(self, dt: float = config.TIMESTEP,
+                  now_s: float = 0.0) -> float:
+        """Advance an M-drone one timestep in a straight line toward B.
 
-        The drone flies from its start point toward :attr:`end_point` at
-        constant speed and stops once it arrives (within
-        ``config.WAYPOINT_ARRIVAL_THRESHOLD`` metres). C-drones do not use
-        this method — they are steered by the topology agent through
-        :meth:`apply_velocity` — so calling it on a C-drone is a no-op.
+        The drone waits out :attr:`start_delay_s`, then flies from A toward
+        :attr:`end_point` at constant speed and hovers there for the rest of
+        the run. C-drones do not use this method — they are steered by the
+        topology agent through :meth:`apply_velocity` — so calling it on a
+        C-drone is a no-op, which is what makes them hover in Phase 2a.
+
+        It SNAPS to B rather than stopping within a threshold of it: a drone
+        that halts a metre or two short leaves its final position depending on
+        its speed, which would make "has it arrived" a different question for
+        every drone. The last step is therefore shorter than the others.
 
         Args:
-            dt: Duration of this timestep in seconds.
+            dt:    Duration of this timestep in seconds.
+            now_s: Simulation time at the START of this step, in seconds, so
+                   the start delay can be honoured.
 
         Returns:
             Distance moved in metres.
@@ -207,21 +226,37 @@ class Drone:
             self.velocity = np.zeros(2, dtype=np.float64)
             return 0.0
 
+        if now_s < self.start_delay_s:
+            # Still waiting to set off.
+            self.velocity = np.zeros(2, dtype=np.float64)
+            return 0.0
+
         direction = self.end_point - self.position
         dist_to_end = float(np.linalg.norm(direction))
 
-        if dist_to_end < config.WAYPOINT_ARRIVAL_THRESHOLD:
-            # Arrived at the end point — stop and stay put for good.
+        if dist_to_end == 0.0:
+            # At B — stop and stay put for good. Also the case for a drone
+            # whose B is its A, which is what a zero-length flight means.
             self.velocity = np.zeros(2, dtype=np.float64)
             self.arrived = True
             return 0.0
 
         unit = direction / dist_to_end
         max_move = self.speed * dt
-        actual_move = min(max_move, dist_to_end)
 
-        self.velocity = unit * self.speed
-        self.position = self.position + unit * actual_move
+        if max_move >= dist_to_end:
+            # Land exactly on B, so the final position does not depend on
+            # where the last step happened to fall.
+            actual_move = dist_to_end
+            self.position = self.end_point.copy()
+            self.velocity = np.zeros(2, dtype=np.float64)
+            self.arrived = True
+        else:
+            actual_move = max_move
+            self.velocity = unit * self.speed
+            self.position = self.position + unit * actual_move
+
+        self.distance_flown += actual_move
         self.energy_motion -= config.ENERGY_PER_MOVE * actual_move
         self.energy_motion = max(0.0, self.energy_motion)
 
@@ -411,6 +446,20 @@ class Drone:
             measured: True once the warm-up is over.
         """
         self._bump_link(next_hop, "expired_in_queue", measured)
+
+    def note_link_broken(
+        self, next_hop: NextHop, measured: bool = True
+    ) -> None:
+        """Record that a packet died because this link went away under it.
+
+        Local knowledge: the drone owns the queue and watches its own
+        neighbour set shrink, so it learns this without any ACK.
+
+        Args:
+            next_hop: The link that disappeared.
+            measured: True once the warm-up is over.
+        """
+        self._bump_link(next_hop, "dropped_link_broken", measured)
 
     def note_sent(self, next_hop: NextHop, measured: bool = True) -> None:
         """Record one transmission attempt toward *next_hop*.

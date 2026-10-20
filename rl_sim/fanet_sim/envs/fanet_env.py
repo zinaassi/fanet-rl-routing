@@ -290,6 +290,7 @@ class FANETEnv:
         self._rng_place: np.random.Generator
         self._rng_chan: np.random.Generator
         self._rng_route: np.random.Generator
+        self._rng_mob: np.random.Generator
         self._seed_streams()
 
         self.gs_position: np.ndarray = np.array(config.GS_POSITION, dtype=np.float64)
@@ -321,6 +322,16 @@ class FANETEnv:
         # waited on a link, so no link is charged for them.
         self.expired_on_arrival: int = 0
         self.expired_on_arrival_measured: int = 0
+        # Phase 2a. Packets handed back to the routing rule because the link
+        # they were queued on went away, and the ones that found nowhere to
+        # go. Both counted over the measurement window only.
+        self.reroutes: int = 0
+        self.link_broken_drops: int = 0
+        # Per M-drone, how many measured steps it had SOME path to the GS,
+        # and how many measured steps there were in total.
+        self.connected_steps: Dict[int, int] = {}
+        self.measured_steps: int = 0
+        self._reachable_from_gs: Optional[set] = None
         # Per-M-drone traffic phase, drawn in reset().
         self._traffic_offset: Dict[int, int] = {}
         # How many layouts had to be drawn before one was accepted by the
@@ -364,6 +375,10 @@ class FANETEnv:
         self.queue_samples = []
         self.expired_on_arrival = 0
         self.expired_on_arrival_measured = 0
+        self.reroutes = 0
+        self.link_broken_drops = 0
+        self.connected_steps = {}
+        self.measured_steps = 0
         self._rx_counts = defaultdict(int)
 
         # Open a new logger for this episode (close any prior one).
@@ -375,6 +390,7 @@ class FANETEnv:
             self.router.on_reset()  # type: ignore[union-attr]
 
         self.drones = self._create_drones()
+        self._assign_mobility()
         self._assign_traffic_offsets()
 
         # Compute initial candidate pools and active links.
@@ -513,7 +529,12 @@ class FANETEnv:
 
         for _ in range(config.NUM_M_DRONES):
             start = self._random_point()
-            end = start.copy() if config.STATIC_MODE else self._random_point()
+            # The end point is NOT drawn here. It used to be, from this same
+            # placement stream, whenever STATIC_MODE was off — which moved
+            # every position after it and so handed a moving run a different
+            # layout from a still one. B now comes from the mobility stream,
+            # in _assign_mobility, after the layout has been accepted.
+            end = start.copy()
             drones.append(Drone(
                 drone_id=drone_id,
                 drone_type="M",
@@ -536,6 +557,80 @@ class FANETEnv:
 
         return drones
 
+    def _assign_mobility(self) -> None:
+        """Give every M-drone its flight: direction, speed and start delay.
+
+        Called once, AFTER a layout has been accepted, so the number of
+        rejected draws cannot shift the mobility stream.
+
+        Every draw here comes from ``_rng_mob`` and nothing else. The speed
+        the placement stream drew in :meth:`_draw_drones` is overwritten: that
+        draw stays where it is, still consuming exactly what it consumed in
+        Phase 1, because removing it would shift every position after it and
+        move all twenty layouts. It is ballast now, and this is the only place
+        that says so.
+
+        The flight is A -> B at constant speed:
+
+        * A is the drone's Phase-1 position, where it already is;
+        * the direction is uniform in [0, 360);
+        * B is where that ray leaves the arena, pulled back
+          ``config.BORDER_MARGIN_M`` so it lands inside. A drone already
+          within the margin of the border in its own direction gets B = A and
+          simply hovers, which is the honest answer rather than a nudge
+          inwards that would bend its direction.
+
+        With ``config.STATIC_MODE`` set this does nothing at all, so a static
+        run never touches the mobility stream.
+        """
+        if config.STATIC_MODE:
+            return
+
+        for drone in self.drones:
+            if drone.drone_type != "M":
+                continue
+            angle = float(self._rng_mob.uniform(0.0, 2.0 * np.pi))
+            direction = np.array([np.cos(angle), np.sin(angle)],
+                                 dtype=np.float64)
+            drone.speed = float(self._rng_mob.uniform(
+                config.DRONE_SPEED_MIN, config.DRONE_SPEED_MAX
+            ))
+            drone.start_delay_s = float(self._rng_mob.uniform(
+                0.0, config.MAX_START_DELAY_S
+            ))
+            drone.end_point = self._border_point(drone.position, direction)
+            drone.arrived = bool(
+                np.array_equal(drone.end_point, drone.position)
+            )
+
+    @staticmethod
+    def _border_point(start: np.ndarray, direction: np.ndarray) -> np.ndarray:
+        """Return where *direction* leaves the arena, minus the margin.
+
+        Solves for the smallest positive t with ``start + t * direction`` on
+        the arena boundary, then steps back ``config.BORDER_MARGIN_M`` along
+        the ray. Clamped at the start point, so B is never behind A.
+
+        Args:
+            start:     The drone's position, inside the arena.
+            direction: A unit vector.
+
+        Returns:
+            B, always inside the arena.
+        """
+        distances = []
+        for axis, extent in ((0, config.WIDTH), (1, config.HEIGHT)):
+            component = direction[axis]
+            if component > 0.0:
+                distances.append((extent - start[axis]) / component)
+            elif component < 0.0:
+                distances.append((0.0 - start[axis]) / component)
+        # A unit vector always has a non-zero component, so this is never
+        # empty; min() is the first boundary the ray meets.
+        to_border = min(d for d in distances if d >= 0.0)
+        travel = max(0.0, to_border - config.BORDER_MARGIN_M)
+        return start + travel * direction
+
     def _assign_traffic_offsets(self) -> None:
         """Give every M-drone the step within its interval on which it creates.
 
@@ -556,17 +651,30 @@ class FANETEnv:
                 self._traffic_offset[drone.drone_id] = 0
 
     def _seed_streams(self) -> None:
-        """(Re)build the three independent random streams from the two seeds.
+        """(Re)build the four independent random streams from the two seeds.
 
         ``_rng_place`` is driven by ``placement_seed``. ``_rng_chan`` (channel
         loss and traffic timing) and ``_rng_route`` (the RANDOM routing rule)
         are two independent streams spawned off ``run_seed``, so consuming
         routing draws can never shift the channel or traffic draws.
+
+        ``_rng_mob`` (Phase 2a: direction, speed and start delay) has its OWN
+        SeedSequence keyed by the placement seed and a fixed tag, in the style
+        of the agent's exploration stream. It is deliberately not a third
+        spawn off either of the others: an independent stream cannot be
+        shifted by a change in how many draws the others make, whichever way
+        round that would have gone. Keying it on the placement seed makes a
+        layout's trajectories a property of the layout, so greedy and random
+        on the same placement fly identically.
         """
         self._rng_place = np.random.default_rng(self.placement_seed)
         chan_seed, route_seed = np.random.SeedSequence(self.run_seed).spawn(2)
         self._rng_chan = np.random.default_rng(chan_seed)
         self._rng_route = np.random.default_rng(route_seed)
+        self._rng_mob = np.random.default_rng(
+            np.random.SeedSequence([self.placement_seed,
+                                    config.MOBILITY_STREAM_TAG])
+        )
 
     def _random_point(self) -> np.ndarray:
         """Return a uniformly random (x, y) point inside the arena."""
@@ -616,16 +724,27 @@ class FANETEnv:
         """
         self.tx_events = []
         self._rx_counts = defaultdict(int)
+        # Who can reach the GS this step, computed at most once and thrown
+        # away when the step ends, since the drones move between steps.
+        self._reachable_from_gs = None
         measured = config.is_warm(self.step_count)
 
-        # 1. Move M-drones along their straight start -> end line, then refresh
-        #    the neighbour sets. Phase 1A is static, so no drone moves.
+        # 1. Move M-drones along their straight A -> B line, then refresh the
+        #    neighbour sets. Phase 1 is static, so no drone moves there.
         if not config.STATIC_MODE:
+            now_s = self._sim_time()
             for drone in self.drones:
                 if drone.drone_type == "M":
-                    drone.step_move(config.TIMESTEP)
+                    drone.step_move(config.TIMESTEP, now_s=now_s)
         self._recompute_links()
         self._update_active_links()
+
+        # 1b. Links that went away this step: hand their queued packets back
+        #     to the routing rule before anything else looks at a queue.
+        self._rescue_broken_links(measured)
+
+        # 1c. Who can still reach the GS at all, measured on the TRUE network.
+        self._sample_connectivity(config.in_measurement_window(self.step_count))
 
         # 2. Retire packets that died waiting in a link queue, and let each
         #    source give up on its own packets the GS never acknowledged. This
@@ -732,6 +851,11 @@ class FANETEnv:
                 source_id=drone.drone_id,
                 created_at=self.step_count,
             )
+            # Was there any path to the GS at this moment? "Loss while
+            # connected" counts only packets for which there was, so a drone
+            # that has flown out of the network is not charged for packets it
+            # never had a way to deliver.
+            pkt.source_connected = self._has_path_to_gs(drone.drone_id)
             self.all_packets.append(pkt)
             drone.note_created(pkt)
             if self._logger is not None:
@@ -842,13 +966,22 @@ class FANETEnv:
         )
 
     def _route_into_queue(
-        self, drone: Drone, pkt: Packet, measured: bool
+        self, drone: Drone, pkt: Packet, measured: bool,
+        fail_reason: Optional[DropReason] = None,
+        broken_link: Optional[NextHop] = None,
     ) -> None:
         """Commit *pkt* to one of *drone*'s link queues, or drop it.
 
         Three outcomes: no qualifying next hop drops the packet "no_route";
         a chosen link whose queue is full drops it "queue_full" at this drone;
         otherwise it waits on that link until its turn to be sent.
+
+        *fail_reason* overrides all three failure labels. The broken-link
+        rescue passes ``LINK_BROKEN``, because a packet that had a perfectly
+        good next hop until its link vanished was not lost to a routing void
+        or to congestion; it was lost to the link going away. Expiry is NOT
+        overridden: a packet already out of TTL or hops is retired as such,
+        which is what "respect TTL and the hop limit" means.
 
         A packet that has already used up its TTL or its hop budget is retired
         here rather than taking a queue slot it can never leave. It never
@@ -871,28 +1004,51 @@ class FANETEnv:
             self._expire_packet(pkt, holder=drone)
             return
 
+        def _fail(default: DropReason) -> None:
+            """Drop *pkt*, under the rescue's label when there is one."""
+            reason = default if fail_reason is None else fail_reason
+            if fail_reason is not None:
+                self.link_broken_drops += 1 if measured else 0
+                if broken_link is not None:
+                    drone.note_link_broken(broken_link, measured)
+                    self._note_link(drone.drone_id, broken_link,
+                                    "dropped_link_broken", measured)
+            self._drop(pkt, reason, drone)
+
         reachable = self._next_hop_candidates(drone)
         if not reachable:
             # Nowhere to send it at all.
-            self._drop(pkt, DropReason.NO_ROUTE, drone)
+            _fail(DropReason.NO_ROUTE)
             return
 
         candidates = self._allowed_candidates(drone, pkt)
         if not candidates:
             # There were options, and the loop guard took the last one.
-            self._drop(pkt, DropReason.DEAD_END, drone)
+            _fail(DropReason.DEAD_END)
             return
 
         next_key = self._select_next_hop(drone, candidates, pkt)
         if next_key is None:
             # The rule found nothing usable — for greedy, nothing closer.
-            self._drop(pkt, DropReason.NO_ROUTE, drone)
+            _fail(DropReason.NO_ROUTE)
             return
 
         drone.note_offered(next_key, measured)
         self._note_link(drone.drone_id, next_key, "offered", measured)
 
         if not drone.enqueue(next_key, pkt):
+            if fail_reason is not None:
+                # The rescue found a hop, but its queue was full. The per-link
+                # book charges the link that REFUSED it — the one just
+                # offered — so every "offered" keeps exactly one outcome on
+                # its own link. Only the packet's cause says link_broken,
+                # which is the honest summary of why it died.
+                self.link_broken_drops += 1 if measured else 0
+                drone.note_queue_full(next_key, measured)
+                self._note_link(drone.drone_id, next_key,
+                                "dropped_queue_full", measured)
+                self._drop(pkt, fail_reason, drone, next_hop=next_key)
+                return
             drone.note_queue_full(next_key, measured)
             self._note_link(
                 drone.drone_id, next_key, "dropped_queue_full", measured
@@ -933,6 +1089,21 @@ class FANETEnv:
         arrivals: List[Tuple[Drone, Packet]] = []
 
         for drone, next_key, pkt in pending:
+            # The link is checked again HERE, not only when the packet was
+            # enqueued. The rescue at the top of the step should already have
+            # emptied every dead queue, so this is the backstop that makes
+            # "sent to the GS after flying out of range" impossible rather
+            # than merely unlikely. A packet caught here goes back through the
+            # routing rule like any other stranded one.
+            if not self._link_is_live(drone, next_key):
+                self.reroutes += 1 if measured else 0
+                self._route_into_queue(
+                    drone, pkt, measured,
+                    fail_reason=DropReason.LINK_BROKEN,
+                    broken_link=next_key,
+                )
+                continue
+
             target_pos = (
                 self.gs_position
                 if next_key == "GS"
@@ -1022,6 +1193,119 @@ class FANETEnv:
             receiver, pkt = arrivals[int(index)]
             self._route_into_queue(receiver, pkt, measured)
 
+
+    def _link_is_live(self, drone: Drone, key: NextHop) -> bool:
+        """True if *drone* can still use the link to *key* right now.
+
+        The one test used both by the broken-link rescue and by the send-time
+        check, so the two can never disagree about what "still a link" means.
+
+        Args:
+            drone: The drone that owns the queue.
+            key:   Neighbour id, or "GS".
+
+        Returns:
+            Whether that next hop is still reachable.
+        """
+        if key == "GS":
+            return bool(are_connected(drone.position, self.gs_position))
+        return key in drone.neighbors
+
+    def _rescue_broken_links(self, measured: bool) -> None:
+        """Re-route everything queued on a link that no longer exists.
+
+        Called at the top of the step, right after the drones have moved and
+        the neighbour sets have been rebuilt. For every queue whose next hop
+        is gone, each packet goes back through the drone's own routing rule
+        exactly as if it had just arrived — same visited list, same TTL, same
+        hop budget — and the empty queue is then deleted.
+
+        A packet the rule cannot place, for any reason, is dropped
+        "link_broken": there is no sense in calling it "no_route" or
+        "queue_full" when the thing that killed it was the link going away
+        while it waited.
+
+        Args:
+            measured: True once the warm-up is over.
+        """
+        if config.STATIC_MODE:
+            # Nothing moves, so no link can break. Skipping keeps the static
+            # world bit-for-bit what Phase 1 produced.
+            return
+
+        for drone in self.drones:
+            broken = [
+                key for key in list(drone.link_queues)
+                if drone.link_queues[key] and not self._link_is_live(drone, key)
+            ]
+            for key in broken:
+                stranded = drone.link_queues.pop(key)
+                for pkt in stranded:
+                    self.reroutes += 1 if measured else 0
+                    self._route_into_queue(
+                        drone, pkt, measured,
+                        fail_reason=DropReason.LINK_BROKEN,
+                        broken_link=key,
+                    )
+            # Queues that went away empty leave nothing to re-route, but the
+            # key should still go: it is no longer a link.
+            for key in [k for k in list(drone.link_queues)
+                        if not drone.link_queues[k]
+                        and not self._link_is_live(drone, k)]:
+                drone.link_queues.pop(key)
+
+    def _has_path_to_gs(self, drone_id: int) -> bool:
+        """True if *drone_id* has some path to the GS right now.
+
+        Reads the set computed once per step by :meth:`_sample_connectivity`,
+        so asking for eighteen drones costs one graph, not eighteen.
+
+        Args:
+            drone_id: The drone to ask about.
+
+        Returns:
+            Whether a path exists on the TRUE network.
+        """
+        if self._reachable_from_gs is None:
+            graph, gs_label = build_graph_with_gs(self.drones, self.gs_position)
+            self._reachable_from_gs = nx.node_connected_component(
+                graph, gs_label
+            )
+        return drone_id in self._reachable_from_gs
+
+    def _sample_connectivity(self, measured: bool) -> None:
+        """Note which M-drones can still reach the GS, on the true network.
+
+        One graph per step over the real positions — not what any drone
+        believes — so "connected" means there is genuinely some path, however
+        lossy, from that M-drone to the ground station.
+
+        Args:
+            measured: True on the steps inside the CREATION window
+                      [WARMUP_STEPS, MAX_STEPS - DRAIN_STEPS). The same window
+                      the loss numbers use, so "x% of the time connected" and
+                      "y% of packets lost" describe the same stretch of the
+                      run.
+        """
+        if not measured:
+            return
+        self.measured_steps += 1
+
+        if self._reachable_from_gs is None:
+            graph, gs_label = build_graph_with_gs(self.drones, self.gs_position)
+            self._reachable_from_gs = nx.node_connected_component(
+                graph, gs_label
+            )
+        reachable = self._reachable_from_gs
+        for drone in self.drones:
+            if drone.drone_type != "M":
+                continue
+            if drone.drone_id in reachable:
+                self.connected_steps[drone.drone_id] = (
+                    self.connected_steps.get(drone.drone_id, 0) + 1
+                )
+            else:
+                self.connected_steps.setdefault(drone.drone_id, 0)
 
     def _note_link(
         self, from_id: int, to_key: NextHop, field: str, measured: bool
