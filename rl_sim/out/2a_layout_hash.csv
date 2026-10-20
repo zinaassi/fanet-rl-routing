@@ -1,4 +1,4 @@
-# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  placements=20  |  window=[50,950) of 1000  |  commit=6797e4a-dirty  |  phase-2a static reference
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  placements=20  |  window=[50,950) of 1000  |  commit=eaa4bf0  |  phase-2a static reference
 placement_seed,positions_sha256,num_drones,placement_draws
 1,704acefbf0ff8189e51d525ff73c8a337ab36c4c2dc4356fb9c9a6eff90b88c5,25,1
 2,fbd2e9cdbd3ae067919244b2fca641f943fae596cc627bf048598d99c210d18f,25,1

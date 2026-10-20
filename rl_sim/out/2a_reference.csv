@@ -1,4 +1,4 @@
-# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  placements=20  |  window=[50,950) of 1000  |  commit=6797e4a-dirty  |  phase-2a static reference
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  placements=20  |  window=[50,950) of 1000  |  commit=eaa4bf0  |  phase-2a static reference
 rule,load_ms,placement_seed,total_loss,channel,queue_full,no_route,dead_end,ttl,hop_limit,mean_hops,views_agree
 greedy,200,1,0.3106172839506173,0.1402469135802469,0.17037037037037037,0.0,0.0,0.0,0.0,1.6627865329512894,True
 greedy,200,2,0.3333333333333333,0.11567901234567901,0.21765432098765433,0.0,0.0,0.0,0.0,1.6444444444444444,True
