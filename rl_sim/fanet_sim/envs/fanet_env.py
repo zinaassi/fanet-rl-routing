@@ -59,7 +59,7 @@ from __future__ import annotations
 
 import os
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 import networkx as nx
 import numpy as np
@@ -292,6 +292,7 @@ class FANETEnv:
         self._rng_route: np.random.Generator
         self._rng_mob: np.random.Generator
         self._rng_hello: np.random.Generator
+        self._rng_cdrone: np.random.Generator
         self._seed_streams()
 
         self.gs_position: np.ndarray = np.array(config.GS_POSITION, dtype=np.float64)
@@ -348,6 +349,13 @@ class FANETEnv:
         self._accuracy_precision: float = 0.0
         self._accuracy_recall: float = 0.0
         self._accuracy_samples: int = 0
+        # Phase 2a step 3. Pairs of drones really within C_SAFE_DISTANCE_M of
+        # each other, counted per step on TRUE positions, and the share of
+        # those involving an M-drone, which does not avoid anybody.
+        self.close_passes: int = 0
+        self.close_passes_with_m: int = 0
+        # The C-drones' mean distance from the GS, one value per second.
+        self.c_distance_series: List[float] = []
         # Per-M-drone traffic phase, drawn in reset().
         self._traffic_offset: Dict[int, int] = {}
         # How many layouts had to be drawn before one was accepted by the
@@ -404,6 +412,9 @@ class FANETEnv:
         self._accuracy_precision = 0.0
         self._accuracy_recall = 0.0
         self._accuracy_samples = 0
+        self.close_passes = 0
+        self.close_passes_with_m = 0
+        self.c_distance_series = []
         self._rx_counts = defaultdict(int)
 
         # Open a new logger for this episode (close any prior one).
@@ -614,6 +625,11 @@ class FANETEnv:
 
         for drone in self.drones:
             if drone.drone_type != "M":
+                # C-drones fly at a fixed speed, and apply_velocity caps each
+                # command at drone.speed — so this has to be set, or they
+                # would crawl at whatever the placement stream happened to
+                # draw for them. No draw is made here.
+                drone.speed = config.C_DRONE_SPEED
                 continue
             angle = float(self._rng_mob.uniform(0.0, 2.0 * np.pi))
             direction = np.array([np.cos(angle), np.sin(angle)],
@@ -709,6 +725,14 @@ class FANETEnv:
         self._rng_hello = np.random.default_rng(
             np.random.SeedSequence([self.run_seed, config.HELLO_STREAM_TAG])
         )
+        # Phase 2a step 3. The C-drones' own randomness — only random_walk
+        # needs any — on its own stream again, keyed on the PLACEMENT seed so
+        # a layout's C-drone behaviour is the same under every routing rule,
+        # the way the M-drone trajectories already are.
+        self._rng_cdrone = np.random.default_rng(
+            np.random.SeedSequence([self.placement_seed,
+                                    config.C_DRONE_STREAM_TAG])
+        )
 
     def _random_point(self) -> np.ndarray:
         """Return a uniformly random (x, y) point inside the arena."""
@@ -770,6 +794,9 @@ class FANETEnv:
             for drone in self.drones:
                 if drone.drone_type == "M":
                     drone.step_move(config.TIMESTEP, now_s=now_s)
+            # C-drones decide from their tables, which hold what they heard
+            # BEFORE this step, so they move on last step's picture.
+            self._move_c_drones()
         self._recompute_links()
         self._update_active_links()
 
@@ -786,6 +813,8 @@ class FANETEnv:
         in_window = config.in_measurement_window(self.step_count)
         self._sample_connectivity(in_window)
         self._sample_table_accuracy(in_window)
+        self._count_close_passes(in_window)
+        self._sample_c_distance()
 
         # 2. Retire packets that died waiting in a link queue, and let each
         #    source give up on its own packets the GS never acknowledged. This
@@ -1313,20 +1342,22 @@ class FANETEnv:
         if config.IDEAL_HELLO:
             return
 
-        senders: List[Tuple[NextHop, str, np.ndarray, np.ndarray, int, int]] = []
+        senders: List[Tuple[NextHop, str, np.ndarray, np.ndarray, int, int,
+                            Optional[np.ndarray]]] = []
         for drone in self.drones:
             if self.step_count >= drone.next_hello_step:
                 senders.append((
                     drone.drone_id, drone.drone_type, drone.position.copy(),
                     drone.velocity.copy(), drone.total_queued(),
                     drone.relayed_since_hello,
+                    None if drone.target is None else drone.target.copy(),
                 ))
                 drone.next_hello_step = self.step_count + self._next_hello_gap()
                 drone.relayed_since_hello = 0
                 drone.hellos_sent += 1
         if self.step_count >= self._gs_next_hello_step:
             senders.append(("GS", "GS", self.gs_position.copy(),
-                            np.zeros(2, dtype=np.float64), 0, 0))
+                            np.zeros(2, dtype=np.float64), 0, 0, None))
             self._gs_next_hello_step = (
                 self.step_count + self._next_hello_gap()
             )
@@ -1335,7 +1366,8 @@ class FANETEnv:
         if not senders:
             return
 
-        for sender_id, sender_type, position, velocity, fill, relayed in senders:
+        for (sender_id, sender_type, position, velocity, fill, relayed,
+             target) in senders:
             for receiver in self.drones:
                 if receiver.drone_id == sender_id:
                     continue
@@ -1354,7 +1386,291 @@ class FANETEnv:
                     sent_at=self.step_count,
                     queue_fill=fill,
                     relayed=relayed,
+                    target=None if target is None else target.copy(),
                 )
+
+    # ------------------------------------------------------------------
+    # C-drone movement (Phase 2a step 3)
+    # ------------------------------------------------------------------
+
+    def _move_c_drones(self) -> None:
+        """Let every C-drone take one step under the configured rule.
+
+        A C-drone decides from its OWN neighbour table and nothing else: the
+        same out-of-date picture the router works from. It never reads a true
+        position, which is why the rules can send one toward a drone that has
+        already left.
+
+        Order: pick a heading under the rule, then let the steering look at
+        it. Steering can only turn the heading aside or refuse the step; it
+        never changes the target.
+        """
+        if config.C_RULE == "hover":
+            return
+
+        for drone in self.drones:
+            if drone.drone_type != "C":
+                continue
+            heading = self._c_heading(drone)
+            if heading is None:
+                drone.velocity = np.zeros(2, dtype=np.float64)
+                continue
+            if config.AVOID:
+                heading = self._steer_around(drone, heading)
+                if heading is None:
+                    drone.avoid_waits += 1
+                    drone.velocity = np.zeros(2, dtype=np.float64)
+                    continue
+            drone.apply_velocity(heading * config.C_DRONE_SPEED
+                                 * config.TIMESTEP)
+
+    def _c_heading(self, drone: Drone) -> Optional[np.ndarray]:
+        """Return the unit heading *drone* wants this step, or None to hover.
+
+        Args:
+            drone: A C-drone.
+
+        Returns:
+            A unit vector, or None when the rule says to stay put.
+        """
+        if config.C_RULE == "random_walk":
+            return self._random_walk_heading(drone)
+        return self._target_heading(drone)
+
+    def _random_walk_heading(self, drone: Drone) -> Optional[np.ndarray]:
+        """A straight line, a new direction every C_TURN_INTERVAL, bouncing.
+
+        The bounce is a reflection off whichever wall it reached, so a drone
+        that runs into the border keeps its speed and turns, rather than
+        sliding along the wall or stopping.
+
+        Args:
+            drone: A C-drone.
+
+        Returns:
+            Its unit heading for this step.
+        """
+        turn_every = max(1, int(round(config.C_TURN_INTERVAL / config.TIMESTEP)))
+        if drone.heading is None or self.step_count >= drone.next_decision_step:
+            angle = float(self._rng_cdrone.uniform(0.0, 2.0 * np.pi))
+            drone.heading = np.array([np.cos(angle), np.sin(angle)],
+                                     dtype=np.float64)
+            drone.next_decision_step = self.step_count + turn_every
+
+        # Reflect off a wall it would otherwise walk through.
+        step = drone.heading * config.C_DRONE_SPEED * config.TIMESTEP
+        ahead = drone.position + step
+        bounced = drone.heading.copy()
+        if ahead[0] < 0.0 or ahead[0] > config.WIDTH:
+            bounced[0] = -bounced[0]
+        if ahead[1] < 0.0 or ahead[1] > config.HEIGHT:
+            bounced[1] = -bounced[1]
+        drone.heading = bounced
+        return bounced
+
+    def _target_heading(self, drone: Drone) -> Optional[np.ndarray]:
+        """Pick or keep a target under "busiest"/"midpoint", and head for it.
+
+        The target is re-chosen every ``config.C_DECISION_INTERVAL`` seconds.
+        Between decisions the drone keeps flying to the point it picked, even
+        if the neighbour it picked it from has since gone quiet.
+
+        Args:
+            drone: A C-drone.
+
+        Returns:
+            A unit heading, or None when there is no target or it is already
+            close enough to one.
+        """
+        every = max(1, int(round(config.C_DECISION_INTERVAL / config.TIMESTEP)))
+        if self.step_count >= drone.next_decision_step:
+            drone.target = self._choose_target(drone)
+            drone.next_decision_step = self.step_count + every
+
+        if drone.target is None:
+            return None
+        gap = drone.target - drone.position
+        distance = float(np.linalg.norm(gap))
+        stop = (config.C_BUSIEST_STOP_M if config.C_RULE == "busiest"
+                else config.C_MIDPOINT_STOP_M)
+        if distance <= stop:
+            return None
+        return gap / distance
+
+    def _choose_target(self, drone: Drone) -> Optional[np.ndarray]:
+        """Return where *drone* should head, from its table alone.
+
+        "busiest" takes the neighbour that relayed the most in the last
+        second, ties going to the fuller queue, and heads for the position it
+        last advertised. "midpoint" takes the M-drone it can hear that is
+        farthest from the GS, and heads for the middle of the line between
+        that drone and the GS — the gap the network is most likely to need
+        bridged.
+
+        With ``config.SHARE_TARGETS`` the drone skips any candidate within
+        ``config.C_TARGET_SPREAD_M`` of a target another C-drone has
+        announced, and takes the best one left. Without it they are free to
+        pile onto the same point.
+
+        Args:
+            drone: A C-drone.
+
+        Returns:
+            A target point, or None when nothing qualifies.
+        """
+        taken = self._announced_targets(drone)
+
+        if config.C_RULE == "busiest":
+            ranked = sorted(
+                (h for h in drone.hello_table.values() if h.relayed > 0),
+                key=lambda h: (-h.relayed, -h.queue_fill, str(h.sender_id)),
+            )
+            for hello in ranked:
+                if self._far_enough(hello.position, taken):
+                    return hello.position.copy()
+            return None
+
+        # midpoint
+        ranked = sorted(
+            (h for h in drone.hello_table.values() if h.sender_type == "M"),
+            key=lambda h: (-float(np.linalg.norm(h.position - self.gs_position)),
+                           str(h.sender_id)),
+        )
+        for hello in ranked:
+            point = (hello.position + self.gs_position) / 2.0
+            if self._far_enough(point, taken):
+                return point
+        return None
+
+    def _announced_targets(self, drone: Drone) -> List[np.ndarray]:
+        """Return the targets other C-drones have told *drone* about."""
+        if not config.SHARE_TARGETS:
+            return []
+        return [h.target for h in drone.hello_table.values()
+                if h.sender_type == "C" and h.target is not None]
+
+    @staticmethod
+    def _far_enough(point: np.ndarray,
+                    taken: Sequence[np.ndarray]) -> bool:
+        """True if *point* is clear of every already-announced target."""
+        return all(
+            float(np.linalg.norm(point - other)) >= config.C_TARGET_SPREAD_M
+            for other in taken
+        )
+
+    def _predicted_positions(self, drone: Drone) -> List[np.ndarray]:
+        """Where *drone* thinks everything it knows about will be.
+
+        Last advertised position plus the advertised velocity times the age
+        of that hello — and then one more step, because what matters is where
+        the other drone will be when this one ARRIVES, not where it is as
+        this one sets off. Without that extra step two drones closing on each
+        other each take a step the other had not allowed for, and the pair can
+        end up nearer than C_SAFE_DISTANCE_M even though both thought they
+        were clear.
+
+        It is still a guess built on stale information, which is why the runs
+        also count how often two drones really do pass close.
+
+        Args:
+            drone: The C-drone looking around.
+
+        Returns:
+            One predicted position per table entry, the GS excluded — it does
+            not move and nothing has to keep clear of it.
+        """
+        out: List[np.ndarray] = []
+        for hello in drone.hello_table.values():
+            if hello.sender_type == "GS":
+                continue
+            age = ((self.step_count - hello.sent_at) * config.TIMESTEP
+                   + config.TIMESTEP)
+            out.append(hello.position + hello.velocity * age)
+        return out
+
+    def _steer_around(self, drone: Drone,
+                      heading: np.ndarray) -> Optional[np.ndarray]:
+        """Return a heading that keeps clear, or None to stay put this step.
+
+        Tries the planned heading first, then turns of
+        ``config.C_AVOID_TURN_DEG`` either way, widening to
+        ``config.C_AVOID_MAX_TURN_DEG``. The first one that keeps the drone
+        at least ``config.C_SAFE_DISTANCE_M`` from every predicted position
+        wins.
+
+        Args:
+            drone:   The C-drone.
+            heading: The unit heading it wanted.
+
+        Returns:
+            A unit heading, or None when nothing is clear.
+        """
+        others = self._predicted_positions(drone)
+        if not others:
+            return heading
+
+        step = config.C_DRONE_SPEED * config.TIMESTEP
+        # Clear by D_SAFE plus one step. Every C-drone decides at the same
+        # moment from the same stale velocities, so a prediction can be wrong
+        # by a whole step — most sharply when the other one has just WAITED,
+        # advertising zero velocity, and then turns and moves. Leaving a
+        # step's worth of room makes the D_SAFE guarantee hold whatever the
+        # other drone does, instead of only when it keeps going as it was.
+        clearance = config.C_SAFE_DISTANCE_M + step
+        angles = [0.0]
+        turn = config.C_AVOID_TURN_DEG
+        while turn <= config.C_AVOID_MAX_TURN_DEG + 1e-9:
+            angles.extend((turn, -turn))
+            turn += config.C_AVOID_TURN_DEG
+
+        for index, degrees in enumerate(angles):
+            radians = np.radians(degrees)
+            rotation = np.array([
+                [np.cos(radians), -np.sin(radians)],
+                [np.sin(radians), np.cos(radians)],
+            ])
+            candidate = rotation @ heading
+            landing = drone.position + candidate * step
+            if all(float(np.linalg.norm(landing - other)) >= clearance
+                   for other in others):
+                if index:
+                    drone.avoid_turns += 1
+                return candidate
+        return None
+
+    def _count_close_passes(self, measured: bool) -> None:
+        """Count pairs of drones really within C_SAFE_DISTANCE_M of each other.
+
+        On TRUE positions, not predictions: this is what actually happened,
+        against which the steering's guesswork can be judged. Counted per
+        step, so a pair that stays close for ten steps counts ten times.
+
+        Args:
+            measured: True on the steps inside the creation window.
+        """
+        if not measured:
+            return
+        drones = self.drones
+        for i, first in enumerate(drones):
+            for second in drones[i + 1:]:
+                gap = float(np.linalg.norm(first.position - second.position))
+                if gap >= config.C_SAFE_DISTANCE_M:
+                    continue
+                self.close_passes += 1
+                if "M" in (first.drone_type, second.drone_type):
+                    self.close_passes_with_m += 1
+
+    def _sample_c_distance(self) -> None:
+        """Record the C-drones' mean distance from the GS, once per second."""
+        every = max(1, int(round(1.0 / config.TIMESTEP)))
+        if self.step_count % every:
+            return
+        distances = [
+            float(np.linalg.norm(d.position - self.gs_position))
+            for d in self.drones if d.drone_type == "C"
+        ]
+        if distances:
+            self.c_distance_series.append(float(np.mean(distances)))
 
     def _expire_hello_entries(self, measured: bool) -> None:
         """Forget neighbours that have not said anything for too long.

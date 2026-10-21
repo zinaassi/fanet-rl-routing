@@ -239,6 +239,15 @@ def ground_truth_view(env: FANETEnv) -> Dict[str, Any]:
         "stale_sends": env.stale_sends,
         "stale_link_drops": env.stale_link_drops,
         **_hello_rates(env),
+        # --- Phase 2a step 3: what the C-drones did ---
+        "c_distance_flown_mean": _mean([
+            d.distance_flown for d in env.drones if d.drone_type == "C"
+        ]),
+        "c_distance_from_gs": list(env.c_distance_series),
+        "avoid_turns": sum(d.avoid_turns for d in env.drones),
+        "avoid_waits": sum(d.avoid_waits for d in env.drones),
+        "close_passes": env.close_passes,
+        "close_passes_with_m": env.close_passes_with_m,
     }
 
 

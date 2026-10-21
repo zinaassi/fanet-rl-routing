@@ -112,6 +112,9 @@ class Hello:
         queue_fill:  Total packets the sender was holding, across all its
                      link queues.
         relayed:     How many packets it relayed in the last second.
+        target:      Where a C-drone said it was heading, or None. Only
+                     C-drones fill this in, and only to let other C-drones
+                     keep out of each other's way.
     """
 
     sender_id: NextHop
@@ -121,6 +124,7 @@ class Hello:
     sent_at: int
     queue_fill: int
     relayed: int
+    target: Optional[np.ndarray] = None
 
 
 def _link_row() -> Dict[str, int]:
@@ -210,6 +214,15 @@ class Drone:
         # packets it has relayed since its last hello.
         self.next_hello_step: int = 0
         self.relayed_since_hello: int = 0
+        # Phase 2a step 3, C-drones only. Where this drone is heading, the
+        # heading it is walking on, and when it next re-decides.
+        self.target: Optional[np.ndarray] = None
+        self.heading: Optional[np.ndarray] = None
+        self.next_decision_step: int = 0
+        # Steering: how often it had to turn aside, and how often nothing was
+        # clear and it stayed put.
+        self.avoid_turns: int = 0
+        self.avoid_waits: int = 0
         # Energy is tracked as two independent budgets so the topology agent's
         # motion cost (Phase 4) does not get hidden inside the radio cost.
         self.energy_radio: float = config.INITIAL_ENERGY
@@ -342,6 +355,7 @@ class Drone:
         # Charge motion energy on the distance actually travelled after clamping.
         moved = float(np.linalg.norm(new_pos - self.position))
         self.position = new_pos
+        self.distance_flown += moved
         self.energy_motion -= config.ENERGY_PER_MOVE * moved
         self.energy_motion = max(0.0, self.energy_motion)
 

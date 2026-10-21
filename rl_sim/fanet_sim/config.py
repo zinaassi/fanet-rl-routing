@@ -310,6 +310,67 @@ HELLO_TIMEOUT_INTERVALS: float = 3.0  #                       PROVISIONAL - to c
 HELLO_STREAM_TAG: int = 0x4E110
 
 # ---------------------------------------------------------------------------
+# C-drone movement (Phase 2a step 3)
+# ---------------------------------------------------------------------------
+# The C-drones carry no traffic of their own: their whole job is to sit where
+# the relaying is. Until now they hovered. Four rules, chosen by C_RULE:
+#
+#   "hover"        never moves — the step-2 world, kept as the control
+#   "random_walk"  a straight line in a random direction, a new direction
+#                  every C_TURN_INTERVAL seconds, bouncing off the border
+#   "busiest"      fly toward whichever neighbour has relayed the most in the
+#                  last second, and hover once close to it
+#   "midpoint"     fly to the middle of the line between the GS and the
+#                  M-drone that is farthest from it
+#
+# A C-drone decides from its OWN neighbour table and nothing else, so it is
+# working from the same out-of-date picture as the router. It never reads a
+# true position.
+C_RULE: str = "hover"            # which rule the C-drones follow  PROVISIONAL
+C_RULES = ("hover", "random_walk", "busiest", "midpoint")
+
+#: C-drones fly at a fixed speed, unlike the M-drones.         PROVISIONAL
+C_DRONE_SPEED: float = 30.0
+
+#: random_walk picks a new direction this often, in seconds.   PROVISIONAL
+C_TURN_INTERVAL: float = 5.0
+
+#: busiest and midpoint re-choose their target this often, in seconds.
+C_DECISION_INTERVAL: float = 1.0
+
+#: How close counts as "arrived" for each targeting rule, in metres. busiest
+#: stops well short, because sitting on top of the drone it is helping would
+#: do nothing for the link it is meant to shorten.             PROVISIONAL
+C_BUSIEST_STOP_M: float = 100.0
+C_MIDPOINT_STOP_M: float = 10.0
+
+# --- target sharing -------------------------------------------------------
+# Without it, every C-drone that hears the same busy neighbour flies to the
+# same place and they pile up. With it, each C-drone announces its target in
+# its hello and skips any target within C_TARGET_SPREAD of one it has heard
+# from another C-drone, taking the best remaining one instead.
+SHARE_TARGETS: bool = False      #                              PROVISIONAL
+C_TARGET_SPREAD_M: float = 150.0 #                              PROVISIONAL
+
+# --- steering around ------------------------------------------------------
+# A moving C-drone predicts where everything it knows about will be — last
+# advertised position plus velocity times the age of that hello — and will
+# not take a step that brings it within C_SAFE_DISTANCE_M of any of them. It
+# tries the planned direction first, then turns of 15, 30, ... up to 90
+# degrees either way, and stays put if nothing is clear. It is working from
+# predictions, so it can still be wrong; the runs count how often two drones
+# really do pass close.
+AVOID: bool = False              #                              PROVISIONAL
+C_SAFE_DISTANCE_M: float = 20.0  #                              PROVISIONAL
+C_AVOID_TURN_DEG: float = 15.0   # step between tried headings
+C_AVOID_MAX_TURN_DEG: float = 90.0
+
+#: Tag for the C-drone stream: its own SeedSequence, keyed on the placement
+#: seed so a layout's C-drone behaviour is a property of that layout and is
+#: the same under every routing rule.                                [DECIDED]
+C_DRONE_STREAM_TAG: int = 0xC2D04
+
+# ---------------------------------------------------------------------------
 # Loop guard
 # ---------------------------------------------------------------------------
 # A DESIGN ASSUMPTION ABOUT THE NETWORK, not about any one routing rule: the
