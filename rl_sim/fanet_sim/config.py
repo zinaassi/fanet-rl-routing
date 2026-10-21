@@ -272,6 +272,44 @@ MAX_START_DELAY_S: float = 50.0  #                             PROVISIONAL - to 
 BORDER_MARGIN_M: float = 10.0
 
 # ---------------------------------------------------------------------------
+# Hello messages (Phase 2a step 2)
+# ---------------------------------------------------------------------------
+# Until now every drone was simply GIVEN its neighbours' positions. With
+# hellos it has to learn them: each drone and the GS broadcasts a hello every
+# HELLO_INTERVAL seconds, every other drone hears it with probability
+# 1 - p_loss(distance) on the same curve the data uses, and a drone routes
+# using ONLY what its neighbour table says.
+#
+# The table is therefore always a little out of date, and the faster the
+# drones fly the more out of date it is. Two new things follow: a neighbour
+# that is really gone but still in the table (a send to it is "stale"), and a
+# real neighbour the table has not heard of yet (invisible to the routing).
+#
+# Hellos are FREE here: they take no queue slot and no link capacity, they are
+# only counted. Making them pay for themselves is a later question.
+#
+# IDEAL_HELLO restores the old perfect knowledge exactly, and is the DEFAULT,
+# so every Phase-1 and step-1 result still reproduces bit for bit.
+IDEAL_HELLO: bool = True         # perfect neighbour knowledge  PROVISIONAL - to confirm
+
+#: Seconds between a drone's hellos.                           PROVISIONAL - to confirm
+HELLO_INTERVAL: float = 1.0
+
+#: Each interval is shortened by a random fraction of itself, drawn uniformly
+#: from [0, this], so the fleet does not settle into lockstep. OLSR jitters
+#: its control traffic the same way, for the same reason.   PROVISIONAL - to confirm
+HELLO_JITTER_FRACTION: float = 0.25
+
+#: A neighbour is forgotten after this many intervals without a hello.
+HELLO_TIMEOUT_INTERVALS: float = 3.0  #                       PROVISIONAL - to confirm
+
+#: Tag for the hello stream, in the style of AGENT_STREAM_TAG and
+#: MOBILITY_STREAM_TAG: its own SeedSequence, never a spawn off another
+#: stream, so hello draws cannot shift the channel, traffic, placement or
+#: mobility draws.                                                     [DECIDED]
+HELLO_STREAM_TAG: int = 0x4E110
+
+# ---------------------------------------------------------------------------
 # Loop guard
 # ---------------------------------------------------------------------------
 # A DESIGN ASSUMPTION ABOUT THE NETWORK, not about any one routing rule: the

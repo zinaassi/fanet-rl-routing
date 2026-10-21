@@ -54,6 +54,7 @@ ACK bookkeeping:
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from collections import defaultdict
 from typing import Dict, List, Optional, Tuple, Union
 
@@ -86,7 +87,40 @@ LINK_FIELDS = (
     # the queue and sees its own neighbour set shrink — so it belongs in the
     # ACK-side book as well as the simulator's.
     "dropped_link_broken",
+    # Phase 2a step 2: a send to a neighbour the table still listed but that
+    # had really moved out of range, and which the channel then lost. The
+    # ideal hop-ACK reports which of the two it was, exactly as it already
+    # reports "channel".
+    "lost_stale_link",
 )
+
+
+@dataclass
+class Hello:
+    """One hello message, as the receiver holds it in its neighbour table.
+
+    Everything here is what the SENDER said about itself at the moment it
+    broadcast, not what is true now. That gap is the whole point of step 2:
+    the faster the fleet flies, the more a table entry lags reality.
+
+    Attributes:
+        sender_id:   Drone id, or "GS".
+        sender_type: "M", "C" or "GS".
+        position:    Where the sender said it was.
+        velocity:    How it said it was moving.
+        sent_at:     Simulation step the hello was broadcast on.
+        queue_fill:  Total packets the sender was holding, across all its
+                     link queues.
+        relayed:     How many packets it relayed in the last second.
+    """
+
+    sender_id: NextHop
+    sender_type: str
+    position: np.ndarray
+    velocity: np.ndarray
+    sent_at: int
+    queue_fill: int
+    relayed: int
 
 
 def _link_row() -> Dict[str, int]:
@@ -164,6 +198,18 @@ class Drone:
         # these defaults while config.STATIC_MODE is True.
         self.start_delay_s: float = 0.0
         self.distance_flown: float = 0.0
+        # Phase 2a step 2. What this drone BELIEVES its neighbourhood to be,
+        # built only from hellos it actually received. Empty while
+        # config.IDEAL_HELLO is True, where routing reads the true sets
+        # instead. Keyed by sender id, or "GS".
+        self.hello_table: Dict[NextHop, Hello] = {}
+        # How many hellos this drone has sent and heard, for the rate report.
+        self.hellos_sent: int = 0
+        self.hellos_received: int = 0
+        # When this drone next broadcasts, in simulation steps, and the
+        # packets it has relayed since its last hello.
+        self.next_hello_step: int = 0
+        self.relayed_since_hello: int = 0
         # Energy is tracked as two independent budgets so the topology agent's
         # motion cost (Phase 4) does not get hidden inside the radio cost.
         self.energy_radio: float = config.INITIAL_ENERGY
@@ -481,13 +527,17 @@ class Drone:
 
         Args:
             next_hop: The drone id (or "GS") the packet was sent to.
-            outcome:  ``"ok"`` or ``"channel"``.
+            outcome:  ``"ok"``, ``"channel"``, or ``"stale_link"`` when the
+                      receiver had really moved out of range. ACKs are ideal
+                      in this phase, so the sender is told which; a real
+                      sender would only see silence.
             measured: True once the warm-up is over.
 
         Raises:
-            ValueError: If *outcome* is neither of those two values.
+            ValueError: If *outcome* is none of those values.
         """
-        field = {"ok": "acked", "channel": "lost_channel"}.get(outcome)
+        field = {"ok": "acked", "channel": "lost_channel",
+                 "stale_link": "lost_stale_link"}.get(outcome)
         if field is None:
             raise ValueError(f"unknown hop-ACK outcome: {outcome!r}")
         self._bump_link(next_hop, field, measured)

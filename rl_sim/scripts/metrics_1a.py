@@ -222,6 +222,49 @@ def ground_truth_view(env: FANETEnv) -> Dict[str, Any]:
         **_connected_loss(packets),
         "reroutes": env.reroutes,
         "link_broken_drops": env.link_broken_drops,
+        # --- Phase 2a step 2: how good the neighbour tables were ---
+        # Of the neighbours a drone believed it had, the share that were
+        # real; and of its real neighbours, the share it knew about. Both 1.0
+        # under IDEAL_HELLO, by construction.
+        "table_precision": (
+            env._accuracy_precision / env._accuracy_samples
+            if env._accuracy_samples else None
+        ),
+        "table_recall": (
+            env._accuracy_recall / env._accuracy_samples
+            if env._accuracy_samples else None
+        ),
+        # Sends aimed at a neighbour that had really moved out of range, and
+        # the ones the channel then lost.
+        "stale_sends": env.stale_sends,
+        "stale_link_drops": env.stale_link_drops,
+        **_hello_rates(env),
+    }
+
+
+def _hello_rates(env: FANETEnv) -> Dict[str, Any]:
+    """Return hellos sent and heard, per drone per second.
+
+    Counted over the whole run rather than the measurement window: a hello
+    schedule does not warm up, and the rate is a property of the setting, not
+    of the traffic.
+
+    Args:
+        env: A finished environment.
+
+    Returns:
+        ``hellos_sent_per_drone_s`` and ``hellos_received_per_drone_s``.
+    """
+    seconds = config.MAX_STEPS * config.TIMESTEP
+    drones = len(env.drones)
+    if not drones or seconds <= 0:
+        return {"hellos_sent_per_drone_s": None,
+                "hellos_received_per_drone_s": None}
+    sent = sum(d.hellos_sent for d in env.drones)
+    received = sum(d.hellos_received for d in env.drones)
+    return {
+        "hellos_sent_per_drone_s": sent / drones / seconds,
+        "hellos_received_per_drone_s": received / drones / seconds,
     }
 
 
@@ -290,6 +333,9 @@ def ack_view(env: FANETEnv) -> Dict[str, Any]:
         "lost_channel": sum(r["lost_channel"] for r in link_stats.values()),
         "lost_link_broken": sum(
             r["dropped_link_broken"] for r in link_stats.values()
+        ),
+        "lost_stale_link": sum(
+            r["lost_stale_link"] for r in link_stats.values()
         ),
         "expired_in_queue": sum(
             r["expired_in_queue"] for r in link_stats.values()

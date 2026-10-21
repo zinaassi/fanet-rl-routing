@@ -29,6 +29,12 @@ class DropReason(Enum):
     LINK_BROKEN = auto()   # Phase 2a: the link it was queued on went away
                            # while it waited, and the re-route found nowhere
                            # else to put it
+    STALE_LINK = auto()    # Phase 2a step 2: sent to a neighbour the table
+                           # still listed but that had really moved out of
+                           # range, and the send was lost. The same channel
+                           # draw as any other send; only the cause differs,
+                           # to separate "the radio lost it" from "the
+                           # neighbour table was out of date"
 
     @property
     def label(self) -> str:

@@ -67,7 +67,7 @@ import numpy as np
 from fanet_sim import config
 from fanet_sim.envs import channel
 from fanet_sim.envs.channel import are_connected, euclidean_distance
-from fanet_sim.envs.drone import Drone, NextHop, _link_row
+from fanet_sim.envs.drone import Drone, Hello, NextHop, _link_row
 from fanet_sim.envs.packet import DropReason, Packet, PacketFactory
 from fanet_sim.utils.event_log import EventLogger
 from fanet_sim.utils.metrics import build_graph_with_gs
@@ -291,6 +291,7 @@ class FANETEnv:
         self._rng_chan: np.random.Generator
         self._rng_route: np.random.Generator
         self._rng_mob: np.random.Generator
+        self._rng_hello: np.random.Generator
         self._seed_streams()
 
         self.gs_position: np.ndarray = np.array(config.GS_POSITION, dtype=np.float64)
@@ -332,6 +333,21 @@ class FANETEnv:
         self.connected_steps: Dict[int, int] = {}
         self.measured_steps: int = 0
         self._reachable_from_gs: Optional[set] = None
+        # Phase 2a step 2. Sends aimed at a neighbour the table still listed
+        # but that had really moved out of range, and how many of those the
+        # channel then lost.
+        self.stale_sends: int = 0
+        self.stale_link_drops: int = 0
+        # The ground station broadcasts too, so drones can learn it is in
+        # range; it has no table of its own, since it never routes.
+        self._gs_next_hello_step: int = 0
+        self._gs_hellos_sent: int = 0
+        # Neighbour-table accuracy, summed over drones and measured steps:
+        # how much of what a drone believed was real, and how much of what
+        # was real it knew about.
+        self._accuracy_precision: float = 0.0
+        self._accuracy_recall: float = 0.0
+        self._accuracy_samples: int = 0
         # Per-M-drone traffic phase, drawn in reset().
         self._traffic_offset: Dict[int, int] = {}
         # How many layouts had to be drawn before one was accepted by the
@@ -379,6 +395,15 @@ class FANETEnv:
         self.link_broken_drops = 0
         self.connected_steps = {}
         self.measured_steps = 0
+        self.stale_sends = 0
+        self.stale_link_drops = 0
+        self._gs_next_hello_step = 0
+        self._gs_hellos_sent = 0
+        for drone in self.drones if self.drones else []:
+            drone.hello_table.clear()
+        self._accuracy_precision = 0.0
+        self._accuracy_recall = 0.0
+        self._accuracy_samples = 0
         self._rx_counts = defaultdict(int)
 
         # Open a new logger for this episode (close any prior one).
@@ -391,6 +416,7 @@ class FANETEnv:
 
         self.drones = self._create_drones()
         self._assign_mobility()
+        self._assign_hello_schedule()
         self._assign_traffic_offsets()
 
         # Compute initial candidate pools and active links.
@@ -675,6 +701,14 @@ class FANETEnv:
             np.random.SeedSequence([self.placement_seed,
                                     config.MOBILITY_STREAM_TAG])
         )
+        # Phase 2a step 2. Hello schedules and hello reception draws, on their
+        # own stream again. Keyed on the RUN seed, not the placement seed:
+        # whether a hello is heard is a channel event, and it belongs with the
+        # other things a run seed decides. Turning hellos on therefore cannot
+        # shift a layout, a trajectory or a data-channel draw.
+        self._rng_hello = np.random.default_rng(
+            np.random.SeedSequence([self.run_seed, config.HELLO_STREAM_TAG])
+        )
 
     def _random_point(self) -> np.ndarray:
         """Return a uniformly random (x, y) point inside the arena."""
@@ -739,12 +773,19 @@ class FANETEnv:
         self._recompute_links()
         self._update_active_links()
 
-        # 1b. Links that went away this step: hand their queued packets back
+        # 1b. Neighbours that have gone quiet for too long drop out of the
+        #     table, which is what makes their queues look broken below.
+        self._expire_hello_entries(measured)
+
+        # 1c. Links that went away this step: hand their queued packets back
         #     to the routing rule before anything else looks at a queue.
         self._rescue_broken_links(measured)
 
-        # 1c. Who can still reach the GS at all, measured on the TRUE network.
-        self._sample_connectivity(config.in_measurement_window(self.step_count))
+        # 1d. Who can still reach the GS at all, measured on the TRUE network,
+        #     and how well each drone's table matches it.
+        in_window = config.in_measurement_window(self.step_count)
+        self._sample_connectivity(in_window)
+        self._sample_table_accuracy(in_window)
 
         # 2. Retire packets that died waiting in a link queue, and let each
         #    source give up on its own packets the GS never acknowledged. This
@@ -770,7 +811,10 @@ class FANETEnv:
                     len(queue) for queue in drone.link_queues.values()
                 )
 
-        # 7. Radio idle/listen energy and accumulated rx energy for the step.
+        # 7. Hellos go out LAST, so one heard now is first usable next step.
+        self._exchange_hellos(measured)
+
+        # 8. Radio idle/listen energy and accumulated rx energy for the step.
         for drone in self.drones:
             drone.consume_idle_energy()
             rx_n = self._rx_counts.get(drone.drone_id, 0)
@@ -887,12 +931,7 @@ class FANETEnv:
         Returns:
             Dict mapping next-hop key to that endpoint's position.
         """
-        candidates: Dict[NextHop, np.ndarray] = {
-            nid: nbr.position for nid, nbr in drone.neighbors.items()
-        }
-        if are_connected(drone.position, self.gs_position):
-            candidates["GS"] = self.gs_position
-        return candidates
+        return self._believed_links(drone)
 
     def _allowed_candidates(
         self, drone: Drone, pkt: Packet
@@ -1104,11 +1143,20 @@ class FANETEnv:
                 )
                 continue
 
-            target_pos = (
-                self.gs_position
-                if next_key == "GS"
-                else drone.neighbors[next_key].position
-            )
+            # The channel draw uses where the receiver REALLY is, not where
+            # it last said it was: the radio does not care what the neighbour
+            # table believes. A send aimed at a neighbour that has since moved
+            # out of range is "stale" — it still goes out, and still draws
+            # against the same curve, but a loss is reported as stale_link so
+            # the cost of an out-of-date table can be told apart from the
+            # ordinary cost of the radio.
+            if next_key == "GS":
+                target_pos = self.gs_position
+            else:
+                target_pos = self.get_drone_by_id(next_key).position
+            stale = not are_connected(drone.position, target_pos)
+            if stale:
+                self.stale_sends += 1 if measured else 0
 
             drone.note_sent(next_key, measured)
             self._note_link(drone.drone_id, next_key, "sent", measured)
@@ -1120,9 +1168,15 @@ class FANETEnv:
 
             dist = euclidean_distance(drone.position, target_pos)
             if self._rng_chan.random() < channel.p_loss(dist):
-                drone.note_hop_ack(next_key, "channel", measured)
-                self._note_link(drone.drone_id, next_key, "lost_channel", measured)
-                self._drop(pkt, DropReason.CHANNEL, drone, next_hop=next_key)
+                outcome = "stale_link" if stale else "channel"
+                field = "lost_stale_link" if stale else "lost_channel"
+                reason = (DropReason.STALE_LINK if stale
+                          else DropReason.CHANNEL)
+                if stale:
+                    self.stale_link_drops += 1 if measured else 0
+                drone.note_hop_ack(next_key, outcome, measured)
+                self._note_link(drone.drone_id, next_key, field, measured)
+                self._drop(pkt, reason, drone, next_hop=next_key)
                 continue
 
             drone.note_hop_ack(next_key, "ok", measured)
@@ -1151,7 +1205,8 @@ class FANETEnv:
                     )
                 continue
 
-            next_hop = drone.neighbors[next_key]
+            next_hop = self.get_drone_by_id(next_key)
+            drone.relayed_since_hello += 1
             pkt.relay_to(next_key)
             self._rx_counts[next_hop.drone_id] += 1
             arrivals.append((next_hop, pkt))
@@ -1194,6 +1249,193 @@ class FANETEnv:
             self._route_into_queue(receiver, pkt, measured)
 
 
+    # ------------------------------------------------------------------
+    # Hello messages (Phase 2a step 2)
+    # ------------------------------------------------------------------
+
+    def _hello_period_steps(self) -> int:
+        """Return the hello interval in whole simulation steps, at least one."""
+        return max(1, int(round(config.HELLO_INTERVAL / config.TIMESTEP)))
+
+    def _assign_hello_schedule(self) -> None:
+        """Give every sender its first hello step.
+
+        Each starts at a uniformly random point inside one interval, so the
+        fleet does not broadcast in lockstep from the first step. Nothing is
+        drawn while ``config.IDEAL_HELLO`` is set, which keeps the hello
+        stream untouched in every run that does not use it.
+        """
+        self._gs_next_hello_step = 0
+        if config.IDEAL_HELLO:
+            return
+
+        period = self._hello_period_steps()
+        for drone in self.drones:
+            drone.next_hello_step = int(self._rng_hello.integers(period))
+            drone.relayed_since_hello = 0
+        self._gs_next_hello_step = int(self._rng_hello.integers(period))
+
+    def _next_hello_gap(self) -> int:
+        """Return the gap to the next hello, in steps, jitter included.
+
+        The interval is SHORTENED by a uniform fraction of itself, up to
+        ``config.HELLO_JITTER_FRACTION``, the way OLSR jitters its control
+        traffic: without it every drone that once lined up stays lined up.
+
+        Returns:
+            A gap of at least one step.
+        """
+        period = self._hello_period_steps()
+        jitter = float(self._rng_hello.uniform(
+            0.0, config.HELLO_JITTER_FRACTION
+        ))
+        return max(1, int(round(period * (1.0 - jitter))))
+
+    def _exchange_hellos(self, measured: bool) -> None:
+        """Broadcast this step's hellos and deliver the ones that are heard.
+
+        Run at the END of the step, so a hello heard now is first usable on
+        the next one — a drone cannot act on information it has only just
+        received.
+
+        Every other drone hears a hello with probability
+        ``1 - p_loss(distance)`` over the TRUE distance, on the same curve the
+        data uses, drawn from the hello stream. An entry is only taken if the
+        ADVERTISED position is in range of the receiver: a drone will not
+        believe in a neighbour that says it is 400 m away.
+
+        Hellos are free here — no queue slot, no link capacity. They are
+        counted, not charged.
+
+        Args:
+            measured: True once the warm-up is over, for the per-second rates.
+        """
+        if config.IDEAL_HELLO:
+            return
+
+        senders: List[Tuple[NextHop, str, np.ndarray, np.ndarray, int, int]] = []
+        for drone in self.drones:
+            if self.step_count >= drone.next_hello_step:
+                senders.append((
+                    drone.drone_id, drone.drone_type, drone.position.copy(),
+                    drone.velocity.copy(), drone.total_queued(),
+                    drone.relayed_since_hello,
+                ))
+                drone.next_hello_step = self.step_count + self._next_hello_gap()
+                drone.relayed_since_hello = 0
+                drone.hellos_sent += 1
+        if self.step_count >= self._gs_next_hello_step:
+            senders.append(("GS", "GS", self.gs_position.copy(),
+                            np.zeros(2, dtype=np.float64), 0, 0))
+            self._gs_next_hello_step = (
+                self.step_count + self._next_hello_gap()
+            )
+            self._gs_hellos_sent += 1
+
+        if not senders:
+            return
+
+        for sender_id, sender_type, position, velocity, fill, relayed in senders:
+            for receiver in self.drones:
+                if receiver.drone_id == sender_id:
+                    continue
+                distance = euclidean_distance(receiver.position, position)
+                if self._rng_hello.random() < channel.p_loss(distance):
+                    continue        # the hello itself was lost
+                receiver.hellos_received += 1
+                # Believe it only if what it SAYS puts it in range.
+                if not are_connected(receiver.position, position):
+                    continue
+                receiver.hello_table[sender_id] = Hello(
+                    sender_id=sender_id,
+                    sender_type=sender_type,
+                    position=position.copy(),
+                    velocity=velocity.copy(),
+                    sent_at=self.step_count,
+                    queue_fill=fill,
+                    relayed=relayed,
+                )
+
+    def _expire_hello_entries(self, measured: bool) -> None:
+        """Forget neighbours that have not said anything for too long.
+
+        A neighbour is dropped after ``config.HELLO_TIMEOUT_INTERVALS``
+        intervals of silence. Packets queued for it are then re-routed by the
+        same rescue that handles a link going away, because from the drone's
+        side that is exactly what has happened.
+
+        Args:
+            measured: True once the warm-up is over.
+        """
+        if config.IDEAL_HELLO:
+            return
+
+        timeout = int(round(
+            config.HELLO_TIMEOUT_INTERVALS * self._hello_period_steps()
+        ))
+        for drone in self.drones:
+            dead = [
+                key for key, hello in drone.hello_table.items()
+                if self.step_count - hello.sent_at > timeout
+            ]
+            for key in dead:
+                drone.hello_table.pop(key)
+
+    def _believed_links(self, drone: Drone) -> Dict[NextHop, np.ndarray]:
+        """Return what *drone* currently believes it can reach, key → position.
+
+        With ``config.IDEAL_HELLO`` this is the true neighbour set and the
+        true positions, which is what every Phase-1 result was measured with.
+        Otherwise it is the neighbour table, and the positions are the ones
+        the neighbours last ADVERTISED — out of date by however long ago the
+        hello was sent.
+
+        Args:
+            drone: The drone about to decide.
+
+        Returns:
+            Dict mapping next-hop key to the position the router should use.
+        """
+        if config.IDEAL_HELLO:
+            candidates: Dict[NextHop, np.ndarray] = {
+                nid: nbr.position for nid, nbr in drone.neighbors.items()
+            }
+            if are_connected(drone.position, self.gs_position):
+                candidates["GS"] = self.gs_position
+            return candidates
+        return {key: hello.position
+                for key, hello in drone.hello_table.items()}
+
+    def _sample_table_accuracy(self, measured: bool) -> None:
+        """Measure how well each drone's table matches the real network.
+
+        Two numbers per drone: of the neighbours it believes it has, the share
+        that are real, and of its real neighbours, the share it knows about.
+        Both are 1.0 under IDEAL_HELLO by construction.
+
+        A drone with nothing to compare — no believed neighbours, or no real
+        ones — is left out of that side's average rather than counted as a
+        perfect score.
+
+        Args:
+            measured: True on the steps inside the creation window.
+        """
+        if not measured:
+            return
+        for drone in self.drones:
+            believed = set(self._believed_links(drone))
+            real = set(drone.neighbors)
+            if are_connected(drone.position, self.gs_position):
+                real.add("GS")
+            if not believed and not real:
+                continue
+            hit = believed & real
+            self._accuracy_precision += (
+                len(hit) / len(believed) if believed else 1.0
+            )
+            self._accuracy_recall += len(hit) / len(real) if real else 1.0
+            self._accuracy_samples += 1
+
     def _link_is_live(self, drone: Drone, key: NextHop) -> bool:
         """True if *drone* can still use the link to *key* right now.
 
@@ -1207,9 +1449,14 @@ class FANETEnv:
         Returns:
             Whether that next hop is still reachable.
         """
-        if key == "GS":
-            return bool(are_connected(drone.position, self.gs_position))
-        return key in drone.neighbors
+        if config.IDEAL_HELLO:
+            if key == "GS":
+                return bool(are_connected(drone.position, self.gs_position))
+            return key in drone.neighbors
+        # With real hellos the drone acts on what it was told. A queue is
+        # kept while the table still lists that neighbour, and emptied when
+        # the entry times out — whether or not the neighbour is really there.
+        return key in drone.hello_table
 
     def _rescue_broken_links(self, measured: bool) -> None:
         """Re-route everything queued on a link that no longer exists.
@@ -1228,9 +1475,11 @@ class FANETEnv:
         Args:
             measured: True once the warm-up is over.
         """
-        if config.STATIC_MODE:
-            # Nothing moves, so no link can break. Skipping keeps the static
-            # world bit-for-bit what Phase 1 produced.
+        if config.STATIC_MODE and config.IDEAL_HELLO:
+            # Nothing moves and knowledge is perfect, so no link can break.
+            # Skipping keeps the static world bit-for-bit what Phase 1
+            # produced. With real hellos a table entry can still time out
+            # even while nobody moves, so the rescue has to run.
             return
 
         for drone in self.drones:
