@@ -352,8 +352,11 @@ class FANETEnv:
         # Phase 2a step 3. Pairs of drones really within C_SAFE_DISTANCE_M of
         # each other, counted per step on TRUE positions, and the share of
         # those involving an M-drone, which does not avoid anybody.
-        self.close_passes: int = 0
-        self.close_passes_with_m: int = 0
+        # Close passes, counted ONCE per approach rather than per step, and
+        # split by the pair's kinds: "CC", "CM" or "MM".
+        self.close_pass_events: Dict[str, int] = {}
+        self.closest_approach_m: float = float("inf")
+        self._close_now: set = set()
         # The C-drones' mean distance from the GS, one value per second.
         self.c_distance_series: List[float] = []
         # Per-M-drone traffic phase, drawn in reset().
@@ -412,8 +415,9 @@ class FANETEnv:
         self._accuracy_precision = 0.0
         self._accuracy_recall = 0.0
         self._accuracy_samples = 0
-        self.close_passes = 0
-        self.close_passes_with_m = 0
+        self.close_pass_events = {}
+        self.closest_approach_m = float("inf")
+        self._close_now = set()
         self.c_distance_series = []
         self._rx_counts = defaultdict(int)
 
@@ -1212,6 +1216,15 @@ class FANETEnv:
             self._note_link(drone.drone_id, next_key, "acked", measured)
             self.tx_events.append((drone.drone_id, next_key))
 
+            # A RELAY is another drone's packet moved on by this one. A
+            # source handing off its own packet is not relaying, and a hop
+            # into the GS is — it is the last relay of the chain. Counting
+            # own hand-offs and skipping GS hops made "busiest" point at
+            # whoever CREATED the most, which under greedy is whoever is
+            # farthest out.
+            if pkt.source_id != drone.drone_id:
+                drone.relayed_since_hello += 1
+
             if next_key == "GS":
                 pkt.relay_to("GS")
                 pkt.mark_delivered(self.step_count)
@@ -1235,7 +1248,6 @@ class FANETEnv:
                 continue
 
             next_hop = self.get_drone_by_id(next_key)
-            drone.relayed_since_hello += 1
             pkt.relay_to(next_key)
             self._rx_counts[next_hop.drone_id] += 1
             arrivals.append((next_hop, pkt))
@@ -1558,35 +1570,30 @@ class FANETEnv:
             for other in taken
         )
 
-    def _predicted_positions(self, drone: Drone) -> List[np.ndarray]:
-        """Where *drone* thinks everything it knows about will be.
+    def _sensed_positions(self, drone: Drone) -> List[np.ndarray]:
+        """Where everything within sensing range really is, right now.
 
-        Last advertised position plus the advertised velocity times the age
-        of that hello — and then one more step, because what matters is where
-        the other drone will be when this one ARRIVES, not where it is as
-        this one sets off. Without that extra step two drones closing on each
-        other each take a step the other had not allowed for, and the pair can
-        end up nearer than C_SAFE_DISTANCE_M even though both thought they
-        were clear.
+        Steering is the one thing that does not go through the neighbour
+        table. Keeping clear of another aircraft is a sensing job: a drone
+        sees what is near it, and a hello that may be three seconds old is no
+        basis for deciding whether a 3 m step is safe. Everything beyond
+        ``config.SENSOR_RANGE_M`` is ignored — it cannot be reached in a step
+        anyway, since that is more than sixteen steps of flying.
 
-        It is still a guess built on stale information, which is why the runs
-        also count how often two drones really do pass close.
+        Routing, target choice and target sharing still read the table alone.
 
         Args:
             drone: The C-drone looking around.
 
         Returns:
-            One predicted position per table entry, the GS excluded — it does
-            not move and nothing has to keep clear of it.
+            True positions of the other drones within sensing range.
         """
-        out: List[np.ndarray] = []
-        for hello in drone.hello_table.values():
-            if hello.sender_type == "GS":
-                continue
-            age = ((self.step_count - hello.sent_at) * config.TIMESTEP
-                   + config.TIMESTEP)
-            out.append(hello.position + hello.velocity * age)
-        return out
+        return [
+            other.position for other in self.drones
+            if other.drone_id != drone.drone_id
+            and float(np.linalg.norm(other.position - drone.position))
+            <= config.SENSOR_RANGE_M
+        ]
 
     def _steer_around(self, drone: Drone,
                       heading: np.ndarray) -> Optional[np.ndarray]:
@@ -1605,17 +1612,16 @@ class FANETEnv:
         Returns:
             A unit heading, or None when nothing is clear.
         """
-        others = self._predicted_positions(drone)
+        others = self._sensed_positions(drone)
         if not others:
             return heading
 
         step = config.C_DRONE_SPEED * config.TIMESTEP
-        # Clear by D_SAFE plus one step. Every C-drone decides at the same
-        # moment from the same stale velocities, so a prediction can be wrong
-        # by a whole step — most sharply when the other one has just WAITED,
-        # advertising zero velocity, and then turns and moves. Leaving a
-        # step's worth of room makes the D_SAFE guarantee hold whatever the
-        # other drone does, instead of only when it keeps going as it was.
+        # Clear by D_SAFE plus one step. Even with true positions, every
+        # C-drone decides at the same moment and they all move together, so
+        # the other one can close up to a step's worth of the gap after this
+        # drone has committed. Leaving that room makes the D_SAFE guarantee
+        # hold whatever the other drone does.
         clearance = config.C_SAFE_DISTANCE_M + step
         angles = [0.0]
         turn = config.C_AVOID_TURN_DEG
@@ -1639,11 +1645,16 @@ class FANETEnv:
         return None
 
     def _count_close_passes(self, measured: bool) -> None:
-        """Count pairs of drones really within C_SAFE_DISTANCE_M of each other.
+        """Count each approach inside C_SAFE_DISTANCE_M once, not per step.
 
-        On TRUE positions, not predictions: this is what actually happened,
-        against which the steering's guesswork can be judged. Counted per
-        step, so a pair that stays close for ten steps counts ten times.
+        A pair that stays close for ten steps is ONE close pass, not ten:
+        what matters is how often two aircraft came together, not how long
+        they lingered. A pair counts again only after it has separated.
+
+        Split by what was involved, because the three mean different things.
+        C-C is the only kind the steering can do anything about; M-drones fly
+        their mission paths and avoid nobody, so C-M and M-M are a property
+        of the layout.
 
         Args:
             measured: True on the steps inside the creation window.
@@ -1653,12 +1664,20 @@ class FANETEnv:
         drones = self.drones
         for i, first in enumerate(drones):
             for second in drones[i + 1:]:
+                pair = (first.drone_id, second.drone_id)
                 gap = float(np.linalg.norm(first.position - second.position))
-                if gap >= config.C_SAFE_DISTANCE_M:
-                    continue
-                self.close_passes += 1
-                if "M" in (first.drone_type, second.drone_type):
-                    self.close_passes_with_m += 1
+                if gap < config.C_SAFE_DISTANCE_M:
+                    kinds = "".join(sorted((first.drone_type,
+                                            second.drone_type)))
+                    if pair not in self._close_now:
+                        self._close_now.add(pair)
+                        self.close_pass_events[kinds] = (
+                            self.close_pass_events.get(kinds, 0) + 1
+                        )
+                    if gap < self.closest_approach_m:
+                        self.closest_approach_m = gap
+                else:
+                    self._close_now.discard(pair)
 
     def _sample_c_distance(self) -> None:
         """Record the C-drones' mean distance from the GS, once per second."""

@@ -76,18 +76,32 @@ C_SETTINGS: Tuple[CSettings, ...] = (
 #: Step 3 runs at the default hello interval.
 STEP3_HELLO_S: float = 1.0
 
+#: Step 4: the four rules worth keeping, on the 50 TEST layouts.
+C_SETTINGS_FINAL: Tuple[CSettings, ...] = (
+    ("hover",         "hover",       5.0, True, False, 150.0),
+    ("walk 5s",       "random_walk", 5.0, True, False, 150.0),
+    ("busiest s150",  "busiest",     5.0, True, True,  150.0),
+    ("midpoint s150", "midpoint",    5.0, True, True,  150.0),
+)
+
+#: Step 4 runs on the Phase-1b test set, not the 20 Phase-1a layouts.
+PLACEMENTS_FINAL: Tuple[int, ...] = tuple(range(1, 51))
+
 CAUSES: Tuple[str, ...] = (
     "channel", "queue_full", "no_route", "dead_end", "ttl", "hop_limit",
     "link_broken", "stale_link",
 )
 
 EXTRAS: Tuple[str, ...] = (
-    "pct_time_connected", "loss_while_connected", "created_while_connected",
+    "pct_packets_connected", "pct_time_connected",
+    "loss_while_connected", "loss_while_disconnected",
+    "created_while_connected", "created_while_disconnected",
     "reroutes", "link_broken_drops", "mean_hops",
     "table_precision", "table_recall", "stale_sends", "stale_link_drops",
     "hellos_sent_per_drone_s", "hellos_received_per_drone_s",
     "c_distance_flown_mean", "avoid_turns", "avoid_waits",
-    "close_passes", "close_passes_with_m",
+    "close_passes", "close_passes_cc", "close_passes_cm", "close_passes_mm",
+    "closest_approach_m",
 )
 
 #: Seconds at which the C-drones' mean distance from the GS is reported.
@@ -226,10 +240,15 @@ def build_jobs(step: int) -> List[Tuple]:
                 for hello in HELLO_SETTINGS
                 for rule in RULES
                 for seed in PLACEMENTS]
+    if step == 3:
+        return [(rule, seed, STEP2_DELAY_S, STEP3_HELLO_S, setting)
+                for setting in C_SETTINGS
+                for rule in RULES
+                for seed in PLACEMENTS]
     return [(rule, seed, STEP2_DELAY_S, STEP3_HELLO_S, setting)
-            for setting in C_SETTINGS
+            for setting in C_SETTINGS_FINAL
             for rule in RULES
-            for seed in PLACEMENTS]
+            for seed in PLACEMENTS_FINAL]
 
 
 def run_grid(workers: int, step: int) -> List[Dict[str, Any]]:
@@ -294,7 +313,10 @@ def summarise(rows: Sequence[Dict[str, Any]], step: int) -> List[Dict[str, Any]]
     Returns:
         The summary rows, in the order the grid was run.
     """
-    if step == 3:
+    if step == 4:
+        groups = [({"c_setting": label}, label)
+                  for label, *_ in C_SETTINGS_FINAL]
+    elif step == 3:
         groups = [({"c_setting": label}, label)
                   for label, *_ in C_SETTINGS]
     elif step == 1:
@@ -363,14 +385,15 @@ def print_summary(summary: Sequence[Dict[str, Any]]) -> None:
     print("  " + "-" * width)
 
     print(f"\n  {'setting':>8}{'rule':>8}{'conn':>8}{'loss|conn':>11}"
-          f"{'std':>7}{'reroute':>9}{'broken':>8}"
+          f"{'std':>7}{'loss|cut':>10}{'reroute':>9}{'broken':>8}"
           f"{'believed ok':>13}{'found':>8}{'stale snd':>11}{'hello/s':>9}")
     print("  " + "-" * 102)
     for row in summary:
         print(f"  {row['setting']:>8}{row['rule']:>8}"
-              f"{row['pct_time_connected_mean'] * 100:7.1f}%"
+              f"{row['pct_packets_connected_mean'] * 100:7.1f}%"
               f"{row['loss_while_connected_mean'] * 100:10.2f}%"
               f"{row['loss_while_connected_std'] * 100:7.2f}"
+              f"{(row['loss_while_disconnected_mean'] or 0.0) * 100:9.2f}%"
               f"{row['reroutes_mean']:9.1f}"
               f"{row['link_broken_drops_mean']:8.1f}"
               f"{row['table_precision_mean'] * 100:12.1f}%"
@@ -384,8 +407,9 @@ def print_c_drones(summary: Sequence[Dict[str, Any]]) -> None:
     """Print what the C-drones did, per setting and rule."""
     print(f"\n  {'setting':>18}{'rule':>8}{'flown':>9}"
           + "".join(f"{str(m) + 's':>8}" for m in DISTANCE_MARKS_S)
-          + f"{'turns':>8}{'waits':>9}{'close':>8}{'with M':>8}")
-    print("  " + "-" * 104)
+          + f"{'turns':>8}{'waits':>9}{'C-C':>8}{'C-M':>8}{'M-M':>8}"
+          f"{'closest':>9}")
+    print("  " + "-" * 120)
     for row in summary:
         print(f"  {row['c_setting']:>18}{row['rule']:>8}"
               f"{row['c_distance_flown_mean_mean']:9.0f}"
@@ -395,8 +419,10 @@ def print_c_drones(summary: Sequence[Dict[str, Any]]) -> None:
               )
               + f"{row['avoid_turns_mean']:8.0f}"
               f"{row['avoid_waits_mean']:9.0f}"
-              f"{row['close_passes_mean']:8.0f}"
-              f"{row['close_passes_with_m_mean']:8.0f}")
+              f"{row['close_passes_cc_mean']:8.1f}"
+              f"{row['close_passes_cm_mean']:8.1f}"
+              f"{row['close_passes_mm_mean']:8.1f}"
+              f"{(row['closest_approach_m_mean'] or 0.0):9.2f}")
     print("  " + "-" * 104)
 
 
@@ -455,7 +481,7 @@ def main() -> None:
     parser.add_argument("--workers", type=int,
                         default=min(20, os.cpu_count() or 1),
                         help="Parallel workers; 1 runs sequentially.")
-    parser.add_argument("--step", type=int, default=3, choices=(1, 2, 3),
+    parser.add_argument("--step", type=int, default=4, choices=(1, 2, 3, 4),
                         help="1 sweeps the start delay with perfect "
                              "neighbour knowledge; 2 fixes the delay at "
                              f"{STEP2_DELAY_S:.0f} s and sweeps the hello "
@@ -465,7 +491,7 @@ def main() -> None:
     rows = run_grid(args.workers, args.step)
     summary = summarise(rows, args.step)
     print_summary(summary)
-    if args.step == 3:
+    if args.step in (3, 4):
         print_c_drones(summary)
     print_against_static(summary, args.out_dir)
 
@@ -479,11 +505,16 @@ def main() -> None:
                 f"{'/'.join(f'{h:.1f}' for h in HELLO_SETTINGS if h)} s "
                 f"plus ideal, start delay {STEP2_DELAY_S:.0f} s")
         stem = "2a_hello"
-    else:
+    elif args.step == 3:
         note = (f"phase 2a step 3, C-drone rules, hello "
                 f"{STEP3_HELLO_S:.0f} s, start delay "
                 f"{STEP2_DELAY_S:.0f} s")
         stem = "2a_cdrone"
+    else:
+        note = (f"phase 2a step 4, {len(PLACEMENTS_FINAL)} TEST layouts, "
+                f"sensor steering, hello {STEP3_HELLO_S:.0f} s, start delay "
+                f"{STEP2_DELAY_S:.0f} s")
+        stem = "2a_final"
     write_csv(os.path.join(args.out_dir, f"{stem}_runs.csv"), rows,
               RUN_COLUMNS, note)
     write_csv(os.path.join(args.out_dir, f"{stem}_summary.csv"), summary,

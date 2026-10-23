@@ -362,6 +362,14 @@ C_TARGET_SPREAD_M: float = 150.0 #                              PROVISIONAL
 # really do pass close.
 AVOID: bool = False              #                              PROVISIONAL
 C_SAFE_DISTANCE_M: float = 20.0  #                              PROVISIONAL
+
+#: How far a C-drone can SEE. Steering reads the true current positions of
+#: everything inside this range and ignores everything outside it. This is
+#: the one place a drone is allowed to know something a hello did not tell
+#: it: keeping clear of a neighbour is a sensing job, not a routing one, and
+#: a hello that is up to three seconds old is no basis for it. Routing,
+#: target choice and target sharing still read the table alone.
+SENSOR_RANGE_M: float = 50.0     #                              PROVISIONAL
 C_AVOID_TURN_DEG: float = 15.0   # step between tried headings
 C_AVOID_MAX_TURN_DEG: float = 90.0
 

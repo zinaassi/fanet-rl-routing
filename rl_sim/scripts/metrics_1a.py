@@ -246,8 +246,15 @@ def ground_truth_view(env: FANETEnv) -> Dict[str, Any]:
         "c_distance_from_gs": list(env.c_distance_series),
         "avoid_turns": sum(d.avoid_turns for d in env.drones),
         "avoid_waits": sum(d.avoid_waits for d in env.drones),
-        "close_passes": env.close_passes,
-        "close_passes_with_m": env.close_passes_with_m,
+        # Each approach inside C_SAFE_DISTANCE_M counted once, by kind.
+        "close_passes_cc": env.close_pass_events.get("CC", 0),
+        "close_passes_cm": env.close_pass_events.get("CM", 0),
+        "close_passes_mm": env.close_pass_events.get("MM", 0),
+        "close_passes": sum(env.close_pass_events.values()),
+        "closest_approach_m": (
+            None if env.closest_approach_m == float("inf")
+            else env.closest_approach_m
+        ),
     }
 
 
@@ -278,26 +285,41 @@ def _hello_rates(env: FANETEnv) -> Dict[str, Any]:
 
 
 def _connected_loss(packets: Sequence[Packet]) -> Dict[str, Any]:
-    """Return the loss counted only over packets created while connected.
+    """Split the loss by whether the source could reach the GS at all.
 
     A packet whose source had no path to the GS at the moment it was created
-    could never have been delivered by any routing rule, so charging it to the
-    routing says nothing. This reports the loss with those packets set aside,
-    beside how many were set aside.
+    could not have been delivered by any routing rule, so charging it to the
+    routing says nothing. Reported both ways, with the share of packets in
+    each group, so that
+
+        total_loss = c * loss_while_connected
+                     + (1 - c) * loss_while_disconnected
+
+    holds exactly, with ``c = pct_packets_connected``. tests/test_2a_fixes.py
+    checks that identity on every run.
+
+    "% connected" is measured PER PACKET, at the moment of creation — not as
+    a share of steps. A drone that is cut off while it happens to be silent
+    costs the network nothing, and should not read as if it did.
 
     Args:
         packets: The packets inside the measurement window.
 
     Returns:
-        ``created_while_connected``, ``lost_while_connected`` and
-        ``loss_while_connected`` (the rate).
+        The counts and rates for both groups.
     """
     connected = [p for p in packets if p.source_connected]
-    lost = [p for p in connected if not p.delivered]
+    cut_off = [p for p in packets if not p.source_connected]
+    lost_connected = [p for p in connected if not p.delivered]
+    lost_cut_off = [p for p in cut_off if not p.delivered]
     return {
+        "pct_packets_connected": _rate(len(connected), len(packets)),
         "created_while_connected": len(connected),
-        "lost_while_connected": len(lost),
-        "loss_while_connected": _rate(len(lost), len(connected)),
+        "lost_while_connected": len(lost_connected),
+        "loss_while_connected": _rate(len(lost_connected), len(connected)),
+        "created_while_disconnected": len(cut_off),
+        "lost_while_disconnected": len(lost_cut_off),
+        "loss_while_disconnected": _rate(len(lost_cut_off), len(cut_off)),
     }
 
 

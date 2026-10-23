@@ -526,4 +526,6 @@ def test_the_c_drones_actually_move_and_are_measured() -> None:
     assert len(truth["c_distance_from_gs"]) == int(
         config.MAX_STEPS * config.TIMESTEP
     )
-    assert truth["close_passes"] >= truth["close_passes_with_m"]
+    assert truth["close_passes"] == (truth["close_passes_cc"]
+                                     + truth["close_passes_cm"]
+                                     + truth["close_passes_mm"])
