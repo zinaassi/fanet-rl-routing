@@ -1,4 +1,4 @@
-# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  window=[50,950) of 1000  |  commit=2bf0d73-dirty  |  phase 2c M1, clone of midpoint, static mission, hello 1 s, greedy routing
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  window=[50,950) of 1000  |  commit=7dc1c5b  |  phase 2c M1, clone of midpoint, static mission, hello 1 s, greedy routing
 epoch,train_mse,holdout_mse,holdout_metres
 1,0.01632594825055391,0.011233881115913391,51.185123443603516
 2,0.010647228853688354,0.010032524354755878,47.95261764526367
