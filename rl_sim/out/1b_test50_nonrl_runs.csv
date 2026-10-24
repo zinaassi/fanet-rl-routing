@@ -1,4 +1,4 @@
-# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200/500 ms  |  placements=50  |  window=[50,950) of 1000  |  commit=7fa52f8-dirty  |  phase 1b, 50 TEST layouts
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200/500 ms  |  placements=50  |  window=[50,950) of 1000  |  commit=a4892b7  |  phase 1b, 50 TEST layouts
 rule,load_ms,placement_seed,init_seed,total_loss,channel,queue_full,no_route,dead_end,ttl,hop_limit,mean_hops,views_agree
 random,200,1,-1,0.6512345679012346,0.4262962962962963,0.0,0.0,0.02419753086419753,0.0,0.20074074074074075,4.64070796460177,True
 greedy,200,1,-1,0.3106172839506173,0.1402469135802469,0.17037037037037037,0.0,0.0,0.0,0.0,1.6627865329512894,True
