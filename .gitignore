@@ -50,3 +50,4 @@ scratch/
 *:Zone.Identifier
 .DS_Store
 Thumbs.db
+!rl_sim/out/2c_*.csv

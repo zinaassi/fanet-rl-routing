@@ -59,13 +59,14 @@ from __future__ import annotations
 
 import os
 from collections import defaultdict
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import networkx as nx
 import numpy as np
 
 from fanet_sim import config
 from fanet_sim.envs import channel
+from fanet_sim.envs import c_interface
 from fanet_sim.envs.channel import are_connected, euclidean_distance
 from fanet_sim.envs.drone import Drone, Hello, NextHop, _link_row
 from fanet_sim.envs.packet import DropReason, Packet, PacketFactory
@@ -232,6 +233,7 @@ class FANETEnv:
         placement_seed: Optional[int] = None,
         run_seed: Optional[int] = None,
         router: Optional[object] = None,
+        c_agent: Optional[object] = None,
     ) -> None:
         """Create the environment (does NOT run reset automatically).
 
@@ -281,6 +283,11 @@ class FANETEnv:
             )
         self.routing = routing
         self.router = router
+        # Phase 2c. With config.C_RULE == "rl" the C-drones ask this object
+        # for a waypoint each decision. Injected like the router, so
+        # fanet_sim never imports agents/ and stays torch-free. It needs one
+        # method: decide(observations) -> one action per observation.
+        self.c_agent = c_agent
         self.episode_id = episode_id
         self.placement_seed = (
             config.PLACEMENT_SEED if placement_seed is None else placement_seed
@@ -354,6 +361,12 @@ class FANETEnv:
         # those involving an M-drone, which does not avoid anybody.
         # Close passes, counted ONCE per approach rather than per step, and
         # split by the pair's kinds: "CC", "CM" or "MM".
+        # Phase 2c. The C-drone agent's log: one row per decision, with the
+        # observation it saw, the action it gave and the reward for the
+        # second that followed.
+        self.c_decisions: List[Dict[str, Any]] = []
+        self._second_start: Dict[str, int] = {}
+        self._flown_at_decision: Dict[int, float] = {}
         self.close_pass_events: Dict[str, int] = {}
         self.closest_approach_m: float = float("inf")
         self._close_now: set = set()
@@ -415,6 +428,9 @@ class FANETEnv:
         self._accuracy_precision = 0.0
         self._accuracy_recall = 0.0
         self._accuracy_samples = 0
+        self.c_decisions = []
+        self._second_start = {}
+        self._flown_at_decision = {}
         self.close_pass_events = {}
         self.closest_approach_m = float("inf")
         self._close_now = set()
@@ -624,16 +640,20 @@ class FANETEnv:
         With ``config.STATIC_MODE`` set this does nothing at all, so a static
         run never touches the mobility stream.
         """
+        # C-drones fly at a fixed speed, and apply_velocity caps each command
+        # at drone.speed — so this has to be set, or they would crawl at
+        # whatever the placement stream happened to draw for them. It is set
+        # even in the static world, where the C-drones may still fly. No draw
+        # is made here.
+        for drone in self.drones:
+            if drone.drone_type == "C":
+                drone.speed = config.C_DRONE_SPEED
+
         if config.STATIC_MODE:
             return
 
         for drone in self.drones:
             if drone.drone_type != "M":
-                # C-drones fly at a fixed speed, and apply_velocity caps each
-                # command at drone.speed — so this has to be set, or they
-                # would crawl at whatever the placement stream happened to
-                # draw for them. No draw is made here.
-                drone.speed = config.C_DRONE_SPEED
                 continue
             angle = float(self._rng_mob.uniform(0.0, 2.0 * np.pi))
             direction = np.array([np.cos(angle), np.sin(angle)],
@@ -798,9 +818,14 @@ class FANETEnv:
             for drone in self.drones:
                 if drone.drone_type == "M":
                     drone.step_move(config.TIMESTEP, now_s=now_s)
-            # C-drones decide from their tables, which hold what they heard
-            # BEFORE this step, so they move on last step's picture.
-            self._move_c_drones()
+        # The C-drones move whatever STATIC_MODE says. It is the MISSION that
+        # is static in Phase 2c M0-M3: the M-drones hold their Phase-1
+        # positions while the C-drones fly, which isolates what moving the
+        # relays is worth from what the mission's movement costs. C_RULE
+        # defaults to "hover", so a Phase-1 run still has nobody moving.
+        # They decide from their tables, which hold what they heard BEFORE
+        # this step, so they move on last step's picture.
+        self._move_c_drones()
         self._recompute_links()
         self._update_active_links()
 
@@ -1224,6 +1249,7 @@ class FANETEnv:
             # farthest out.
             if pkt.source_id != drone.drone_id:
                 drone.relayed_since_hello += 1
+                drone.note_relay(self.step_count, pkt.source_id)
 
             if next_key == "GS":
                 pkt.relay_to("GS")
@@ -1355,7 +1381,7 @@ class FANETEnv:
             return
 
         senders: List[Tuple[NextHop, str, np.ndarray, np.ndarray, int, int,
-                            Optional[np.ndarray]]] = []
+                            Optional[np.ndarray], np.ndarray]] = []
         for drone in self.drones:
             if self.step_count >= drone.next_hello_step:
                 senders.append((
@@ -1363,13 +1389,15 @@ class FANETEnv:
                     drone.velocity.copy(), drone.total_queued(),
                     drone.relayed_since_hello,
                     None if drone.target is None else drone.target.copy(),
+                    drone.end_point.copy(),
                 ))
                 drone.next_hello_step = self.step_count + self._next_hello_gap()
                 drone.relayed_since_hello = 0
                 drone.hellos_sent += 1
         if self.step_count >= self._gs_next_hello_step:
             senders.append(("GS", "GS", self.gs_position.copy(),
-                            np.zeros(2, dtype=np.float64), 0, 0, None))
+                            np.zeros(2, dtype=np.float64), 0, 0, None,
+                            self.gs_position.copy()))
             self._gs_next_hello_step = (
                 self.step_count + self._next_hello_gap()
             )
@@ -1379,7 +1407,7 @@ class FANETEnv:
             return
 
         for (sender_id, sender_type, position, velocity, fill, relayed,
-             target) in senders:
+             target, end_point) in senders:
             for receiver in self.drones:
                 if receiver.drone_id == sender_id:
                     continue
@@ -1399,6 +1427,7 @@ class FANETEnv:
                     queue_fill=fill,
                     relayed=relayed,
                     target=None if target is None else target.copy(),
+                    end_point=end_point.copy(),
                 )
 
     # ------------------------------------------------------------------
@@ -1420,6 +1449,10 @@ class FANETEnv:
         if config.C_RULE == "hover":
             return
 
+        if config.C_RULE == "rl" and self.step_count % \
+                c_interface.steps_per_decision() == 0:
+            self._agent_waypoints()
+
         for drone in self.drones:
             if drone.drone_type != "C":
                 continue
@@ -1436,6 +1469,94 @@ class FANETEnv:
             drone.apply_velocity(heading * config.C_DRONE_SPEED
                                  * config.TIMESTEP)
 
+    def _agent_waypoints(self) -> None:
+        """Ask the injected agent for one waypoint per C-drone.
+
+        Runs on the decision steps only. Each drone's observation is built
+        from its own table and counters alone, the agent answers with a
+        normalised action, and that becomes the drone's target for the next
+        second. The reward for the second just ended is attached to the
+        PREVIOUS decision, which is the one that earned it.
+
+        Raises:
+            RuntimeError: If C_RULE is "rl" with no agent injected.
+        """
+        if self.c_agent is None:
+            raise RuntimeError(
+                'config.C_RULE is "rl" but no c_agent was injected into '
+                'FANETEnv; pass c_agent=... the way the router is passed'
+            )
+
+        c_drones = [d for d in self.drones if d.drone_type == "C"]
+        self._close_last_second(c_drones)
+
+        observations = [c_interface.build_observation(self, drone)
+                        for drone in c_drones]
+        actions = self.c_agent.decide(observations)  # type: ignore[union-attr]
+        if len(actions) != len(c_drones):
+            raise RuntimeError(
+                f"the agent returned {len(actions)} actions for "
+                f"{len(c_drones)} C-drones"
+            )
+
+        for drone, observation, action in zip(c_drones, observations, actions):
+            if action is None:
+                # "Nowhere to go this second." A drone with no waypoint flies
+                # nowhere AND announces nothing, which is what the Phase-2a
+                # rules do when they find no target — and other C-drones'
+                # target sharing reads those announcements, so the difference
+                # is visible to the fleet, not just to this drone. The logged
+                # action is the drone's own position, since that is the
+                # waypoint a policy would have to output to stay put.
+                drone.target = None
+                waypoint = drone.position.copy()
+                action = c_interface.action_from_waypoint(
+                    waypoint, self.gs_position
+                )
+            else:
+                action = np.asarray(action, dtype=np.float64)
+                waypoint = c_interface.waypoint_from_action(
+                    action, self.gs_position
+                )
+                drone.target = waypoint
+            self._flown_at_decision[drone.drone_id] = drone.distance_flown
+            self.c_decisions.append({
+                "step": self.step_count,
+                "drone_id": drone.drone_id,
+                "observation": observation,
+                "action": np.asarray(action, dtype=np.float64).copy(),
+                "waypoint": waypoint.copy(),
+                "reward": None,
+            })
+
+        self._second_start = {
+            "delivered": len(self.delivered),
+            "dropped": len(self.dropped),
+            "created": len(self.all_packets),
+        }
+
+    def _close_last_second(self, c_drones: List[Drone]) -> None:
+        """Fill in the reward for the decisions taken a second ago.
+
+        Args:
+            c_drones: The C-drones, in the order they decided.
+        """
+        if not self._second_start:
+            return
+        delivered = len(self.delivered) - self._second_start["delivered"]
+        dropped = len(self.dropped) - self._second_start["dropped"]
+        created = len(self.all_packets) - self._second_start["created"]
+
+        pending = self.c_decisions[-len(c_drones):]
+        for drone, row in zip(c_drones, pending):
+            if row["reward"] is not None:
+                continue
+            flown = (drone.distance_flown
+                     - self._flown_at_decision.get(drone.drone_id, 0.0))
+            row["reward"] = c_interface.flight_reward(
+                delivered, dropped, created, flown, drone.speed
+            )
+
     def _c_heading(self, drone: Drone) -> Optional[np.ndarray]:
         """Return the unit heading *drone* wants this step, or None to hover.
 
@@ -1447,6 +1568,11 @@ class FANETEnv:
         """
         if config.C_RULE == "random_walk":
             return self._random_walk_heading(drone)
+        if config.C_RULE == "rl":
+            # The agent has already set the target; just fly to it. The stop
+            # distance is the midpoint one, which is what "hovers within
+            # 10 m of it" means.
+            return self._heading_to_target(drone, config.C_MIDPOINT_STOP_M)
         return self._target_heading(drone)
 
     def _random_walk_heading(self, drone: Drone) -> Optional[np.ndarray]:
@@ -1499,13 +1625,28 @@ class FANETEnv:
             drone.target = self._choose_target(drone)
             drone.next_decision_step = self.step_count + every
 
+        stop = (config.C_BUSIEST_STOP_M if config.C_RULE == "busiest"
+                else config.C_MIDPOINT_STOP_M)
+        return self._heading_to_target(drone, stop)
+
+    @staticmethod
+    def _heading_to_target(drone: Drone,
+                           stop_m: float) -> Optional[np.ndarray]:
+        """Return the unit heading to the drone's target, or None to hover.
+
+        Args:
+            drone:  The C-drone.
+            stop_m: How close counts as arrived.
+
+        Returns:
+            A unit heading, or None when there is no target or it is already
+            close enough.
+        """
         if drone.target is None:
             return None
         gap = drone.target - drone.position
         distance = float(np.linalg.norm(gap))
-        stop = (config.C_BUSIEST_STOP_M if config.C_RULE == "busiest"
-                else config.C_MIDPOINT_STOP_M)
-        if distance <= stop:
+        if distance <= stop_m:
             return None
         return gap / distance
 

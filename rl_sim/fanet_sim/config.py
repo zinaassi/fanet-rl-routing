@@ -327,7 +327,7 @@ HELLO_STREAM_TAG: int = 0x4E110
 # working from the same out-of-date picture as the router. It never reads a
 # true position.
 C_RULE: str = "hover"            # which rule the C-drones follow  PROVISIONAL
-C_RULES = ("hover", "random_walk", "busiest", "midpoint")
+C_RULES = ("hover", "random_walk", "busiest", "midpoint", "rl")
 
 #: C-drones fly at a fixed speed, unlike the M-drones.         PROVISIONAL
 C_DRONE_SPEED: float = 30.0
@@ -370,6 +370,19 @@ C_SAFE_DISTANCE_M: float = 20.0  #                              PROVISIONAL
 #: a hello that is up to three seconds old is no basis for it. Routing,
 #: target choice and target sharing still read the table alone.
 SENSOR_RANGE_M: float = 50.0     #                              PROVISIONAL
+
+# ---------------------------------------------------------------------------
+# The C-drone agent (Phase 2c)
+# ---------------------------------------------------------------------------
+# C_RULE = "rl" hands the waypoint decision to an agent injected into
+# FANETEnv, the way the router already is. fanet_sim stays torch-free: the
+# environment only asks for a waypoint and reports a reward, and the policy
+# lives in agents/.
+#
+# The reward is the network's delivery balance over the last second, shared
+# by all seven C-drones, minus a charge for flying. 0.01 charges a drone that
+# flies flat out all second one hundredth of a packet's worth of reward.
+C_FLIGHT_COST: float = 0.01      #                              PROVISIONAL
 C_AVOID_TURN_DEG: float = 15.0   # step between tried headings
 C_AVOID_MAX_TURN_DEG: float = 90.0
 

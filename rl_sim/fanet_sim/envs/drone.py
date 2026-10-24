@@ -115,6 +115,10 @@ class Hello:
         target:      Where a C-drone said it was heading, or None. Only
                      C-drones fill this in, and only to let other C-drones
                      keep out of each other's way.
+        end_point:   Where an M-drone said its flight ends, or None. A drone
+                     knows its own mission path and can say so; it is the one
+                     thing a neighbour can learn about where this drone will
+                     be in ten seconds rather than one.
     """
 
     sender_id: NextHop
@@ -125,6 +129,7 @@ class Hello:
     queue_fill: int
     relayed: int
     target: Optional[np.ndarray] = None
+    end_point: Optional[np.ndarray] = None
 
 
 def _link_row() -> Dict[str, int]:
@@ -223,6 +228,10 @@ class Drone:
         # clear and it stayed put.
         self.avoid_turns: int = 0
         self.avoid_waits: int = 0
+        # Phase 2c. One (step, source_id) pair per packet this drone relayed,
+        # trimmed to the last second. "Relayed" is the same thing the hello
+        # counts: another drone's packet, moved on by this one.
+        self.relay_log: List[Tuple[int, NextHop]] = []
         # Energy is tracked as two independent budgets so the topology agent's
         # motion cost (Phase 4) does not get hidden inside the radio cost.
         self.energy_radio: float = config.INITIAL_ENERGY
@@ -506,6 +515,33 @@ class Drone:
             measured: True once the warm-up is over.
         """
         self._bump_link(next_hop, "expired_in_queue", measured)
+
+    def note_relay(self, step: int, source_id: NextHop) -> None:
+        """Record that this drone relayed a packet from *source_id*.
+
+        Args:
+            step:      The simulation step it happened on.
+            source_id: Who created the packet.
+        """
+        self.relay_log.append((step, source_id))
+
+    def relays_in_last_second(self, step: int,
+                              steps_per_second: int) -> Tuple[int, int]:
+        """Return how much this drone relayed in the last second, and for whom.
+
+        Trims the log as it goes, so it never grows past a second's worth.
+
+        Args:
+            step:             The current simulation step.
+            steps_per_second: How many steps make a second.
+
+        Returns:
+            ``(packets relayed, how many different sources they came from)``.
+        """
+        cutoff = step - steps_per_second
+        self.relay_log = [entry for entry in self.relay_log
+                          if entry[0] > cutoff]
+        return len(self.relay_log), len({src for _, src in self.relay_log})
 
     def note_link_broken(
         self, next_hop: NextHop, measured: bool = True
