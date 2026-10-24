@@ -19,9 +19,10 @@ Advisor: Eran, with Prof. Reuven Cohen
 7. [Baselines: Greedy and Random](#7-baselines-greedy-and-random)
 8. [The RL Agent](#8-the-rl-agent)
 9. [Results](#9-results)
-10. [Summary: Difficulties, Further Work, Conclusion](#10-summary-difficulties-further-work-conclusion)
-11. [References](#11-references)
-12. [Appendix](#12-appendix)
+10. [Phase 2a: The Moving World](#10-phase-2a-the-moving-world)
+11. [Summary: Difficulties, Further Work, Conclusion](#11-summary-difficulties-further-work-conclusion)
+12. [References](#12-references)
+13. [Appendix](#13-appendix)
 
 ---
 
@@ -494,13 +495,97 @@ RL has the lowest loss at every queue size.
 
 ---
 
-## 10. Summary: Difficulties, Further Work, Conclusion
+## 10. Phase 2a: The Moving World
+
+In Phase 2 the drones move. Before training a new agent, we made the
+simulator work with moving drones and tested simple rules for moving
+the C-drones.
+
+**What we added**
+
+1. **Moving M-drones:** each M-drone starts at its Phase 1 position,
+   waits a random 0–50 s, then flies in a straight line, in a random
+   direction, at a fixed speed (10–30 m/s), to the edge of the area.
+   There it hovers.
+2. **Broken links:** when a link breaks, the packets waiting for it are
+   sent to another neighbour. If there is none, they are dropped
+   (link broken).
+3. **Hello messages:** drones no longer know their neighbours for free.
+   Each drone sends a hello every 1 s with its position, speed and
+   load. A neighbour that is not heard for 3 s is forgotten. A packet
+   sent to a neighbour that has already flown away, and lost, counts
+   as stale link.
+4. **Moving C-drones:** C-drones fly at 30 m/s and decide using only
+   the hellos they hear. They avoid collisions with an onboard sensor
+   that sees drones within 50 m.
+<!-- source: rl_sim/fanet_sim/config.py — MAX_START_DELAY_S=50, DRONE_SPEED_MIN/MAX=10/30, HELLO_INTERVAL=1.0, HELLO_TIMEOUT_INTERVALS=3.0, C_DRONE_SPEED=30, SENSOR_RANGE_M=50 -->
+
+**C-drone rules**
+
+| rule | what the C-drone does |
+|---|---|
+| hover | stays where it is |
+| random walk | flies in a random direction, new direction every 5 s |
+| busiest | flies toward the neighbour that relays the most packets |
+| midpoint | flies to the middle point between the GS and the farthest M-drone it hears |
+<!-- source: rl_sim/fanet_sim/config.py — C_RULES, C_TURN_INTERVAL=5.0; rl_sim/fanet_sim/envs/fanet_env.py (_choose_target) -->
+
+Busiest and midpoint are our own rules. For both, each C-drone
+announces its target in its hello and avoids targets within 150 m of
+another C-drone's, so the C-drones spread out.
+<!-- source: rl_sim/fanet_sim/config.py — SHARE_TARGETS, C_TARGET_SPREAD_M=150 -->
+
+**Results**
+
+| C-drone rule | total loss | channel | full queue | no route | dead end | ttl | hop limit | link broken | stale link |
+|---|---|---|---|---|---|---|---|---|---|
+| no movement (section 9) | 25.0% | 13.8% | 11.2% | 0.0% | 0.0% | 0.0% | 0.0% | – | – |
+| hover | 44.5% | 13.7% | 17.0% | 8.9% | 0.2% | 0.0% | 0.0% | 0.4% | 4.5% |
+| random walk | 45.5% | 11.7% | 14.1% | 8.8% | 0.2% | 0.0% | 0.0% | 0.7% | 10.0% |
+| busiest | 43.7% | 12.8% | 5.1% | 15.5% | 1.1% | 0.0% | 0.0% | 0.3% | 8.9% |
+| midpoint | 29.1% | 11.3% | 12.5% | 1.0% | 0.1% | 0.0% | 0.0% | 0.1% | 4.2% |
+
+**Table 8:** Packet loss and its causes with greedy routing (50 test
+layouts, 200 ms, % of packets created).
+<!-- source: no-movement row from rl_sim/out/1b_test50_runs.csv (rule=greedy, load_ms=200, 50 rows, mean of total_loss and of each cause column); the other rows from rl_sim/out/2a_final_summary.csv (rule=greedy), columns total_loss_mean, channel_mean, queue_full_mean, no_route_mean, dead_end_mean, ttl_mean, hop_limit_mean, link_broken_mean, stale_link_mean -->
+
+| C-drone rule | total loss | channel | full queue | no route | dead end | ttl | hop limit | link broken | stale link |
+|---|---|---|---|---|---|---|---|---|---|
+| no movement (section 9) | 63.5% | 39.9% | 0.0% | 0.0% | 4.8% | 0.0% | 18.7% | – | – |
+| hover | 73.7% | 35.1% | 0.3% | 0.2% | 12.5% | 0.0% | 16.2% | 0.1% | 9.3% |
+| random walk | 77.5% | 29.4% | 0.2% | 0.3% | 11.1% | 0.0% | 13.2% | 0.1% | 23.2% |
+| busiest | 77.6% | 26.8% | 0.4% | 1.1% | 16.3% | 0.0% | 19.3% | 0.1% | 13.5% |
+| midpoint | 66.9% | 33.1% | 0.0% | 0.3% | 7.0% | 0.0% | 15.3% | 0.0% | 11.2% |
+
+**Table 9:** Packet loss and its causes with random routing (50 test
+layouts, 200 ms, % of packets created).
+<!-- source: no-movement row from rl_sim/out/1b_test50_runs.csv (rule=random, load_ms=200, 50 rows, mean of total_loss and of each cause column); the other rows from rl_sim/out/2a_final_summary.csv (rule=random), same columns as Table 8 -->
+
+When the drones move, greedy loses much more than with no movement
+(44.5% against 25.0%). This is not because drones are cut off: 97.6%
+of the packets are created while their drone has a path to the GS. The
+extra loss comes from three things: full queues (17.0% against
+11.2%), greedy getting stuck when no neighbour is closer to the GS
+(8.9% against 0.0%), and packets sent to neighbours that have already
+flown away (stale link, 4.5%).
+<!-- source: rl_sim/out/2a_final_summary.csv (c_setting=hover, rule=greedy) — total_loss_mean 44.5, pct_packets_connected_mean 97.6, queue_full_mean 17.0, no_route_mean 8.9, stale_link_mean 4.5. The "against" figures are the no-movement ones from rl_sim/out/1b_test50_runs.csv (rule=greedy, load_ms=200): total 25.0, queue_full 11.2, no_route 0.0. -->
+
+Midpoint fills the gaps between the GS and the far M-drones. Greedy
+then rarely gets stuck (1.0%), and its loss falls from 44.5% to
+29.1%. Random walk and busiest do not help: with random routing both
+are worse than hovering, and with greedy they change the loss by about
+1%.
+<!-- source: rl_sim/out/2a_final_summary.csv — rule=greedy: no_route_mean 1.0 and total_loss_mean 29.1 at c_setting=midpoint s150, against 44.5 at hover, 45.5 at walk 5s and 43.7 at busiest s150. rule=random: 73.7 at hover against 77.5 at walk 5s and 77.6 at busiest s150. -->
+
+---
+
+## 11. Summary: Difficulties, Further Work, Conclusion
 
 _To be written after Phase 2._
 
 ---
 
-## 11. References
+## 12. References
 
 _To be written after Phase 2._
 
@@ -523,6 +608,6 @@ Running list of citations still needed:
 
 ---
 
-## 12. Appendix
+## 13. Appendix
 
 _To be written after Phase 2._
