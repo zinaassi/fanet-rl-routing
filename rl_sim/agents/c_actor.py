@@ -122,6 +122,160 @@ def to_tensors(batch: Dict[str, np.ndarray],
     )
 
 
+class GaussianActor(nn.Module):
+    """A :class:`CActor` plus one learned spread, for PPO.
+
+    The network gives the MEAN waypoint; the spread is a single pair of
+    numbers shared by every drone and every situation, which is the usual
+    starting point and keeps the thing that is explored from depending on
+    what is being observed. It starts at ``std = 0.1``, about 45 m on the
+    ground — a little under the C-drones' safe distance, so exploration
+    nudges rather than teleports.
+
+    Attributes:
+        mean:    The deterministic actor.
+        log_std: The learned spread, in action units.
+    """
+
+    def __init__(self, start_std: float = 0.1) -> None:
+        """Build the actor and its spread.
+
+        Args:
+            start_std: The initial standard deviation, in action units.
+        """
+        super().__init__()
+        self.mean = CActor()
+        self.log_std = nn.Parameter(
+            torch.full((2,), float(np.log(start_std)))
+        )
+
+    def forward(self, own: torch.Tensor, neighbours: torch.Tensor,
+                mask: torch.Tensor) -> torch.Tensor:
+        """Return the mean waypoint.
+
+        Args:
+            own:        (B, SELF_FEATURES).
+            neighbours: (B, N, NEIGHBOUR_FEATURES).
+            mask:       (B, N).
+
+        Returns:
+            (B, 2) in [-1, 1].
+        """
+        return self.mean(own, neighbours, mask)
+
+    def distribution(self, own: torch.Tensor, neighbours: torch.Tensor,
+                     mask: torch.Tensor) -> torch.distributions.Normal:
+        """Return the action distribution for these observations.
+
+        Args:
+            own:        (B, SELF_FEATURES).
+            neighbours: (B, N, NEIGHBOUR_FEATURES).
+            mask:       (B, N).
+
+        Returns:
+            A diagonal Normal over the two action dimensions.
+        """
+        centre = self.forward(own, neighbours, mask)
+        return torch.distributions.Normal(centre, self.log_std.exp())
+
+
+class CCritic(nn.Module):
+    """Values a moment from the whole network's state.
+
+    Used ONLY while training. It is deliberately a plain MLP: the thing it
+    reads is already a fixed-length vector, so none of the actor's set
+    handling applies.
+
+    Attributes:
+        body: 2 x 128 with ReLU, then one output.
+    """
+
+    def __init__(self, width: int, hidden: int = 128) -> None:
+        """Build the critic.
+
+        Args:
+            width:  Length of the global state vector.
+            hidden: Width of both hidden layers.
+        """
+        super().__init__()
+        self.body = nn.Sequential(
+            nn.Linear(width, hidden), nn.ReLU(),
+            nn.Linear(hidden, hidden), nn.ReLU(),
+            nn.Linear(hidden, 1),
+        )
+
+    def forward(self, state: torch.Tensor) -> torch.Tensor:
+        """Return one value per state.
+
+        Args:
+            state: (B, width).
+
+        Returns:
+            (B,) values.
+        """
+        return self.body(state).squeeze(-1)
+
+
+class RunningNorm:
+    """Tracks a mean and variance for normalising the value target.
+
+    PPO's value loss is badly scaled when the returns are, and these returns
+    start near zero and grow. Keeping a running estimate and dividing by it
+    keeps the critic's job the same size throughout.
+
+    Attributes:
+        mean:  Running mean.
+        var:   Running variance.
+        count: How many samples have gone in.
+    """
+
+    def __init__(self) -> None:
+        self.mean = 0.0
+        self.var = 1.0
+        self.count = 1e-4
+
+    def update(self, values: np.ndarray) -> None:
+        """Fold a batch into the estimate.
+
+        Args:
+            values: The new samples.
+        """
+        batch_mean = float(values.mean())
+        batch_var = float(values.var())
+        batch_count = len(values)
+
+        delta = batch_mean - self.mean
+        total = self.count + batch_count
+        self.mean += delta * batch_count / total
+        m_a = self.var * self.count
+        m_b = batch_var * batch_count
+        self.var = (m_a + m_b + delta ** 2 * self.count * batch_count / total
+                    ) / total
+        self.count = total
+
+    def normalise(self, values: np.ndarray) -> np.ndarray:
+        """Return *values* in units of the running spread.
+
+        Args:
+            values: Raw returns.
+
+        Returns:
+            The normalised returns.
+        """
+        return (values - self.mean) / (np.sqrt(self.var) + 1e-8)
+
+    def denormalise(self, values: np.ndarray) -> np.ndarray:
+        """Undo :meth:`normalise`.
+
+        Args:
+            values: Normalised values.
+
+        Returns:
+            Raw values.
+        """
+        return values * (np.sqrt(self.var) + 1e-8) + self.mean
+
+
 class WaypointAgent:
     """Runs a trained :class:`CActor` as the C-drones' agent.
 

@@ -51,8 +51,15 @@ from fanet_sim.envs.channel import are_connected, euclidean_distance
 ACTION_SCALE_M: float = 450.0
 
 #: How many numbers describe the drone itself, and each table entry.
-SELF_FEATURES: int = 16
-NEIGHBOUR_FEATURES: int = 16
+#
+# Three inputs were dropped in M2, all of them end-to-end ACK figures. The
+# drone's own ACK ratio was always 0 for a C-drone, which creates nothing;
+# the per-link delivery rate and its "measured" flag need an ACK to walk back
+# along a packet's path, which works in the static world and is an open
+# question in the moving one. The reward comes from the simulator during
+# training, so none of the three was load-bearing.
+SELF_FEATURES: int = 15
+NEIGHBOUR_FEATURES: int = 14
 
 #: The order of the type one-hot inside a neighbour's features.
 TYPES: Tuple[str, ...] = ("M", "C", "GS")
@@ -115,26 +122,6 @@ def action_from_waypoint(waypoint: np.ndarray,
 # Observation
 # ---------------------------------------------------------------------------
 
-def _link_ack_ratio(drone: Any, key: Any) -> Tuple[float, float]:
-    """Return this drone's measured success rate on one link, and a flag.
-
-    Built from the drone's own hop-ACK book, so it is local knowledge. The
-    flag says whether anything has been sent on that link at all; without it
-    a link never used and a link that always fails both read as zero.
-
-    Args:
-        drone: The drone that owns the link.
-        key:   The next hop.
-
-    Returns:
-        ``(rate, 1.0 if measured else 0.0)``.
-    """
-    row = drone.link_stats.get(key)
-    if not row or not row["sent"]:
-        return 0.0, 0.0
-    return row["acked"] / row["sent"], 1.0
-
-
 def _self_features(env: Any, drone: Any) -> np.ndarray:
     """Return the drone's own part of the observation.
 
@@ -161,11 +148,6 @@ def _self_features(env: Any, drone: Any) -> np.ndarray:
     sent = sum(row["sent"] for row in drone.link_stats.values())
     acked = sum(row["acked"] for row in drone.link_stats.values())
     hop_ratio = acked / sent if sent else 0.0
-    created = drone.packets_created
-    # A C-drone creates nothing, so this is 0 for every C-drone. It is kept
-    # because the observation is defined for any drone, and because an agent
-    # that one day runs on an M-drone would want it.
-    e2e_ratio = (drone.packets_gs_acked / created) if created else 0.0
 
     return np.array([
         drone.position[0] / ACTION_SCALE_M,
@@ -179,7 +161,6 @@ def _self_features(env: Any, drone: Any) -> np.ndarray:
         relayed / 10.0,
         sources / 6.0,
         hop_ratio,
-        e2e_ratio,
         len(drone.hello_table) / 25.0,
         env.step_count * config.TIMESTEP / 100.0,
         drone.velocity[0] / config.C_DRONE_SPEED,
@@ -209,7 +190,6 @@ def _neighbour_features(env: Any, drone: Any, hello: Any) -> np.ndarray:
 
     mine = float(np.linalg.norm(gs - drone.position))
     theirs = float(np.linalg.norm(gs - guessed))
-    rate, measured = _link_ack_ratio(drone, hello.sender_id)
 
     end_point = hello.end_point
     end_offset = (np.zeros(2) if end_point is None
@@ -227,8 +207,6 @@ def _neighbour_features(env: Any, drone: Any, hello: Any) -> np.ndarray:
         hello.relayed / 10.0,
         (theirs - mine) / config.LOSS_50_DISTANCE_M,
         1.0 if are_connected(guessed, gs) else 0.0,
-        rate,
-        measured,
         age,
         end_offset[0],
         end_offset[1],
@@ -288,6 +266,65 @@ def pad_observations(
             neighbours[index, :count] = observation["neighbours"][:count]
             mask[index, :count] = 1.0
     return {"self": selves, "neighbours": neighbours, "mask": mask}
+
+
+# ---------------------------------------------------------------------------
+# The critic's view
+# ---------------------------------------------------------------------------
+
+#: Numbers per drone in the global state: position relative to the GS over
+#: ACTION_SCALE_M, the M/C type one-hot, and total queue fill over the queue
+#: capacity.
+GLOBAL_PER_DRONE: int = 5
+
+
+def global_state_width(drone_count: int) -> int:
+    """Return the length of the critic's input for a fleet of this size.
+
+    Args:
+        drone_count: How many drones there are.
+
+    Returns:
+        The vector length.
+    """
+    return drone_count * GLOBAL_PER_DRONE + SELF_FEATURES + 1
+
+
+def build_global_state(env: Any, drone: Any) -> np.ndarray:
+    """Return what the CRITIC sees: the whole network, plus whose turn it is.
+
+    This is the one thing in Phase 2c that is not local. It is used ONLY
+    while training — MAPPO's centralised critic — and the drones never see
+    it. A critic that knows the true state can judge an action properly even
+    though the actor that chose it was working from a stale table, which is
+    the whole reason for splitting them.
+
+    Drones are taken in id order so the vector means the same thing every
+    time, and the learning drone's own observation is appended so the critic
+    can tell which of the seven it is being asked about.
+
+    Args:
+        env:   The environment.
+        drone: The C-drone whose value is being estimated.
+
+    Returns:
+        A vector of ``global_state_width(len(env.drones))`` numbers.
+    """
+    gs = env.gs_position
+    parts: List[np.ndarray] = []
+    for other in sorted(env.drones, key=lambda d: d.drone_id):
+        offset = (other.position - gs) / ACTION_SCALE_M
+        parts.append(np.array([
+            offset[0],
+            offset[1],
+            1.0 if other.drone_type == "M" else 0.0,
+            1.0 if other.drone_type == "C" else 0.0,
+            other.total_queued() / config.QUEUE_CAPACITY,
+        ], dtype=np.float64))
+    parts.append(_self_features(env, drone))
+    parts.append(np.array([env.step_count * config.TIMESTEP / 100.0],
+                          dtype=np.float64))
+    return np.concatenate(parts)
 
 
 # ---------------------------------------------------------------------------

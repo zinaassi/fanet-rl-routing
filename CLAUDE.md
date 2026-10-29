@@ -275,6 +275,10 @@ written after Phase 2.
 - Whether the topology agent joins the static phase.
 - Link-break handling and hello messages in the dynamic phase.
 - A near-full load (e.g. 90 ms).
+- 2b/2d: end-to-end ACKs in the moving world. Plan: the GS broadcasts the
+  ACK back along the packet's path (drones on the path keep it and pass it
+  on, others drop it); measure the % of ACKs that reach each drone on the
+  path. Fallback if low: GS beacons (as in PARRoT, Sliwa et al. 2021).
 
 ## IGNORE / LEAVE BEHIND
 We keep ONLY the simulator: world, drones, placement/mobility, channel,

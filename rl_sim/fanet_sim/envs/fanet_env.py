@@ -1524,6 +1524,10 @@ class FANETEnv:
                 "step": self.step_count,
                 "drone_id": drone.drone_id,
                 "observation": observation,
+                # The critic's view of the same moment. Recorded here rather
+                # than rebuilt later because the world moves on: by the time
+                # an update runs, these positions are gone.
+                "global_state": c_interface.build_global_state(self, drone),
                 "action": np.asarray(action, dtype=np.float64).copy(),
                 "waypoint": waypoint.copy(),
                 "reward": None,
