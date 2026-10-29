@@ -340,3 +340,53 @@ def test_a_rollout_produces_aligned_arrays() -> None:
     assert out["self"].shape[1] == c_interface.SELF_FEATURES
     assert np.isfinite(out["reward"]).all()
     assert out["views_agree"]
+
+
+def test_a_rollout_is_reproducible_from_its_run_seed() -> None:
+    """The exploration noise follows the episode's seed, not the worker's luck.
+
+    The actor samples from torch's GLOBAL RNG, and rollouts run in spawned
+    workers, so without an explicit seed every rollout would explore
+    differently and no training run could be reproduced.
+    """
+    from agents.c_actor import GaussianActor
+    from scripts.train_c_ppo import _run_episode
+
+    actor = GaussianActor()
+    state = actor.state_dict()
+
+    first = _run_episode(101, 9001, state, "rl", greedy=False)
+    again = _run_episode(101, 9001, state, "rl", greedy=False)
+    other = _run_episode(101, 9002, state, "rl", greedy=False)
+
+    assert first["action"] == pytest.approx(again["action"], abs=0.0)
+    assert first["log_prob"] == pytest.approx(again["log_prob"], abs=0.0)
+    assert first["total_loss"] == pytest.approx(again["total_loss"], abs=0.0)
+
+    shared = min(len(first["action"]), len(other["action"]))
+    assert not np.allclose(first["action"][:shared], other["action"][:shared])
+
+
+def test_sampling_explores_but_greedy_does_not() -> None:
+    """Two sampled rollouts on ONE seed differ only because of the actions.
+
+    Same seed, same weights: sampling is reproducible (the test above), so
+    what separates sampling from greedy is the noise itself, and greedy must
+    carry none of it.
+    """
+    from agents.c_actor import GaussianActor
+    from scripts.train_c_ppo import _run_episode
+
+    actor = GaussianActor()
+    state = actor.state_dict()
+
+    sampled = _run_episode(101, 9001, state, "rl", greedy=False)
+    mean_one = _run_episode(101, 9001, state, "rl", greedy=True)
+    mean_two = _run_episode(101, 9002, state, "rl", greedy=True)
+
+    assert mean_one["total_loss"] == pytest.approx(
+        _run_episode(101, 9001, state, "rl", greedy=True)["total_loss"],
+        abs=0.0,
+    )
+    assert sampled["total_loss"] != mean_one["total_loss"]
+    assert mean_one["total_loss"] != mean_two["total_loss"]

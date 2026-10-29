@@ -196,7 +196,8 @@ def _run_episode(layout: int, run_seed: int, state: Optional[Dict[str, Any]],
 
     Args:
         layout:   Placement seed.
-        run_seed: Channel and traffic seed.
+        run_seed: Channel and traffic seed, and the seed of this
+                  episode's exploration stream.
         state:    Actor weights, for the "rl" policy.
         policy:   "rl", "midpoint", "hover" or "clone".
         greedy:   For "rl", take the mean instead of sampling.
@@ -207,6 +208,15 @@ def _run_episode(layout: int, run_seed: int, state: Optional[Dict[str, Any]],
     import torch
 
     torch.set_num_threads(1)
+    # The actor draws its exploration noise from torch's global RNG, and this
+    # runs in a SPAWNED worker, which would otherwise seed that RNG at random
+    # and make the whole training run irreproducible. run_seed is already
+    # unique per (training seed, update, episode); the agent tag keeps this
+    # stream apart from the environment's channel and traffic streams, the
+    # same convention the Phase-1b agent follows.
+    torch.manual_seed(int(np.random.SeedSequence(
+        [run_seed, config.AGENT_STREAM_TAG]
+    ).generate_state(1)[0]))
     previous = _world()
     try:
         env = FANETEnv(routing=ROUTING, log_path=os.devnull,
