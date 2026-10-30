@@ -390,3 +390,44 @@ def test_sampling_explores_but_greedy_does_not() -> None:
     )
     assert sampled["total_loss"] != mean_one["total_loss"]
     assert mean_one["total_loss"] != mean_two["total_loss"]
+
+
+def test_m2_is_still_the_default_training_setup() -> None:
+    """M3 made train_one_seed configurable; M2 must be what it still does.
+
+    The defaults are the whole reason M2 stays reproducible after the
+    refactor, so they are pinned here rather than left to a comment.
+    """
+    import inspect
+
+    from scripts.train_c_ppo import (EVAL_RUN_SEEDS, MIN_IMPROVEMENT,
+                                     PATIENCE, TRAIN_LAYOUT, layout_eval_jobs,
+                                     one_layout, train_one_seed)
+
+    defaults = inspect.signature(train_one_seed).parameters
+    assert defaults["layouts"].default is one_layout
+    assert defaults["eval_jobs"].default is layout_eval_jobs
+    assert defaults["min_improvement"].default == MIN_IMPROVEMENT == 0.5
+    assert defaults["patience"].default == PATIENCE == 5
+    assert defaults["model_name"].default is None
+
+    jobs = layout_eval_jobs({"w": 1})
+    assert [(layout, seed, greedy) for layout, seed, _, _, greedy in jobs] == [
+        (TRAIN_LAYOUT, seed, True) for seed in EVAL_RUN_SEEDS
+    ]
+    assert all(policy == "rl" for _, _, _, policy, _ in jobs)
+
+
+def test_the_default_layout_sampler_draws_nothing() -> None:
+    """M2's seed stream must not shift because a layout sampler now exists.
+
+    one_layout is handed the generator and must leave it exactly where it
+    found it, or every M2 run seed after the first update would move.
+    """
+    from scripts.train_c_ppo import TRAIN_LAYOUT, one_layout
+
+    untouched = np.random.default_rng(7).integers(1, 10 ** 8, size=5).tolist()
+
+    rng = np.random.default_rng(7)
+    assert one_layout(rng, 20) == [TRAIN_LAYOUT] * 20
+    assert rng.integers(1, 10 ** 8, size=5).tolist() == untouched

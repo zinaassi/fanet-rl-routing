@@ -372,8 +372,42 @@ def anchor_weight(update: int) -> float:
     return ANCHOR_WEIGHT * (1.0 - done / ANCHOR_UPDATES)
 
 
+def one_layout(rng: Any, episodes: int) -> List[int]:
+    """Return the M2 layout list: the training layout, every episode.
+
+    It takes *rng* and does not touch it, so the default draws nothing and
+    M2's seed stream is exactly what it was.
+
+    Args:
+        rng:      The seed's generator. Unused.
+        episodes: How many episodes this update runs.
+
+    Returns:
+        One layout per episode.
+    """
+    return [TRAIN_LAYOUT] * episodes
+
+
+def layout_eval_jobs(state: Dict[str, Any]) -> List[Tuple]:
+    """Return M2's evaluation: the training layout on the fixed run seeds.
+
+    Args:
+        state: The frozen actor weights.
+
+    Returns:
+        One greedy rollout job per evaluation seed.
+    """
+    return [(TRAIN_LAYOUT, int(s), state, "rl", True) for s in EVAL_RUN_SEEDS]
+
+
 def train_one_seed(seed: int, pool: Any, out_dir: str,
-                   max_updates: int, episodes: int) -> Dict[str, Any]:
+                   max_updates: int, episodes: int, *,
+                   layouts: Any = one_layout,
+                   eval_jobs: Any = layout_eval_jobs,
+                   min_improvement: float = MIN_IMPROVEMENT,
+                   patience: int = PATIENCE,
+                   model_name: Optional[str] = None,
+                   progress: Any = None) -> Dict[str, Any]:
     """Train one actor from the clone, and keep the best version.
 
     Args:
@@ -383,6 +417,17 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
         out_dir:     Where the model goes.
         max_updates: Cap on updates.
         episodes:    Episodes per update.
+        layouts:     (rng, episodes) -> one placement seed per episode. The
+                     default is M2's: the training layout every time, drawing
+                     nothing from the generator.
+        eval_jobs:   state -> the rollout jobs one evaluation runs. The
+                     default is M2's: the training layout on EVAL_RUN_SEEDS.
+        min_improvement: Points of total loss a version must beat the best by
+                     to be kept.
+        patience:    Evaluations without a keep before stopping.
+        model_name:  File name under out/models/, or None for M2's.
+        progress:    Called with (log rows, evaluation rows) after every
+                     update, so an interrupted run keeps what it has.
 
     Returns:
         The log rows, the evaluation rows and where the best model went.
@@ -409,13 +454,19 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
     best = float("inf")
     best_update = 0
     last_improved = 0
-    model_path = os.path.join(out_dir, "models", f"c_actor_ppo_seed{seed}.pt")
+    model_path = os.path.join(
+        out_dir, "models", model_name or f"c_actor_ppo_seed{seed}.pt"
+    )
 
     for update in range(1, max_updates + 1):
         started = time.perf_counter()
         state = {k: v.clone() for k, v in actor.state_dict().items()}
         run_seeds = rng.integers(1, 10 ** 8, size=episodes).tolist()
-        jobs = [(TRAIN_LAYOUT, int(s), state, "rl", False) for s in run_seeds]
+        # Run seeds FIRST, then the layouts: the default sampler draws
+        # nothing, so M2's stream is bit-for-bit what it was.
+        episode_layouts = layouts(rng, episodes)
+        jobs = [(int(layout), int(s), state, "rl", False)
+                for layout, s in zip(episode_layouts, run_seeds)]
         results = (list(pool.map(_rollout_job, jobs)) if pool is not None
                    else [_rollout_job(job) for job in jobs])
 
@@ -516,16 +567,18 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
               f"anchor {weight:.2f}  std {row['std']:.3f}  "
               f"{row['seconds']:5.1f}s", flush=True)
 
+        if progress is not None:
+            progress(log, evaluations)
+
         if update % EVALUATE_EVERY:
             continue
 
         marker = ""
         eval_state = {k: v.clone() for k, v in actor.state_dict().items()}
-        eval_jobs = [(TRAIN_LAYOUT, int(s), eval_state, "rl", True)
-                     for s in EVAL_RUN_SEEDS]
-        eval_results = (list(pool.map(_rollout_job, eval_jobs))
+        jobs_now = eval_jobs(eval_state)
+        eval_results = (list(pool.map(_rollout_job, jobs_now))
                         if pool is not None
-                        else [_rollout_job(job) for job in eval_jobs])
+                        else [_rollout_job(job) for job in jobs_now])
         score = statistics.fmean(
             [r["total_loss"] for r in eval_results]
         ) * 100
@@ -533,7 +586,7 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
             "seed": seed, "update": update, "eval_loss": score,
             "saved": False,
         })
-        if score < best - MIN_IMPROVEMENT:
+        if score < best - min_improvement:
             best, best_update = score, update
             last_improved = len(evaluations)
             torch.save(actor.state_dict(), model_path)
@@ -547,9 +600,12 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
         print(f"  seed {seed} update {update:>3}  EVALUATION "
               f"{score:6.2f}%{marker}", flush=True)
 
-        if len(evaluations) - last_improved >= PATIENCE:
-            print(f"  seed {seed}: early stop — {PATIENCE} checks without "
-                  f"a {MIN_IMPROVEMENT} point gain", flush=True)
+        if progress is not None:
+            progress(log, evaluations)
+
+        if len(evaluations) - last_improved >= patience:
+            print(f"  seed {seed}: early stop — {patience} checks without "
+                  f"a {min_improvement} point gain", flush=True)
             break
 
     kept = [row for row in evaluations if row["saved"]]
@@ -631,13 +687,15 @@ def print_comparison(rows: Sequence[Dict[str, Any]]) -> None:
 
 
 def plot_learning(evaluations: Sequence[Dict[str, Any]],
-                  baselines: Dict[str, float], path: str) -> None:
+                  baselines: Dict[str, float], path: str,
+                  title: Optional[str] = None) -> None:
     """Draw evaluation loss against update, one line per training seed.
 
     Args:
         evaluations: Every evaluation row.
         baselines:   Reference losses to draw as horizontal lines.
         path:        Output PNG.
+        title:       Heading, or None for M2's.
     """
     import matplotlib
     matplotlib.use("Agg")
@@ -679,8 +737,9 @@ def plot_learning(evaluations: Sequence[Dict[str, Any]],
     ax.set_xlabel("PPO updates", color=faint, fontsize=11)
     ax.set_ylabel("Total packet loss (%)\nlower is better", color=faint,
                   fontsize=11)
-    ax.set_title(f"Phase 2c M2 — the actor on layout {TRAIN_LAYOUT}, "
-                 f"without exploration", color=text, fontsize=13,
+    ax.set_title(title or (f"Phase 2c M2 — the actor on layout "
+                           f"{TRAIN_LAYOUT}, without exploration"),
+                 color=text, fontsize=13,
                  fontweight="bold", pad=12, loc="left")
     ax.grid(True, color=grid, linewidth=0.8, zorder=1)
     ax.set_axisbelow(True)
