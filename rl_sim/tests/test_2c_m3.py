@@ -163,3 +163,43 @@ def test_a_policy_that_never_wins_gets_a_significant_sign_test() -> None:
     wins, used, p = sign_test(even)
     assert (wins, used) == (15, 30)
     assert p == pytest.approx(1.0)
+
+
+def test_compare_only_reuses_the_trained_actors() -> None:
+    """--compare-only must read the models, never train another update."""
+    import os
+
+    from scripts.train_c_ppo_m3 import already_trained
+
+    models, evaluations = already_trained("out", [0, 1, 2])
+
+    assert sorted(models) == [0, 1, 2]
+    for seed, path in models.items():
+        assert path.endswith(f"c_actor_m3_seed{seed}.pt")
+        assert os.path.exists(path), "the actor must already be on disk"
+    assert {row["seed"] for row in evaluations} == {0, 1, 2}
+    assert any(row["saved"] for row in evaluations)
+
+
+def test_compare_only_stops_when_an_actor_is_missing() -> None:
+    """A seed with no model is a stop, not a silently smaller comparison."""
+    from scripts.train_c_ppo_m3 import already_trained
+
+    with pytest.raises(SystemExit):
+        already_trained("out", [0, 99])
+
+
+def test_the_evaluation_history_round_trips() -> None:
+    """Rows read back from the CSV must be typed as training held them."""
+    from scripts.train_c_ppo_m3 import read_evaluations
+
+    rows = read_evaluations("out/2c_m3_eval.csv")
+
+    assert rows, "the evaluation history is empty"
+    assert all(isinstance(row["seed"], int) for row in rows)
+    assert all(isinstance(row["update"], int) for row in rows)
+    assert all(isinstance(row["eval_loss"], float) for row in rows)
+    assert all(isinstance(row["saved"], bool) for row in rows)
+    # plot_learning stars the last saved row, so "saved" must not be the
+    # string "False", which is truthy.
+    assert not all(row["saved"] for row in rows)

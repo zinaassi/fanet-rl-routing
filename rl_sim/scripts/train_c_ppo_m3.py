@@ -26,6 +26,7 @@ Writes:
 from __future__ import annotations
 
 import argparse
+import csv
 import multiprocessing
 import os
 import statistics
@@ -162,6 +163,63 @@ def saver(out_dir: str) -> Any:
 
     keep.finish = finish                                    # type: ignore
     return keep
+
+
+def read_evaluations(path: str) -> List[Dict[str, Any]]:
+    """Read an evaluation history back from the CSV training wrote.
+
+    Args:
+        path: out/2c_m3_eval.csv.
+
+    Returns:
+        One row per evaluation, typed as training held them.
+
+    Raises:
+        SystemExit: If the file is missing.
+    """
+    if not os.path.exists(path):
+        print(f"STOP: no evaluation history at {path}")
+        raise SystemExit(1)
+    with open(path) as handle:
+        rows = csv.DictReader(line for line in handle
+                              if not line.startswith("#"))
+        return [{"seed": int(row["seed"]), "update": int(row["update"]),
+                 "eval_loss": float(row["eval_loss"]),
+                 "saved": row["saved"] == "True"} for row in rows]
+
+
+def already_trained(out_dir: str,
+                    seeds: Sequence[int]) -> Tuple[Dict[int, str],
+                                                   List[Dict[str, Any]]]:
+    """Return the models and evaluation history a finished run left behind.
+
+    This is what --compare-only stands on: the actors are read from disk and
+    never retrained, so the comparison can be re-run without spending the
+    training again.
+
+    Args:
+        out_dir: Where the models and the evaluation CSV live.
+        seeds:   The training seeds to compare.
+
+    Returns:
+        Training seed -> model path, and the evaluation rows.
+
+    Raises:
+        SystemExit: If a model is missing.
+    """
+    models: Dict[int, str] = {}
+    for seed in seeds:
+        path = os.path.join(out_dir, "models", f"c_actor_m3_seed{seed}.pt")
+        if not os.path.exists(path):
+            print(f"STOP: no trained model at {path}")
+            raise SystemExit(1)
+        models[seed] = path
+    evaluations = read_evaluations(os.path.join(out_dir, "2c_m3_eval.csv"))
+    kept = [row for row in evaluations if row["saved"]]
+    print(f"  re-using {len(models)} trained actors and "
+          f"{len(evaluations)} evaluations ({len(kept)} saved); "
+          f"nothing is retrained")
+    return models, [row for row in evaluations if row["seed"] in models]
 
 
 def compare_on_validation(models: Dict[int, str], pool: Any,
@@ -336,6 +394,9 @@ def main() -> None:
     parser.add_argument("--updates", type=int, default=MAX_UPDATES_M3)
     parser.add_argument("--episodes", type=int,
                         default=EPISODES_PER_UPDATE_M3)
+    parser.add_argument("--compare-only", action="store_true",
+                        help="skip training and re-run the validation "
+                             "comparison from the models already saved")
     args = parser.parse_args()
 
     clone = os.path.join(args.out_dir, "models", "c_actor_bc.pt")
@@ -353,7 +414,9 @@ def main() -> None:
     try:
         evaluations: List[Dict[str, Any]] = []
         models: Dict[int, str] = {}
-        for seed in args.seeds:
+        if args.compare_only:
+            models, evaluations = already_trained(args.out_dir, args.seeds)
+        for seed in (() if args.compare_only else args.seeds):
             print(f"\n=== training seed {seed} ===", flush=True)
             result = train_one_seed(
                 seed, pool, args.out_dir, args.updates, args.episodes,
