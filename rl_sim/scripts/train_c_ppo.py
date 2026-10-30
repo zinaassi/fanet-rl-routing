@@ -540,6 +540,9 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
             evaluations[-1]["saved"] = True
             marker = "  <- best, saved"
         elif score < best:
+            # Better, but not by enough to keep: best_update must stay on the
+            # version that was actually SAVED, or the two no longer describe
+            # the same model.
             best = score
         print(f"  seed {seed} update {update:>3}  EVALUATION "
               f"{score:6.2f}%{marker}", flush=True)
@@ -549,8 +552,10 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
                   f"a {MIN_IMPROVEMENT} point gain", flush=True)
             break
 
+    kept = [row for row in evaluations if row["saved"]]
     return {"log": log, "evaluations": evaluations, "model": model_path,
-            "best_update": best_update, "best": best}
+            "best_update": best_update, "best": best,
+            "kept": kept[-1]["eval_loss"] if kept else float("nan")}
 
 
 # ---------------------------------------------------------------------------
@@ -684,7 +689,9 @@ def plot_learning(evaluations: Sequence[Dict[str, Any]],
     for side in ("left", "bottom"):
         ax.spines[side].set_color(grid)
     ax.tick_params(colors=faint, labelsize=9)
-    ax.legend(loc="upper right", frameon=False, fontsize=10,
+    # Lower left: the curves all start high and fall to the right, and the
+    # baseline labels own the upper right.
+    ax.legend(loc="lower left", frameon=False, fontsize=10,
               labelcolor=faint)
     # Room on the right for the baseline labels.
     ax.set_xlim(left=0)
@@ -744,8 +751,12 @@ def main() -> None:
             log.extend(result["log"])
             evaluations.extend(result["evaluations"])
             models[seed] = result["model"]
-            print(f"  seed {seed}: best {result['best']:.2f}% at update "
-                  f"{result['best_update']}", flush=True)
+            # The KEPT version is the one on disk and the one compared
+            # below; the lowest score seen may belong to a later version that
+            # did not improve by enough to be saved.
+            print(f"  seed {seed}: kept {result['kept']:.2f}% at update "
+                  f"{result['best_update']}  (lowest seen "
+                  f"{result['best']:.2f}%)", flush=True)
 
         rows = compare(models, pool)
     finally:
