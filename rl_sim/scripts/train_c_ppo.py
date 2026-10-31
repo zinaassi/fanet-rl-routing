@@ -46,7 +46,8 @@ from fanet_sim import config
 from fanet_sim.envs import c_interface
 from fanet_sim.envs.c_scripted import HoverAgent, MidpointAgent
 from fanet_sim.envs.fanet_env import FANETEnv
-from scripts.metrics_1a import compute_metrics, loss_by_time_window
+from scripts.metrics_1a import (compute_metrics,
+                                loss_by_time_window, mission_spread)
 from scripts.stamp import csv_comment
 
 # --- the problem ----------------------------------------------------------
@@ -87,23 +88,32 @@ CAUSES: Tuple[str, ...] = (
 # The world
 # ---------------------------------------------------------------------------
 
-def _world(moving: bool = False):
+def _world(moving: bool = False, distance: Optional[float] = None):
     """Set the Phase-2c world and return the settings to put back.
 
     Args:
-        moving: True for M4's moving world, where the M-drones fly as they
-                do in Phase 2a. False, the default, keeps the static mission
-                M0-M3 ran on, so every one of those results stays
-                reproducible.
+        moving:   True for M4's moving world, where the M-drones fly as they
+                  do in Phase 2a. False, the default, keeps the static
+                  mission M0-M3 ran on, so every one of those results stays
+                  reproducible.
+        distance: A mission distance in metres asks for the "near_gs"
+                  curriculum mission at that D, and implies a moving world.
+                  None, the default, leaves MISSION alone, so nothing before
+                  the curriculum can see this argument at all.
 
     Returns:
         The settings _restore puts back.
     """
     previous = (config.C_RULE, config.STATIC_MODE, config.IDEAL_HELLO,
                 config.PACKET_INTERVAL_STEPS, config.HELLO_INTERVAL,
-                config.SHARE_TARGETS, config.AVOID)
+                config.SHARE_TARGETS, config.AVOID, config.MISSION,
+                config.MISSION_DISTANCE_M)
     config.C_RULE = "rl"
     config.STATIC_MODE = not moving    # the MISSION; C-drones always fly
+    if distance is not None:
+        config.MISSION = "near_gs"
+        config.MISSION_DISTANCE_M = float(distance)
+        config.STATIC_MODE = False
     config.IDEAL_HELLO = False
     config.HELLO_INTERVAL = 1.0
     config.SHARE_TARGETS = True
@@ -122,7 +132,8 @@ def _restore(previous) -> None:
     """
     (config.C_RULE, config.STATIC_MODE, config.IDEAL_HELLO,
      config.PACKET_INTERVAL_STEPS, config.HELLO_INTERVAL,
-     config.SHARE_TARGETS, config.AVOID) = previous
+     config.SHARE_TARGETS, config.AVOID, config.MISSION,
+     config.MISSION_DISTANCE_M) = previous
 
 
 # ---------------------------------------------------------------------------
@@ -202,7 +213,8 @@ class SamplingAgent:
 
 def _run_episode(layout: int, run_seed: int, state: Optional[Dict[str, Any]],
                  policy: str, greedy: bool,
-                 moving: bool = False) -> Dict[str, Any]:
+                 moving: bool = False,
+                 distance: Optional[float] = None) -> Dict[str, Any]:
     """Run one episode and return its transitions and its metrics.
 
     Args:
@@ -214,6 +226,9 @@ def _run_episode(layout: int, run_seed: int, state: Optional[Dict[str, Any]],
         greedy:   For "rl", take the mean instead of sampling.
         moving:   True for M4's moving world; False keeps M0-M3's static
                   mission.
+        distance: A mission distance in metres runs the "near_gs"
+                  curriculum mission at that D instead. None leaves the
+                  mission alone.
 
     Returns:
         The transitions (empty unless "rl") and the run's metrics.
@@ -230,7 +245,7 @@ def _run_episode(layout: int, run_seed: int, state: Optional[Dict[str, Any]],
     torch.manual_seed(int(np.random.SeedSequence(
         [run_seed, config.AGENT_STREAM_TAG]
     ).generate_state(1)[0]))
-    previous = _world(moving)
+    previous = _world(moving, distance)
     try:
         env = FANETEnv(routing=ROUTING, log_path=os.devnull,
                        placement_seed=layout, run_seed=run_seed)
@@ -281,6 +296,9 @@ def _run_episode(layout: int, run_seed: int, state: Optional[Dict[str, Any]],
             "loss_while_connected": truth["loss_while_connected"] or 0.0,
             **{f"loss_{label}": value for label, value
                in loss_by_time_window(env).items()},
+            # How far the mission itself got, which the curriculum reports
+            # beside the loss: the same numbers step 1b printed.
+            **mission_spread(env),
         }
 
         if policy == "rl" and not greedy:
@@ -333,13 +351,20 @@ def _transitions(env: Any, agent: SamplingAgent) -> Dict[str, Any]:
 def _rollout_job(args: Tuple) -> Dict[str, Any]:
     """Worker entry point for one rollout.
 
-    The job is M0-M3's 5-tuple, or a 6-tuple whose last field asks for the
-    moving world. Accepting the short form means no earlier caller had to
-    change, so their jobs are still the jobs they were.
+    The job is M0-M3's 5-tuple, a 6-tuple whose last field asks for the
+    moving world, or a 7-tuple whose last field is a mission distance in
+    metres, which asks for the "near_gs" curriculum mission at that D.
+    Accepting the short forms means no earlier caller had to change, so
+    their jobs are still the jobs they were.
+
+    The distance travels per JOB, not as a setting, because the curriculum's
+    replay puts several stages inside one update.
     """
     layout, run_seed, state, policy, greedy = args[:5]
     moving = bool(args[5]) if len(args) > 5 else False
-    return _run_episode(layout, run_seed, state, policy, greedy, moving)
+    distance = args[6] if len(args) > 6 else None
+    return _run_episode(layout, run_seed, state, policy, greedy, moving,
+                        distance)
 
 
 # ---------------------------------------------------------------------------
@@ -438,7 +463,10 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
                    min_updates: int = 0,
                    anchor: bool = True,
                    start_state: Optional[Dict[str, Any]] = None,
-                   critic_name: Optional[str] = None) -> Dict[str, Any]:
+                   critic_name: Optional[str] = None,
+                   stage_schedule: Any = None,
+                   carry: Optional[Dict[str, Any]] = None,
+                   warmup: int = CRITIC_ONLY_UPDATES) -> Dict[str, Any]:
     """Train one actor from the clone, and keep the best version.
 
     Args:
@@ -473,6 +501,17 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
         critic_name: File name under out/models/ for the critic, saved
                      whenever the actor is. None keeps the critic unsaved,
                      which is what M1-M3 did.
+        stage_schedule: (update, episodes) -> one mission distance per
+                     episode, for the curriculum, whose replay mixes stages
+                     inside a single update. None, the default, hands every
+                     job None and leaves the mission exactly as M0-M4 had it.
+        carry:       The actor, critic, normaliser and optimisers of the
+                     previous stage, so a curriculum continues instead of
+                     starting over. None, the default, builds them fresh.
+        warmup:      Updates during which only the critic learns. A later
+                     curriculum stage passes 0, because its critic is
+                     already warm and freezing the actor again would waste
+                     the stage's first ten updates.
 
     Returns:
         The log rows, the evaluation rows and where the best model went.
@@ -483,26 +522,38 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
     torch.manual_seed(seed)
     rng = np.random.default_rng(seed)
 
-    actor = GaussianActor()
-    if start_state is None:
-        clone_path = os.path.join(out_dir, "models", "c_actor_bc.pt")
-        actor.mean.load_state_dict(torch.load(clone_path, weights_only=True))
+    if carry is not None:
+        # A later stage of a curriculum: the actor, the critic, the value
+        # normaliser and both optimisers continue from where the previous
+        # stage left them. A fresh critic here would throw away everything it
+        # learned and the actor would train on noise for ten updates again.
+        actor = carry["actor"]
+        critic = carry["critic"]
+        normaliser = carry["normaliser"]
+        actor_opt = carry["actor_opt"]
+        critic_opt = carry["critic_opt"]
     else:
-        actor.load_state_dict(start_state)
-        # A continuation inherits the spread the earlier stage annealed down
-        # to, which is confidence earned in a world this run is not flying.
-        # config.CONTINUE_STD = a float puts it back; "inherit" keeps it, the
-        # behaviour M4 runs (a) and (b) actually ran under.
-        if config.CONTINUE_STD != "inherit":
-            with torch.no_grad():
-                actor.log_std.fill_(float(np.log(config.CONTINUE_STD)))
-    critic = CCritic(c_interface.global_state_width(
-        config.NUM_M_DRONES + config.NUM_C_DRONES
-    ))
-    normaliser = RunningNorm()
+        actor = GaussianActor()
+        if start_state is None:
+            clone_path = os.path.join(out_dir, "models", "c_actor_bc.pt")
+            actor.mean.load_state_dict(
+                torch.load(clone_path, weights_only=True))
+        else:
+            actor.load_state_dict(start_state)
+            # A continuation inherits the spread the earlier stage annealed
+            # down to, which is confidence earned in a world this run is not
+            # flying. config.CONTINUE_STD = a float puts it back; "inherit"
+            # keeps it, the behaviour M4 runs (a) and (b) ran under.
+            if config.CONTINUE_STD != "inherit":
+                with torch.no_grad():
+                    actor.log_std.fill_(float(np.log(config.CONTINUE_STD)))
+        critic = CCritic(c_interface.global_state_width(
+            config.NUM_M_DRONES + config.NUM_C_DRONES
+        ))
+        normaliser = RunningNorm()
 
-    actor_opt = torch.optim.Adam(actor.parameters(), lr=LEARNING_RATE)
-    critic_opt = torch.optim.Adam(critic.parameters(), lr=LEARNING_RATE)
+        actor_opt = torch.optim.Adam(actor.parameters(), lr=LEARNING_RATE)
+        critic_opt = torch.optim.Adam(critic.parameters(), lr=LEARNING_RATE)
 
     log: List[Dict[str, Any]] = []
     evaluations: List[Dict[str, Any]] = []
@@ -522,8 +573,13 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
         # Run seeds FIRST, then the layouts: the default sampler draws
         # nothing, so M2's stream is bit-for-bit what it was.
         episode_layouts = layouts(rng, episodes)
-        jobs = [(int(layout), int(s), state, "rl", False, moving)
-                for layout, s in zip(episode_layouts, run_seeds)]
+        # The curriculum hands back one mission distance per episode, because
+        # its replay puts several stages inside a single update. Without a
+        # schedule every job is None, which is M0-M4's world untouched.
+        distances = (stage_schedule(update, episodes)
+                     if stage_schedule is not None else [None] * episodes)
+        jobs = [(int(layout), int(s), state, "rl", False, moving, d)
+                for layout, s, d in zip(episode_layouts, run_seeds, distances)]
         results = (list(pool.map(_rollout_job, jobs)) if pool is not None
                    else [_rollout_job(job) for job in jobs])
 
@@ -566,7 +622,7 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
         )
 
         weight = anchor_weight(update) if anchor else 0.0
-        train_actor = update > CRITIC_ONLY_UPDATES
+        train_actor = update > warmup
         policy_loss = value_loss = anchor_loss = 0.0
 
         for _ in range(EPOCHS_PER_UPDATE):
@@ -636,12 +692,21 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
         eval_results = (list(pool.map(_rollout_job, jobs_now))
                         if pool is not None
                         else [_rollout_job(job) for job in jobs_now])
+        # The training rollouts above already refuse to learn from a run
+        # whose ACK view disagreed with the simulator. The evaluation is the
+        # number that gets reported, so it is checked too.
+        agreed = sum(1 for r in eval_results if r["views_agree"])
+        if agreed != len(eval_results):
+            raise RuntimeError(
+                f"views disagreed in {len(eval_results) - agreed} of "
+                f"{len(eval_results)} evaluation runs at update {update}"
+            )
         score = statistics.fmean(
             [r["total_loss"] for r in eval_results]
         ) * 100
         evaluations.append({
             "seed": seed, "update": update, "eval_loss": score,
-            "saved": False,
+            "saved": False, "views_agree": f"{agreed}/{len(eval_results)}",
         })
         if score < best - min_improvement:
             best, best_update = score, update
@@ -674,6 +739,12 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
     kept = [row for row in evaluations if row["saved"]]
     return {"log": log, "evaluations": evaluations, "model": model_path,
             "best_update": best_update, "best": best,
+            "updates_used": len(log),
+            # The live objects, so a curriculum's next stage can go on from
+            # here instead of starting its critic cold.
+            "carry": {"actor": actor, "critic": critic,
+                      "normaliser": normaliser, "actor_opt": actor_opt,
+                      "critic_opt": critic_opt},
             "kept": kept[-1]["eval_loss"] if kept else float("nan")}
 
 

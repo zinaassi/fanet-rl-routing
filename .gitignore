@@ -51,6 +51,8 @@ scratch/
 .DS_Store
 Thumbs.db
 !rl_sim/out/2c_*.csv
+# The curriculum records its settings and seeds as JSON beside its CSVs.
+!rl_sim/out/2c_*.json
 
 # The Phase-2c networks themselves. out/models/ is ignored wholesale above,
 # so each level has to be let through before the files inside can be: the

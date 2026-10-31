@@ -44,6 +44,8 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import numpy as np
+
 from fanet_sim import config
 from fanet_sim.envs.drone import LINK_FIELDS
 from fanet_sim.envs.fanet_env import FANETEnv
@@ -138,6 +140,53 @@ def loss_by_time_window(env: FANETEnv,
 
 #: The three ways a packet offered to a link fails to get across.
 LOSS_PARTS = ("dropped_queue_full", "lost_channel", "expired_in_queue")
+
+
+def mission_spread(env: FANETEnv) -> Dict[str, Any]:
+    """Return how far the mission got, measured at the last step.
+
+    The reach is read from the loss curve, never typed in: it is the distance
+    at which a link stops existing, so "beyond the reach" means "cannot talk
+    to the GS directly, whatever the geometry in between".
+
+    A flight the border clipped ends exactly ON the margin line in at least
+    one axis. One that was not clipped ends at whatever real coordinate its
+    drawn distance reached, so landing on the margin otherwise has
+    probability zero. Nothing is clipped in a static world, where no end
+    point was ever drawn.
+
+    Args:
+        env: A finished environment.
+
+    Returns:
+        Mean M-drone distance from the GS, the share beyond the reach, the
+        share the border cut short, and the reach itself.
+    """
+    from fanet_sim.envs import channel
+
+    gs = np.asarray(config.GS_POSITION, dtype=np.float64)
+    reach = channel.max_link_distance()
+    margin = config.BORDER_MARGIN_M
+    m_drones = [drone for drone in env.drones if drone.drone_type == "M"]
+    distances = [float(np.linalg.norm(drone.position - gs))
+                 for drone in m_drones]
+
+    def _clipped(drone: Any) -> bool:
+        return any(abs(drone.end_point[axis] - edge) < 1e-9
+                   for axis, extent in ((0, config.WIDTH),
+                                        (1, config.HEIGHT))
+                   for edge in (margin, extent - margin))
+
+    clipped = (0 if config.STATIC_MODE
+               else sum(1 for drone in m_drones if _clipped(drone)))
+
+    return {
+        "m_gs_distance_end_mean": statistics.fmean(distances),
+        "pct_m_beyond_reach_end": 100.0 * sum(
+            1 for d in distances if d > reach) / len(distances),
+        "pct_m_clipped_end": 100.0 * clipped / len(m_drones),
+        "reach_m": reach,
+    }
 
 
 def _link_loss_rows(

@@ -47,6 +47,7 @@ from scripts.metrics_1a import (
     compare_views,
     ground_truth_view,
     loss_by_time_window,
+    mission_spread,
     time_window_labels,
 )
 from scripts.stamp import csv_comment
@@ -165,45 +166,17 @@ def label_for(distance: float) -> str:
 def _spread(env: FANETEnv) -> Dict[str, float]:
     """Return how far the mission got, measured at the end of the run.
 
-    The reach is read from the loss curve, not typed in: it is the distance
-    at which a link stops existing, so "farther than the reach" means "cannot
-    talk to the GS directly, whatever the geometry in between".
+    One line, because the measurement itself lives in metrics_1a and the
+    trainer reports the same numbers from the same function. Keeping two
+    copies is how the two tables would drift apart.
 
     Args:
         env: A finished environment.
 
     Returns:
-        Mean M-drone distance from the GS, the share beyond the reach, and
-        the share whose flight the border cut short.
+        What :func:`scripts.metrics_1a.mission_spread` returns.
     """
-    gs = np.asarray(config.GS_POSITION, dtype=np.float64)
-    reach = channel.max_link_distance()
-    margin = config.BORDER_MARGIN_M
-    m_drones = [drone for drone in env.drones if drone.drone_type == "M"]
-    distances = [float(np.linalg.norm(drone.position - gs))
-                 for drone in m_drones]
-    beyond = sum(1 for d in distances if d > reach)
-
-    # A flight the border clipped ends exactly ON the margin line in at least
-    # one axis. One that was not clipped ends at whatever real coordinate the
-    # drawn distance reached, so landing on the margin otherwise has
-    # probability zero. Nothing is clipped in the static world, where no end
-    # point was ever drawn.
-    def _clipped(drone) -> bool:
-        return any(abs(drone.end_point[axis] - edge) < 1e-9
-                   for axis, extent in ((0, config.WIDTH),
-                                        (1, config.HEIGHT))
-                   for edge in (margin, extent - margin))
-
-    clipped = (0 if config.STATIC_MODE
-               else sum(1 for drone in m_drones if _clipped(drone)))
-
-    return {
-        "m_gs_distance_end_mean": statistics.fmean(distances),
-        "pct_m_beyond_reach_end": 100.0 * beyond / len(distances),
-        "pct_m_clipped_end": 100.0 * clipped / len(m_drones),
-        "reach_m": reach,
-    }
+    return mission_spread(env)
 
 
 def run_once(distance: float, rule: str, layout: int,
