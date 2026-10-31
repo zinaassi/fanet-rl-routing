@@ -483,3 +483,85 @@ def test_the_trainer_is_the_thing_that_applies_it() -> None:
     # A fresh actor is already at 0.1, so the clone branch needs no reset and
     # must not have grown one: that would change what M0-M2 trained from.
     assert "CONTINUE_STD" not in source[clone:loaded]
+
+
+# --- the curriculum sweep --------------------------------------------------
+
+def test_the_static_sentinel_reproduces_m3() -> None:
+    """D = STATIC must be the world M0-M3 ran in, to the bit.
+
+    The reference row in the curriculum tables is only worth having if it is
+    the same measurement M3 already published, so this reruns two of M3's
+    committed validation rows through the sweep's own code path.
+
+    It also pins AVOID: M3 ran with collision avoidance ON, and step 1 ran
+    with it off because the sweep left it to the config default. Under the
+    wrong setting these numbers do not match.
+    """
+    from scripts.curriculum_step1 import STATIC, run_once
+
+    path = os.path.join(OUT, "2c_m3_compare.csv")
+    committed = {}
+    for row in csv.DictReader(
+            line for line in open(path) if not line.startswith("#")):
+        if row["policy"] in ("hover", "midpoint"):
+            committed[(row["policy"], int(row["placement_seed"]))] = (
+                100.0 * float(row["total_loss"]))
+
+    for rule in ("hover", "midpoint"):
+        fresh = run_once(STATIC, rule, 301, avoid=True)
+        assert fresh["total_loss"] == pytest.approx(
+            committed[(rule, 301)], abs=1e-9
+        ), f"{rule} no longer reproduces M3's static validation row"
+        assert fresh["pct_m_clipped_end"] == 0.0, "nothing flies in static"
+
+
+def test_the_sweep_runs_with_avoidance_on_by_default() -> None:
+    """Step 1 took the config default, which is OFF, against every other 2c
+    result. The sweep now says what it wants."""
+    from scripts.curriculum_step1 import AVOID
+
+    assert AVOID is True
+    assert config.AVOID is False, "the config default is still off"
+
+
+def test_clipping_is_counted_only_when_it_happens(near_gs) -> None:
+    """Short flights from the middle cannot reach a border; long ones do."""
+    from scripts.curriculum_step1 import _spread
+
+    near_gs(150.0)
+    env = fleet()
+    short = _spread(env)
+    env.close_logger()
+
+    near_gs(650.0)
+    env = fleet()
+    long = _spread(env)
+    env.close_logger()
+
+    assert short["pct_m_clipped_end"] == 0.0
+    assert long["pct_m_clipped_end"] > 0.0
+
+
+def test_a_clipped_flight_is_one_that_sits_on_the_margin(near_gs) -> None:
+    """The geometric test the sweep uses, checked against the drawn distance.
+
+    A clipped end point is shorter than [D/2, D] would have made it; an
+    unclipped one is inside that band. If the two ever disagree the column
+    is measuring something else.
+    """
+    near_gs(650.0)
+    env = fleet()
+    margin = config.BORDER_MARGIN_M
+    for drone in env.drones:
+        if drone.drone_type != "M":
+            continue
+        flown = float(np.linalg.norm(drone.end_point - drone.start_point))
+        on_margin = any(
+            abs(drone.end_point[axis] - edge) < 1e-9
+            for axis, extent in ((0, config.WIDTH), (1, config.HEIGHT))
+            for edge in (margin, extent - margin)
+        )
+        if not on_margin:
+            assert 0.5 * 650.0 - 1e-9 <= flown <= 650.0 + 1e-9
+    env.close_logger()

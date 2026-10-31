@@ -61,6 +61,12 @@ VALIDATION_RUN_SEED_BASE: int = 9100
 #: The rungs of the dial, in metres. 0 is "nobody moves".
 DISTANCES: Tuple[float, ...] = (0.0, 150.0, 250.0, 350.0)
 
+#: Stands in for "the static world" in the distance list: the Phase-1 layout,
+#: uniform over the whole arena, with nothing moving at all. Not a rung of
+#: this curriculum -- it is the world M0-M3 trained in, carried along as a
+#: reference row so the rungs can be read against something known.
+STATIC: float = -1.0
+
 #: The two hand-written rules. No RL here: nothing has been trained on this
 #: mission yet, and that is the point of the step.
 RULES: Tuple[str, ...] = ("hover", "midpoint")
@@ -69,6 +75,11 @@ LOAD_MS: int = 200
 ROUTING: str = "greedy"
 HELLO_INTERVAL_S: float = 1.0
 TARGET_SPREAD_M: float = 150.0
+
+#: C-drone collision avoidance. True is what M3 and M4 ran and what the
+#: design keeps; it is set explicitly here because leaving it to the config
+#: default silently ran step 1 with it OFF, against every other 2c result.
+AVOID: bool = True
 
 CAUSES: Tuple[str, ...] = (
     "channel", "queue_full", "no_route", "dead_end", "ttl", "hop_limit",
@@ -88,15 +99,16 @@ def run_seed_for(layout: int) -> int:
     return VALIDATION_RUN_SEED_BASE + layout - VALIDATION_LAYOUTS[0]
 
 
-def _world(distance: float, rule: str) -> Tuple:
+def _world(distance: float, rule: str, avoid: bool = AVOID) -> Tuple:
     """Put config on the curriculum mission and return what it was.
 
     Set inside the worker, because a spawned process imports config fresh and
     inherits nothing the parent changed.
 
     Args:
-        distance: D in metres.
+        distance: D in metres, or STATIC for the Phase-1 static world.
         rule:     "hover" or "midpoint".
+        avoid:    C-drone collision avoidance.
 
     Returns:
         The previous values, for :func:`_restore`.
@@ -104,15 +116,22 @@ def _world(distance: float, rule: str) -> Tuple:
     previous = (config.MISSION, config.MISSION_DISTANCE_M, config.STATIC_MODE,
                 config.C_RULE, config.IDEAL_HELLO, config.HELLO_INTERVAL,
                 config.SHARE_TARGETS, config.C_TARGET_SPREAD_M,
-                config.PACKET_INTERVAL_STEPS)
-    config.MISSION = "near_gs"
-    config.MISSION_DISTANCE_M = float(distance)
-    config.STATIC_MODE = False      # the MISSION flies; D = 0 just means 0 m
+                config.PACKET_INTERVAL_STEPS, config.AVOID)
+    if distance == STATIC:
+        # The world M0-M3 ran in: uniform placement over the whole arena and
+        # no mission movement. MISSION is left alone because nothing reads it
+        # while STATIC_MODE is on.
+        config.STATIC_MODE = True
+    else:
+        config.MISSION = "near_gs"
+        config.MISSION_DISTANCE_M = float(distance)
+        config.STATIC_MODE = False  # the MISSION flies; D = 0 means 0 m
     config.C_RULE = rule
     config.IDEAL_HELLO = False
     config.HELLO_INTERVAL = HELLO_INTERVAL_S
     config.SHARE_TARGETS = True     # inert for hover: only midpoint and
     config.C_TARGET_SPREAD_M = TARGET_SPREAD_M   # busiest choose a target
+    config.AVOID = avoid
     config.PACKET_INTERVAL_STEPS = int(
         round(LOAD_MS / 1000.0 / config.TIMESTEP)
     )
@@ -128,7 +147,19 @@ def _restore(previous: Tuple) -> None:
     (config.MISSION, config.MISSION_DISTANCE_M, config.STATIC_MODE,
      config.C_RULE, config.IDEAL_HELLO, config.HELLO_INTERVAL,
      config.SHARE_TARGETS, config.C_TARGET_SPREAD_M,
-     config.PACKET_INTERVAL_STEPS) = previous
+     config.PACKET_INTERVAL_STEPS, config.AVOID) = previous
+
+
+def label_for(distance: float) -> str:
+    """Return how a distance is printed.
+
+    Args:
+        distance: D in metres, or STATIC.
+
+    Returns:
+        "static", or the distance in metres.
+    """
+    return "static" if distance == STATIC else f"{distance:.0f}"
 
 
 def _spread(env: FANETEnv) -> Dict[str, float]:
@@ -142,32 +173,53 @@ def _spread(env: FANETEnv) -> Dict[str, float]:
         env: A finished environment.
 
     Returns:
-        Mean M-drone distance from the GS, and the share beyond the reach.
+        Mean M-drone distance from the GS, the share beyond the reach, and
+        the share whose flight the border cut short.
     """
     gs = np.asarray(config.GS_POSITION, dtype=np.float64)
     reach = channel.max_link_distance()
+    margin = config.BORDER_MARGIN_M
+    m_drones = [drone for drone in env.drones if drone.drone_type == "M"]
     distances = [float(np.linalg.norm(drone.position - gs))
-                 for drone in env.drones if drone.drone_type == "M"]
+                 for drone in m_drones]
     beyond = sum(1 for d in distances if d > reach)
+
+    # A flight the border clipped ends exactly ON the margin line in at least
+    # one axis. One that was not clipped ends at whatever real coordinate the
+    # drawn distance reached, so landing on the margin otherwise has
+    # probability zero. Nothing is clipped in the static world, where no end
+    # point was ever drawn.
+    def _clipped(drone) -> bool:
+        return any(abs(drone.end_point[axis] - edge) < 1e-9
+                   for axis, extent in ((0, config.WIDTH),
+                                        (1, config.HEIGHT))
+                   for edge in (margin, extent - margin))
+
+    clipped = (0 if config.STATIC_MODE
+               else sum(1 for drone in m_drones if _clipped(drone)))
+
     return {
         "m_gs_distance_end_mean": statistics.fmean(distances),
         "pct_m_beyond_reach_end": 100.0 * beyond / len(distances),
+        "pct_m_clipped_end": 100.0 * clipped / len(m_drones),
         "reach_m": reach,
     }
 
 
-def run_once(distance: float, rule: str, layout: int) -> Dict[str, Any]:
+def run_once(distance: float, rule: str, layout: int,
+             avoid: bool = AVOID) -> Dict[str, Any]:
     """Run one layout under one rule at one D.
 
     Args:
-        distance: D in metres.
+        distance: D in metres, or STATIC.
         rule:     "hover" or "midpoint".
         layout:   Placement seed.
+        avoid:    C-drone collision avoidance.
 
     Returns:
         The row for the runs CSV.
     """
-    previous = _world(distance, rule)
+    previous = _world(distance, rule, avoid)
     try:
         run_seed = run_seed_for(layout)
         env = FANETEnv(routing=ROUTING, log_path=os.devnull,
@@ -187,6 +239,8 @@ def run_once(distance: float, rule: str, layout: int) -> Dict[str, Any]:
 
         return {
             "mission_distance_m": distance,
+            "setting": label_for(distance),
+            "avoid": avoid,
             "rule": rule,
             "placement_seed": layout,
             "run_seed": run_seed,
@@ -210,7 +264,7 @@ def _job(args: Tuple) -> Dict[str, Any]:
     """Unpack one job for the pool.
 
     Args:
-        args: (distance, rule, layout).
+        args: (distance, rule, layout, avoid).
 
     Returns:
         The run's row.
@@ -218,23 +272,31 @@ def _job(args: Tuple) -> Dict[str, Any]:
     return run_once(*args)
 
 
-def build_jobs() -> List[Tuple]:
-    """Return every (D, rule, layout) to run.
+def build_jobs(distances: Sequence[float] = DISTANCES,
+               avoid: bool = AVOID) -> List[Tuple]:
+    """Return every (D, rule, layout, avoid) to run.
+
+    Args:
+        distances: The settings to sweep, STATIC included if wanted.
+        avoid:     C-drone collision avoidance.
 
     Returns:
-        240 jobs: four distances, two rules, thirty layouts.
+        One job per (setting, rule, layout).
     """
-    return [(distance, rule, layout)
-            for distance in DISTANCES
+    return [(distance, rule, layout, avoid)
+            for distance in distances
             for rule in RULES
             for layout in VALIDATION_LAYOUTS]
 
 
-def run_grid(workers: int) -> List[Dict[str, Any]]:
+def run_grid(workers: int, distances: Sequence[float] = DISTANCES,
+             avoid: bool = AVOID) -> List[Dict[str, Any]]:
     """Run every job and return its rows.
 
     Args:
-        workers: Pool size.
+        workers:   Pool size.
+        distances: The settings to sweep.
+        avoid:     C-drone collision avoidance.
 
     Returns:
         One row per job.
@@ -242,10 +304,10 @@ def run_grid(workers: int) -> List[Dict[str, Any]]:
     Raises:
         RuntimeError: If any run's ACK view disagreed with the simulator.
     """
-    jobs = build_jobs()
-    print(f"Running {len(jobs)} runs: {len(DISTANCES)} distances x "
+    jobs = build_jobs(distances, avoid)
+    print(f"Running {len(jobs)} runs: {len(distances)} settings x "
           f"{len(RULES)} rules x {len(VALIDATION_LAYOUTS)} layouts, "
-          f"no training ...", flush=True)
+          f"avoid={avoid}, no training ...", flush=True)
 
     if workers > 1:
         context = multiprocessing.get_context("spawn")
@@ -288,34 +350,42 @@ def _std(values: Sequence[Optional[float]]) -> float:
     return statistics.stdev(present) if len(present) > 1 else 0.0
 
 
-def summarise(rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+SUMMARY_MEANS: Tuple[str, ...] = (
+    ("total_loss",) + CAUSES
+    + ("pct_packets_connected", "loss_while_connected")
+    + tuple(f"loss_{label}" for label in time_window_labels())
+    + ("m_gs_distance_end_mean", "pct_m_beyond_reach_end",
+       "pct_m_clipped_end", "c_distance_flown_mean")
+)
+
+
+def summarise(rows: Sequence[Dict[str, Any]],
+              distances: Sequence[float] = DISTANCES
+              ) -> List[Dict[str, Any]]:
     """Collapse the per-layout rows to one row per (D, rule).
 
     Args:
-        rows: Every run's row.
+        rows:      Every run's row.
+        distances: The settings, in the order to report them.
 
     Returns:
         One row per setting, in the order the grid was built.
     """
-    columns = (("total_loss",) + CAUSES
-               + ("pct_packets_connected", "loss_while_connected")
-               + tuple(f"loss_{label}" for label in time_window_labels())
-               + ("m_gs_distance_end_mean", "pct_m_beyond_reach_end",
-                  "c_distance_flown_mean"))
-
     out: List[Dict[str, Any]] = []
-    for distance in DISTANCES:
+    for distance in distances:
         for rule in RULES:
             group = [row for row in rows
                      if row["mission_distance_m"] == distance
                      and row["rule"] == rule]
             summary: Dict[str, Any] = {
                 "mission_distance_m": distance,
+                "setting": label_for(distance),
+                "avoid": group[0]["avoid"] if group else None,
                 "rule": rule,
                 "layouts": len(group),
                 "total_loss_std": _std([row["total_loss"] for row in group]),
             }
-            for column in columns:
+            for column in SUMMARY_MEANS:
                 summary[column] = _mean([row[column] for row in group])
             out.append(summary)
     return out
@@ -328,14 +398,14 @@ def print_totals(summary: Sequence[Dict[str, Any]]) -> None:
         summary: The per-setting rows.
     """
     print("\n  Validation 301-330, near_gs mission — % of packets created")
-    header = f"  {'D':>5} {'rule':>9} {'total':>8} {'std':>6}"
+    header = f"  {'D':>6} {'rule':>9} {'total':>8} {'std':>6}"
     header += "".join(f"{cause[:9]:>11}" for cause in CAUSES)
     header += f"{'conn%':>9}{'loss|conn':>11}"
     print("  " + "-" * (len(header) + 2))
     print(header)
     print("  " + "-" * (len(header) + 2))
     for row in summary:
-        line = (f"  {row['mission_distance_m']:>5.0f} {row['rule']:>9} "
+        line = (f"  {row['setting']:>6} {row['rule']:>9} "
                 f"{row['total_loss']:>7.2f}% {row['total_loss_std']:>6.2f}")
         line += "".join(f"{row[cause]:>10.2f}%" for cause in CAUSES)
         line += (f"{row['pct_packets_connected']:>8.2f}%"
@@ -353,12 +423,12 @@ def print_windows(summary: Sequence[Dict[str, Any]]) -> None:
     labels = time_window_labels()
     print("\n  Loss per ten seconds, by the slice a packet was created in"
           " — % of packets created in that slice")
-    header = f"  {'D':>5} {'rule':>9}" + "".join(f"{l:>9}" for l in labels)
+    header = f"  {'D':>6} {'rule':>9}" + "".join(f"{l:>9}" for l in labels)
     print("  " + "-" * (len(header) + 2))
     print(header)
     print("  " + "-" * (len(header) + 2))
     for row in summary:
-        line = f"  {row['mission_distance_m']:>5.0f} {row['rule']:>9}"
+        line = f"  {row['setting']:>6} {row['rule']:>9}"
         line += "".join(f"{row[f'loss_{label}']:>8.2f}%" for label in labels)
         print(line)
     print("  " + "-" * (len(header) + 2))
@@ -375,15 +445,16 @@ def print_spread(summary: Sequence[Dict[str, Any]],
     reach = rows[0]["reach_m"] if rows else channel.max_link_distance()
     print(f"\n  Where the mission ended up, at the last step "
           f"(reach = {reach:.0f} m)")
-    header = (f"  {'D':>5} {'rule':>9} {'mean M from GS':>16} "
-              f"{'% M beyond reach':>18} {'C flown':>10}")
+    header = (f"  {'D':>6} {'rule':>9} {'mean M from GS':>16} "
+              f"{'% M beyond reach':>18} {'% M clipped':>13} {'C flown':>10}")
     print("  " + "-" * (len(header) + 2))
     print(header)
     print("  " + "-" * (len(header) + 2))
     for row in summary:
-        print(f"  {row['mission_distance_m']:>5.0f} {row['rule']:>9} "
+        print(f"  {row['setting']:>6} {row['rule']:>9} "
               f"{row['m_gs_distance_end_mean']:>15.1f}m "
               f"{row['pct_m_beyond_reach_end']:>17.1f}% "
+              f"{row['pct_m_clipped_end']:>12.1f}% "
               f"{row['c_distance_flown_mean']:>9.0f}m")
     print("  " + "-" * (len(header) + 2))
 
@@ -396,13 +467,17 @@ def print_against_hover(summary: Sequence[Dict[str, Any]]) -> None:
     """
     print("\n  What midpoint is worth at each D — points of total loss")
     print("  " + "-" * 52)
-    print(f"  {'D':>5} {'hover':>9} {'midpoint':>10} {'difference':>12}")
+    print(f"  {'D':>6} {'hover':>9} {'midpoint':>10} {'difference':>12}")
     print("  " + "-" * 52)
-    for distance in DISTANCES:
-        rules = {row["rule"]: row["total_loss"] for row in summary
-                 if row["mission_distance_m"] == distance}
+    seen = []
+    for row in summary:
+        if row["mission_distance_m"] in seen:
+            continue
+        seen.append(row["mission_distance_m"])
+        rules = {other["rule"]: other["total_loss"] for other in summary
+                 if other["mission_distance_m"] == row["mission_distance_m"]}
         difference = rules["midpoint"] - rules["hover"]
-        print(f"  {distance:>5.0f} {rules['hover']:>8.2f}% "
+        print(f"  {row['setting']:>6} {rules['hover']:>8.2f}% "
               f"{rules['midpoint']:>9.2f}% {difference:>11.2f}")
     print("  " + "-" * 52)
 
@@ -429,19 +504,25 @@ def write_csv(path: str, rows: Sequence[Dict[str, Any]],
     print(f"  wrote {path}")
 
 
-def stamp_note() -> str:
+def stamp_note(distances: Sequence[float] = DISTANCES,
+               avoid: bool = AVOID) -> str:
     """Return the mission settings, for the stamp.
+
+    Args:
+        distances: The settings this sweep covered.
+        avoid:     C-drone collision avoidance.
 
     Returns:
         A short description of the mission this sweep flew.
     """
     return (f"phase 2c curriculum step 1, mission=near_gs, "
-            f"D={'/'.join(f'{d:.0f}' for d in DISTANCES)} m, "
+            f"D={'/'.join(label_for(d) for d in distances)} m, "
             f"start_radius={config.START_RADIUS_M:.0f} m, "
             f"min_spacing={config.MIN_SPACING_M:.0f} m, "
             f"validation {VALIDATION_LAYOUTS[0]}-{VALIDATION_LAYOUTS[-1]}, "
             f"hellos {HELLO_INTERVAL_S:.0f} s, target spread "
-            f"{TARGET_SPREAD_M:.0f} m, greedy routing, NO training")
+            f"{TARGET_SPREAD_M:.0f} m, avoid={avoid}, greedy routing, "
+            f"NO training")
 
 
 def main() -> None:
@@ -452,33 +533,44 @@ def main() -> None:
     parser.add_argument("--out-dir", type=str, default="out")
     parser.add_argument("--workers", type=int,
                         default=min(20, os.cpu_count() or 1))
+    parser.add_argument("--distances", type=float, nargs="+",
+                        default=list(DISTANCES),
+                        help="D in metres; -1 means the static world")
+    parser.add_argument("--out-prefix", type=str, default="2c_curriculum1")
+    parser.add_argument("--no-avoid", dest="avoid", action="store_false",
+                        default=AVOID,
+                        help="C-drone collision avoidance off, as step 1 "
+                             "ran before it was set explicitly")
     args = parser.parse_args()
 
-    rows = run_grid(args.workers)
-    summary = summarise(rows)
+    distances = tuple(args.distances)
+    rows = run_grid(args.workers, distances, args.avoid)
+    summary = summarise(rows, distances)
 
     print_totals(summary)
     print_windows(summary)
     print_spread(summary, rows)
     print_against_hover(summary)
 
-    run_columns = (["mission_distance_m", "rule", "placement_seed",
-                    "run_seed", "total_loss"] + list(CAUSES)
+    run_columns = (["mission_distance_m", "setting", "avoid", "rule",
+                    "placement_seed", "run_seed", "total_loss"] + list(CAUSES)
                    + ["pct_packets_connected", "loss_while_connected"]
                    + [f"loss_{label}" for label in time_window_labels()]
                    + ["m_gs_distance_end_mean", "pct_m_beyond_reach_end",
-                      "reach_m", "c_distance_flown_mean", "views_agree"])
-    summary_columns = (["mission_distance_m", "rule", "layouts",
-                        "total_loss", "total_loss_std"] + list(CAUSES)
+                      "pct_m_clipped_end", "reach_m",
+                      "c_distance_flown_mean", "views_agree"])
+    summary_columns = (["mission_distance_m", "setting", "avoid", "rule",
+                        "layouts", "total_loss", "total_loss_std"]
+                       + list(CAUSES)
                        + ["pct_packets_connected", "loss_while_connected"]
                        + [f"loss_{label}" for label in time_window_labels()]
                        + ["m_gs_distance_end_mean", "pct_m_beyond_reach_end",
-                          "c_distance_flown_mean"])
+                          "pct_m_clipped_end", "c_distance_flown_mean"])
 
-    note = stamp_note()
-    write_csv(os.path.join(args.out_dir, "2c_curriculum1.csv"),
+    note = stamp_note(distances, args.avoid)
+    write_csv(os.path.join(args.out_dir, f"{args.out_prefix}.csv"),
               rows, run_columns, note)
-    write_csv(os.path.join(args.out_dir, "2c_curriculum1_summary.csv"),
+    write_csv(os.path.join(args.out_dir, f"{args.out_prefix}_summary.csv"),
               summary, summary_columns, note)
 
 
