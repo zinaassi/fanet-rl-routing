@@ -51,3 +51,13 @@ scratch/
 .DS_Store
 Thumbs.db
 !rl_sim/out/2c_*.csv
+
+# The Phase-2c networks themselves. out/models/ is ignored wholesale above,
+# so each level has to be let through before the files inside can be: the
+# directory, then everything directly in it back out, then 2c/ and its
+# weights. Only 2c/ is tracked; the loose M1/M2/M3 files keep their old
+# paths, and the copies under 2c/ are what the repo carries.
+!rl_sim/out/models/
+rl_sim/out/models/*
+!rl_sim/out/models/2c/
+!rl_sim/out/models/2c/*.pt

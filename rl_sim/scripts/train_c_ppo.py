@@ -46,7 +46,7 @@ from fanet_sim import config
 from fanet_sim.envs import c_interface
 from fanet_sim.envs.c_scripted import HoverAgent, MidpointAgent
 from fanet_sim.envs.fanet_env import FANETEnv
-from scripts.metrics_1a import compute_metrics
+from scripts.metrics_1a import compute_metrics, loss_by_time_window
 from scripts.stamp import csv_comment
 
 # --- the problem ----------------------------------------------------------
@@ -87,13 +87,23 @@ CAUSES: Tuple[str, ...] = (
 # The world
 # ---------------------------------------------------------------------------
 
-def _world():
-    """Set the M0-M3 world and return the settings to put back."""
+def _world(moving: bool = False):
+    """Set the Phase-2c world and return the settings to put back.
+
+    Args:
+        moving: True for M4's moving world, where the M-drones fly as they
+                do in Phase 2a. False, the default, keeps the static mission
+                M0-M3 ran on, so every one of those results stays
+                reproducible.
+
+    Returns:
+        The settings _restore puts back.
+    """
     previous = (config.C_RULE, config.STATIC_MODE, config.IDEAL_HELLO,
                 config.PACKET_INTERVAL_STEPS, config.HELLO_INTERVAL,
                 config.SHARE_TARGETS, config.AVOID)
     config.C_RULE = "rl"
-    config.STATIC_MODE = True          # the MISSION is static; C-drones fly
+    config.STATIC_MODE = not moving    # the MISSION; C-drones always fly
     config.IDEAL_HELLO = False
     config.HELLO_INTERVAL = 1.0
     config.SHARE_TARGETS = True
@@ -191,7 +201,8 @@ class SamplingAgent:
 # ---------------------------------------------------------------------------
 
 def _run_episode(layout: int, run_seed: int, state: Optional[Dict[str, Any]],
-                 policy: str, greedy: bool) -> Dict[str, Any]:
+                 policy: str, greedy: bool,
+                 moving: bool = False) -> Dict[str, Any]:
     """Run one episode and return its transitions and its metrics.
 
     Args:
@@ -201,6 +212,8 @@ def _run_episode(layout: int, run_seed: int, state: Optional[Dict[str, Any]],
         state:    Actor weights, for the "rl" policy.
         policy:   "rl", "midpoint", "hover" or "clone".
         greedy:   For "rl", take the mean instead of sampling.
+        moving:   True for M4's moving world; False keeps M0-M3's static
+                  mission.
 
     Returns:
         The transitions (empty unless "rl") and the run's metrics.
@@ -217,7 +230,7 @@ def _run_episode(layout: int, run_seed: int, state: Optional[Dict[str, Any]],
     torch.manual_seed(int(np.random.SeedSequence(
         [run_seed, config.AGENT_STREAM_TAG]
     ).generate_state(1)[0]))
-    previous = _world()
+    previous = _world(moving)
     try:
         env = FANETEnv(routing=ROUTING, log_path=os.devnull,
                        placement_seed=layout, run_seed=run_seed)
@@ -261,6 +274,13 @@ def _run_episode(layout: int, run_seed: int, state: Optional[Dict[str, Any]],
                 [r["reward"] for r in env.c_decisions
                  if r["reward"] is not None] or [0.0]
             ),
+            # Only M4 reports these, but they cost a pass over the packet
+            # list beside a thousand simulated steps, so they are always
+            # here rather than behind another flag.
+            "pct_packets_connected": truth["pct_packets_connected"] or 0.0,
+            "loss_while_connected": truth["loss_while_connected"] or 0.0,
+            **{f"loss_{label}": value for label, value
+               in loss_by_time_window(env).items()},
         }
 
         if policy == "rl" and not greedy:
@@ -311,9 +331,15 @@ def _transitions(env: Any, agent: SamplingAgent) -> Dict[str, Any]:
 
 
 def _rollout_job(args: Tuple) -> Dict[str, Any]:
-    """Worker entry point for one rollout."""
-    layout, run_seed, state, policy, greedy = args
-    return _run_episode(layout, run_seed, state, policy, greedy)
+    """Worker entry point for one rollout.
+
+    The job is M0-M3's 5-tuple, or a 6-tuple whose last field asks for the
+    moving world. Accepting the short form means no earlier caller had to
+    change, so their jobs are still the jobs they were.
+    """
+    layout, run_seed, state, policy, greedy = args[:5]
+    moving = bool(args[5]) if len(args) > 5 else False
+    return _run_episode(layout, run_seed, state, policy, greedy, moving)
 
 
 # ---------------------------------------------------------------------------
@@ -407,7 +433,12 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
                    min_improvement: float = MIN_IMPROVEMENT,
                    patience: int = PATIENCE,
                    model_name: Optional[str] = None,
-                   progress: Any = None) -> Dict[str, Any]:
+                   progress: Any = None,
+                   moving: bool = False,
+                   min_updates: int = 0,
+                   anchor: bool = True,
+                   start_state: Optional[Dict[str, Any]] = None,
+                   critic_name: Optional[str] = None) -> Dict[str, Any]:
     """Train one actor from the clone, and keep the best version.
 
     Args:
@@ -428,6 +459,20 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
         model_name:  File name under out/models/, or None for M2's.
         progress:    Called with (log rows, evaluation rows) after every
                      update, so an interrupted run keeps what it has.
+        moving:      Run the episodes in M4's moving world.
+        min_updates: Never stop early before this update. M4 asks for this
+                     because the moving world is harder and an actor that
+                     has plateaued at update 100 may still be climbing out
+                     of it at 300.
+        anchor:      Keep the fading stay-near-midpoint term. M4's main runs
+                     start from an actor that already knows the task, so
+                     pulling it back towards midpoint would only undo that.
+        start_state: Weights to start the actor from, the whole Gaussian
+                     actor. None, the default, is M2's: the clone loaded
+                     into the mean and a fresh log_std.
+        critic_name: File name under out/models/ for the critic, saved
+                     whenever the actor is. None keeps the critic unsaved,
+                     which is what M1-M3 did.
 
     Returns:
         The log rows, the evaluation rows and where the best model went.
@@ -439,8 +484,11 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
     rng = np.random.default_rng(seed)
 
     actor = GaussianActor()
-    clone_path = os.path.join(out_dir, "models", "c_actor_bc.pt")
-    actor.mean.load_state_dict(torch.load(clone_path, weights_only=True))
+    if start_state is None:
+        clone_path = os.path.join(out_dir, "models", "c_actor_bc.pt")
+        actor.mean.load_state_dict(torch.load(clone_path, weights_only=True))
+    else:
+        actor.load_state_dict(start_state)
     critic = CCritic(c_interface.global_state_width(
         config.NUM_M_DRONES + config.NUM_C_DRONES
     ))
@@ -457,6 +505,8 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
     model_path = os.path.join(
         out_dir, "models", model_name or f"c_actor_ppo_seed{seed}.pt"
     )
+    critic_path = (os.path.join(out_dir, "models", critic_name)
+                   if critic_name else None)
 
     for update in range(1, max_updates + 1):
         started = time.perf_counter()
@@ -465,7 +515,7 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
         # Run seeds FIRST, then the layouts: the default sampler draws
         # nothing, so M2's stream is bit-for-bit what it was.
         episode_layouts = layouts(rng, episodes)
-        jobs = [(int(layout), int(s), state, "rl", False)
+        jobs = [(int(layout), int(s), state, "rl", False, moving)
                 for layout, s in zip(episode_layouts, run_seeds)]
         results = (list(pool.map(_rollout_job, jobs)) if pool is not None
                    else [_rollout_job(job) for job in jobs])
@@ -508,7 +558,7 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
             dtype=torch.float32,
         )
 
-        weight = anchor_weight(update)
+        weight = anchor_weight(update) if anchor else 0.0
         train_actor = update > CRITIC_ONLY_UPDATES
         policy_loss = value_loss = anchor_loss = 0.0
 
@@ -590,6 +640,10 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
             best, best_update = score, update
             last_improved = len(evaluations)
             torch.save(actor.state_dict(), model_path)
+            if critic_path is not None:
+                # Saved with the actor, never on its own: a critic that does
+                # not belong to the kept actor would be worse than none.
+                torch.save(critic.state_dict(), critic_path)
             evaluations[-1]["saved"] = True
             marker = "  <- best, saved"
         elif score < best:
@@ -603,6 +657,8 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
         if progress is not None:
             progress(log, evaluations)
 
+        if update < min_updates:
+            continue
         if len(evaluations) - last_improved >= patience:
             print(f"  seed {seed}: early stop — {patience} checks without "
                   f"a {min_improvement} point gain", flush=True)
@@ -688,7 +744,8 @@ def print_comparison(rows: Sequence[Dict[str, Any]]) -> None:
 
 def plot_learning(evaluations: Sequence[Dict[str, Any]],
                   baselines: Dict[str, float], path: str,
-                  title: Optional[str] = None) -> None:
+                  title: Optional[str] = None,
+                  names: Optional[Sequence[str]] = None) -> None:
     """Draw evaluation loss against update, one line per training seed.
 
     Args:
@@ -696,6 +753,9 @@ def plot_learning(evaluations: Sequence[Dict[str, Any]],
         baselines:   Reference losses to draw as horizontal lines.
         path:        Output PNG.
         title:       Heading, or None for M2's.
+        names:       One label per line, in seed order, for callers whose
+                     lines are not training seeds. M4's are its four runs.
+                     None, the default, labels them "training seed N".
     """
     import matplotlib
     matplotlib.use("Agg")
@@ -704,7 +764,7 @@ def plot_learning(evaluations: Sequence[Dict[str, Any]],
 
     surface, grid = "#fcfcfb", "#e4e3dd"
     text, faint = "#2b2a26", "#5c5b54"
-    seed_colours = {0: "#2a78d6", 1: "#1baf7a", 2: "#b5509c"}
+    seed_colours = {0: "#2a78d6", 1: "#1baf7a", 2: "#b5509c", 3: "#d98b1f"}
     reference = {"hover": "#eb6834", "midpoint": "#4a3aa7",
                  "clone": "#e34948"}
 
@@ -720,13 +780,15 @@ def plot_learning(evaluations: Sequence[Dict[str, Any]],
                     ha="right", va="bottom", fontsize=11, fontweight="bold",
                     color=reference.get(label, faint), zorder=6)
 
-    for seed in sorted({row["seed"] for row in evaluations}):
+    for index, seed in enumerate(sorted({row["seed"] for row in evaluations})):
         rows = [r for r in evaluations if r["seed"] == seed]
         updates = [r["update"] for r in rows]
         losses = [r["eval_loss"] for r in rows]
         colour = seed_colours.get(seed, faint)
+        label = (names[index] if names is not None and index < len(names)
+                 else f"training seed {seed}")
         ax.plot(updates, losses, color=colour, linewidth=2.2, marker="o",
-                markersize=5, label=f"training seed {seed}", zorder=4)
+                markersize=5, label=label, zorder=4)
         kept = [r for r in rows if r["saved"]]
         if kept:
             final = kept[-1]

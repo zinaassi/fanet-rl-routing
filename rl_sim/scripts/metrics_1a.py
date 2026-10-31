@@ -66,19 +66,74 @@ def _mean(values: List[float]) -> Optional[float]:
     return statistics.fmean(values) if values else None
 
 
-def measured_packets(env: FANETEnv) -> List[Packet]:
+def measured_packets(env: FANETEnv,
+                     window: Optional[Tuple[int, int]] = None) -> List[Packet]:
     """Return the packets whose creation step falls in the measurement window.
 
     Args:
-        env: A finished environment.
+        env:    A finished environment.
+        window: A ``(start, stop)`` pair of creation steps to use instead of
+                the configured measurement window, so a report can be cut
+                into slices of the run. Phase 2c M4 uses it to ask what the
+                loss was in each ten-second window while the mission drones
+                were still flying. ``None``, the default, is the configured
+                window, so every earlier caller is unaffected.
 
     Returns:
         The subset of ``env.all_packets`` the report is computed over.
     """
+    if window is None:
+        return [
+            pkt for pkt in env.all_packets
+            if config.in_measurement_window(pkt.created_at)
+        ]
+    start, stop = window
+    return [pkt for pkt in env.all_packets if start <= pkt.created_at < stop]
+
+
+def time_window_labels(span_s: float = 10.0) -> List[str]:
+    """Return the label of each slice the measurement window cuts into.
+
+    Args:
+        span_s: Length of a slice, in seconds.
+
+    Returns:
+        Labels like "5-15s", in order.
+    """
+    start, stop = config.measurement_window()
+    span = int(round(span_s / config.TIMESTEP))
     return [
-        pkt for pkt in env.all_packets
-        if config.in_measurement_window(pkt.created_at)
+        f"{first * config.TIMESTEP:.0f}-"
+        f"{min(first + span, stop) * config.TIMESTEP:.0f}s"
+        for first in range(start, stop, span)
     ]
+
+
+def loss_by_time_window(env: FANETEnv,
+                        span_s: float = 10.0) -> Dict[str, float]:
+    """Return the total loss inside each slice of the measurement window.
+
+    A run where the mission drones are still flying is not one world but a
+    sequence of them, and a single average hides whether the loss came from
+    the upheaval or from where the drones ended up. Packets are counted by
+    the slice they were CREATED in, which is how total_loss counts them.
+
+    Args:
+        env:    A finished environment.
+        span_s: Length of a slice, in seconds.
+
+    Returns:
+        Slice label -> share of packets created in it that never arrived.
+    """
+    start, stop = config.measurement_window()
+    span = int(round(span_s / config.TIMESTEP))
+    out: Dict[str, float] = {}
+    for first, label in zip(range(start, stop, span),
+                            time_window_labels(span_s)):
+        packets = measured_packets(env, (first, min(first + span, stop)))
+        lost = [pkt for pkt in packets if not pkt.delivered]
+        out[label] = _rate(len(lost), len(packets))
+    return out
 
 
 #: The three ways a packet offered to a link fails to get across.
