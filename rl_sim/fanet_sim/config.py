@@ -272,6 +272,40 @@ MAX_START_DELAY_S: float = 50.0  #                             PROVISIONAL - to 
 BORDER_MARGIN_M: float = 10.0
 
 # ---------------------------------------------------------------------------
+# The mission (Phase 2c curriculum)
+# ---------------------------------------------------------------------------
+# Two missions, and MISSION picks which one a run flies.
+#
+# "border" is the mission every result up to and including M4 was measured on:
+# drones placed uniformly over the whole arena, each M-drone flying until it
+# leaves it. Nothing about it changes, and it stays the DEFAULT so every
+# committed number still reproduces.
+#
+# "near_gs" is the curriculum mission. The whole fleet starts bunched around
+# the ground station and the M-drones fly OUTWARD by a bounded distance, so
+# how far the mission spreads is a dial rather than a consequence of the
+# arena's size. That dial is MISSION_DISTANCE_M, below.
+#
+# The point of the dial: under "border" an M-drone's flight length is decided
+# by where it happened to start and which way it happened to face, which runs
+# from a few metres to the full diagonal. There is no way to ask for a
+# slightly harder world. Under "near_gs" there is.
+MISSION: str = "border"          #                              PROVISIONAL
+MISSIONS = ("border", "near_gs")
+
+#: "near_gs" only. Every drone, M and C, starts inside this radius of the GS.
+START_RADIUS_M: float = 100.0    #                              PROVISIONAL
+
+#: "near_gs" only. No two drones, and no drone and the GS, start closer than
+#: this to each other. Keeps the opening layout from being a single pile.
+MIN_SPACING_M: float = 20.0      #                              PROVISIONAL
+
+#: "near_gs" only. D, the difficulty knob, in metres: each M-drone flies a
+#: distance drawn uniformly from [D/2, D]. D = 0 means nobody moves, which is
+#: the easiest world and the one the curriculum starts from.
+MISSION_DISTANCE_M: float = 350.0  #                            PROVISIONAL
+
+# ---------------------------------------------------------------------------
 # Hello messages (Phase 2a step 2)
 # ---------------------------------------------------------------------------
 # Until now every drone was simply GIVEN its neighbours' positions. With
@@ -390,6 +424,22 @@ C_AVOID_MAX_TURN_DEG: float = 90.0
 #: seed so a layout's C-drone behaviour is a property of that layout and is
 #: the same under every routing rule.                                [DECIDED]
 C_DRONE_STREAM_TAG: int = 0xC2D04
+
+# What happens to the actor's exploration spread when a run CONTINUES from an
+# actor trained earlier -- another curriculum stage, or M3.
+#
+#   a float   reset log_std to this spread, forgetting the trained one. The
+#             DEFAULT, 0.1, which is what a fresh actor starts at.
+#   "inherit" keep the spread stored in the checkpoint.
+#
+# The default is a reset because a changed world is exactly when exploration
+# is needed, and a spread annealed down in the old world is confidence earned
+# somewhere else: M4 run (a) continued M3 seed 2 at std 0.084 instead of 0.1
+# and spent its first hundred updates getting worse before it recovered.
+#
+# "inherit" is kept because it is what M4 runs (a) and (b) actually ran, and
+# tests/test_mission_near_gs.py pins that those still reproduce under it.
+CONTINUE_STD = 0.1               #                              PROVISIONAL
 
 # ---------------------------------------------------------------------------
 # Loop guard

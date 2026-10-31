@@ -489,6 +489,13 @@ def train_one_seed(seed: int, pool: Any, out_dir: str,
         actor.mean.load_state_dict(torch.load(clone_path, weights_only=True))
     else:
         actor.load_state_dict(start_state)
+        # A continuation inherits the spread the earlier stage annealed down
+        # to, which is confidence earned in a world this run is not flying.
+        # config.CONTINUE_STD = a float puts it back; "inherit" keeps it, the
+        # behaviour M4 runs (a) and (b) actually ran under.
+        if config.CONTINUE_STD != "inherit":
+            with torch.no_grad():
+                actor.log_std.fill_(float(np.log(config.CONTINUE_STD)))
     critic = CCritic(c_interface.global_state_width(
         config.NUM_M_DRONES + config.NUM_C_DRONES
     ))

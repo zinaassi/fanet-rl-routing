@@ -465,6 +465,10 @@ class FANETEnv:
                 "speed_max": config.DRONE_SPEED_MAX,
                 "m_drone_mobility": config.M_DRONE_MOBILITY,
                 "static_mode": config.STATIC_MODE,
+                "mission": config.MISSION,
+                "mission_distance_m": config.MISSION_DISTANCE_M,
+                "start_radius_m": config.START_RADIUS_M,
+                "min_spacing_m": config.MIN_SPACING_M,
                 "require_connected_m": config.REQUIRE_CONNECTED_M,
                 "loop_guard": config.LOOP_GUARD,
                 "placement_draws": self.placement_draws,
@@ -573,10 +577,15 @@ class FANETEnv:
     def _draw_drones(self) -> List[Drone]:
         """Draw one candidate fleet from the placement stream.
 
-        Every drone is placed uniformly at random inside the arena. While
-        ``config.STATIC_MODE`` is True that position is also its end point and
-        nothing ever moves. Otherwise (Phase 1B) each M-drone additionally gets
-        a random end point and flies the straight line to it.
+        Under ``config.MISSION = "border"`` every drone is placed uniformly at
+        random inside the arena. While ``config.STATIC_MODE`` is True that
+        position is also its end point and nothing ever moves. Otherwise
+        (Phase 1B) each M-drone additionally gets a random end point and flies
+        the straight line to it.
+
+        Under ``"near_gs"`` the whole fleet starts bunched around the GS
+        instead; see :meth:`_near_gs_points`. Where a drone starts is the only
+        difference — everything after this point is shared.
 
         Returns:
             List of Drone objects (M-drones first, then C-drones).
@@ -584,8 +593,15 @@ class FANETEnv:
         drones: List[Drone] = []
         drone_id = 0
 
-        for _ in range(config.NUM_M_DRONES):
-            start = self._random_point()
+        # Under "near_gs" every start position is drawn up front, because each
+        # one has to be checked against the ones already placed. The order is
+        # the same as the per-drone draws below: M-drones first, then C.
+        near_gs = (self._near_gs_points()
+                   if config.MISSION == "near_gs" else None)
+
+        for index in range(config.NUM_M_DRONES):
+            start = (near_gs[index] if near_gs is not None
+                     else self._random_point())
             # The end point is NOT drawn here. It used to be, from this same
             # placement stream, whenever STATIC_MODE was off — which moved
             # every position after it and so handed a moving run a different
@@ -602,17 +618,69 @@ class FANETEnv:
             ))
             drone_id += 1
 
-        for _ in range(config.NUM_C_DRONES):
+        for index in range(config.NUM_C_DRONES):
             drones.append(Drone(
                 drone_id=drone_id,
                 drone_type="C",
-                initial_position=self._random_point(),
+                initial_position=(
+                    near_gs[config.NUM_M_DRONES + index]
+                    if near_gs is not None else self._random_point()
+                ),
                 speed=self._random_speed(),
                 gs_position=self.gs_position,
             ))
             drone_id += 1
 
         return drones
+
+    def _near_gs_points(self) -> List[np.ndarray]:
+        """Draw every drone's start position for the "near_gs" mission.
+
+        One point per drone, M-drones first, uniform over the disc of
+        ``config.START_RADIUS_M`` about the GS and at least
+        ``config.MIN_SPACING_M`` from the GS and from every point already
+        drawn. Rejected points are simply redrawn from the placement stream,
+        so a placement seed still names one layout.
+
+        Uniform over the DISC, not over radius and angle independently: the
+        latter piles drones up at the centre, which is the one thing the
+        minimum spacing exists to prevent. Hence the sqrt.
+
+        Returns:
+            ``NUM_M_DRONES + NUM_C_DRONES`` points inside the arena.
+
+        Raises:
+            RuntimeError: If a point cannot be placed within
+                ``config.MAX_PLACEMENT_DRAWS`` attempts, which means the
+                radius is too small to hold the fleet at this spacing.
+        """
+        centre = np.asarray(self.gs_position, dtype=np.float64)
+        points: List[np.ndarray] = []
+
+        for _ in range(config.NUM_M_DRONES + config.NUM_C_DRONES):
+            for _attempt in range(config.MAX_PLACEMENT_DRAWS):
+                angle = float(self._rng_place.uniform(0.0, 2.0 * np.pi))
+                radius = config.START_RADIUS_M * float(
+                    np.sqrt(self._rng_place.uniform(0.0, 1.0))
+                )
+                point = centre + radius * np.array(
+                    [np.cos(angle), np.sin(angle)], dtype=np.float64
+                )
+                if radius < config.MIN_SPACING_M:
+                    continue
+                if all(float(np.linalg.norm(point - other))
+                       >= config.MIN_SPACING_M for other in points):
+                    points.append(point)
+                    break
+            else:
+                raise RuntimeError(
+                    f"could not place drone {len(points)} of "
+                    f"{config.NUM_M_DRONES + config.NUM_C_DRONES} within "
+                    f"{config.START_RADIUS_M} m of the GS at "
+                    f"{config.MIN_SPACING_M} m spacing"
+                )
+
+        return points
 
     def _assign_mobility(self) -> None:
         """Give every M-drone its flight: direction, speed and start delay.
@@ -664,7 +732,20 @@ class FANETEnv:
             drone.start_delay_s = float(self._rng_mob.uniform(
                 0.0, config.MAX_START_DELAY_S
             ))
-            drone.end_point = self._border_point(drone.position, direction)
+            if config.MISSION == "near_gs":
+                # The flight is a bounded distance outward, drawn AFTER the
+                # three draws above so that turning the dial cannot shift
+                # them: a layout's directions, speeds and delays are the same
+                # at every D, and only the distance changes.
+                distance = float(self._rng_mob.uniform(
+                    0.5 * config.MISSION_DISTANCE_M,
+                    config.MISSION_DISTANCE_M
+                ))
+                drone.end_point = self._clip_inside_border(
+                    drone.position + distance * direction
+                )
+            else:
+                drone.end_point = self._border_point(drone.position, direction)
             drone.arrived = bool(
                 np.array_equal(drone.end_point, drone.position)
             )
@@ -696,6 +777,33 @@ class FANETEnv:
         to_border = min(d for d in distances if d >= 0.0)
         travel = max(0.0, to_border - config.BORDER_MARGIN_M)
         return start + travel * direction
+
+    @staticmethod
+    def _clip_inside_border(point: np.ndarray) -> np.ndarray:
+        """Clamp *point* to ``config.BORDER_MARGIN_M`` inside the arena.
+
+        Used by the "near_gs" mission, whose flight distance is drawn without
+        regard to where the border is, so a long flight can land outside. The
+        prompt's "10 m inside the border" is ``BORDER_MARGIN_M``, read from
+        config rather than typed again here.
+
+        This clamps per axis, so a drone flying diagonally out of a corner
+        keeps the component that still fits. That shortens its flight and
+        bends its final heading, which is the honest consequence of a wall:
+        the alternative, scaling the whole vector back, would stop it short
+        of a border it had room to reach.
+
+        Args:
+            point: Where the flight would end, inside or outside the arena.
+
+        Returns:
+            A point inside the arena.
+        """
+        margin = config.BORDER_MARGIN_M
+        return np.array([
+            float(np.clip(point[0], margin, config.WIDTH - margin)),
+            float(np.clip(point[1], margin, config.HEIGHT - margin)),
+        ], dtype=np.float64)
 
     def _assign_traffic_offsets(self) -> None:
         """Give every M-drone the step within its interval on which it creates.
@@ -895,9 +1003,20 @@ class FANETEnv:
         # an M-drone that never moves is trivially "arrived", so the
         # all-arrived shortcut below would end the episode on step 1.
         done = self.step_count >= config.MAX_STEPS
-        if not config.STATIC_MODE:
+        if not config.STATIC_MODE and config.MISSION == "border":
             # Phase 1B: also stop once every M-drone has reached its end point,
             # since no mission traffic is left to generate or deliver.
+            #
+            # "border" only, and that is not a detail. Under "border" a flight
+            # runs to the edge of the arena and takes most of the episode, so
+            # this shortcut almost never fires before MAX_STEPS and the
+            # measurement window is whole. Under "near_gs" a flight is a few
+            # hundred metres and the whole fleet is parked early -- at
+            # MISSION_DISTANCE_M = 350 every drone has arrived by step 688,
+            # and at 0 before step 1 -- so the shortcut would cut the window
+            # short and leave the late ten-second slices empty at exactly the
+            # settings they were asked for. A curriculum rung therefore always
+            # runs its full length, whether or not anyone is still flying.
             m_drones = [d for d in self.drones if d.drone_type == "M"]
             done = done or (bool(m_drones) and all(d.arrived for d in m_drones))
         if done:
