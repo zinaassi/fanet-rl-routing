@@ -283,3 +283,34 @@ def test_the_validation_grid_never_touches_the_held_back_layouts() -> None:
     assert layouts == set(range(301, 331))
     assert layouts.isdisjoint(range(1, 51))
     assert layouts.isdisjoint(range(401, 451))
+
+
+# --- the S5-from-S4 follow-up ----------------------------------------------
+
+def test_the_s5_test_continues_s4_with_more_patience() -> None:
+    """S4's weights, patience 16, D = 650 only, and a warm-up for the critic."""
+    from scripts.train_c_ppo_curriculum import (
+        S5_FROM_S4_PATIENCE,
+        S5_FROM_S4_START,
+        train_s5_from_s4,
+    )
+
+    assert S5_FROM_S4_START == "c_actor_curriculum_S4.pt"
+    assert S5_FROM_S4_PATIENCE == 16
+
+    source = inspect.getsource(train_s5_from_s4)
+    assert "patience=S5_FROM_S4_PATIENCE" in source
+    assert "[distance] * count" in source, "no replay in this test"
+    assert "warmup=CRITIC_ONLY_UPDATES" in source
+    # The start_state path is the one that resets the spread.
+    assert "start_state=start_weights" in source
+    assert "carry=" not in source
+
+
+def test_the_s5_test_writes_beside_the_committed_tables() -> None:
+    """Its own policy and pairs; the default grid stays the five policies."""
+    from scripts.curriculum_validate import PAIRS, POLICIES, S5_TEST_POLICY
+
+    assert len(POLICIES) == 5
+    assert S5_TEST_POLICY not in POLICIES
+    assert ("staged_final", "midpoint") in PAIRS

@@ -81,6 +81,18 @@ SUMMARY_MEANS: Tuple[str, ...] = (
 )
 
 
+#: The follow-up test adds one policy, and its own comparisons, under its own
+#: file names, so the committed curriculum tables are left as they are.
+S5_TEST_POLICY: Tuple[str, str] = ("s5_from_s4",
+                                   "c_actor_curriculum_s5_from_s4.pt")
+S5_TEST_PAIRS: Tuple[Tuple[str, str], ...] = (
+    ("s5_from_s4", "direct_final"),
+    ("s5_from_s4", "staged_final"),
+    ("s5_from_s4", "midpoint"),
+    ("s5_from_s4", "hover"),
+)
+
+
 def load_actors(out_dir: str) -> Dict[str, Any]:
     """Load the weights of every learned policy.
 
@@ -382,7 +394,17 @@ def main() -> None:
     parser.add_argument("--out-dir", type=str, default="out")
     parser.add_argument("--workers", type=int,
                         default=min(20, os.cpu_count() or 1))
+    parser.add_argument("--s5-test", action="store_true",
+                        help="add the S5-from-S4 actor; writes "
+                             "2c_curriculum_s5test_*.csv instead")
     args = parser.parse_args()
+
+    global POLICIES, PAIRS
+    prefix = "2c_curriculum_validation"
+    if args.s5_test:
+        POLICIES = POLICIES + (S5_TEST_POLICY,)
+        PAIRS = S5_TEST_PAIRS
+        prefix = "2c_curriculum_s5test_validation"
 
     actors = load_actors(args.out_dir)
     rows = run_grid(args.workers, actors)
@@ -399,7 +421,7 @@ def main() -> None:
             "stages " + "/".join(f"{d:.0f}" for d in STAGES)
             + " m, avoid=True, greedy routing, NO training")
 
-    write_csv(os.path.join(args.out_dir, "2c_curriculum_validation.csv"),
+    write_csv(os.path.join(args.out_dir, f"{prefix}.csv"),
               rows,
               ["mission_distance_m", "stage", "policy", "placement_seed",
                "run_seed", "total_loss"] + list(CAUSES)
@@ -408,7 +430,7 @@ def main() -> None:
                  "pct_m_clipped_end", "c_distance_flown_mean", "views_agree"],
               note)
     write_csv(
-        os.path.join(args.out_dir, "2c_curriculum_validation_summary.csv"),
+        os.path.join(args.out_dir, f"{prefix}_summary.csv"),
         summary,
         ["mission_distance_m", "stage", "policy", "layouts", "total_loss",
          "total_loss_std"] + list(CAUSES)
@@ -417,7 +439,7 @@ def main() -> None:
            "pct_m_clipped_end", "c_distance_flown_mean"],
         note)
     write_csv(
-        os.path.join(args.out_dir, "2c_curriculum_validation_paired.csv"),
+        os.path.join(args.out_dir, f"{prefix}_paired.csv"),
         paired,
         ["mission_distance_m", "stage", "actor", "against", "layouts",
          "mean_diff", "ci95_low", "ci95_high", "wins"],

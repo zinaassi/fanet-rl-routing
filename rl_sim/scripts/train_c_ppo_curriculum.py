@@ -111,6 +111,14 @@ REPLAY_SEED_TAG: int = 0xC0FFEE
 STAGED: str = "staged"
 DIRECT: str = "direct"
 
+#: The follow-up test: does the staged path help if the hardest stage gets a
+#: fair chance? It continues S4's best weights at D = 650 only. Patience 8 would
+#: have stopped the direct run at update 420 with 18.35% against its real best
+#: of 16.69%, and patience 16 is the smallest tested value that reaches it.
+S5_FROM_S4: str = "s5_from_s4"
+S5_FROM_S4_START: str = "c_actor_curriculum_S4.pt"
+S5_FROM_S4_PATIENCE: int = 16
+
 CURVE_COLUMNS = ("run", "stage", "mission_distance_m", "update",
                  "stage_update", "eval_loss", "saved", "views_agree")
 
@@ -258,26 +266,28 @@ def curve_rows(run: str, stage: str, distance: float, offset: int,
     } for row in evaluations]
 
 
-def start_weights(out_dir: str) -> Dict[str, Any]:
-    """Load the actor both runs start from.
+def start_weights(out_dir: str, filename: str = START_MODEL) -> Dict[str, Any]:
+    """Load the actor a run starts from.
 
     Args:
-        out_dir: Where the models live.
+        out_dir:  Where the models live.
+        filename: The model file. The default is M3 seed 1, which both the
+                  staged and the direct run start from.
 
     Returns:
-        The M3 seed 1 state dict.
+        The state dict.
 
     Raises:
         SystemExit: If the file is not there.
     """
     import torch
 
-    path = os.path.join(out_dir, MODEL_DIR, START_MODEL)
+    path = os.path.join(out_dir, MODEL_DIR, filename)
     if not os.path.exists(path):
-        path = os.path.join(out_dir, "models", START_MODEL)
+        path = os.path.join(out_dir, "models", filename)
     if not os.path.exists(path):
-        raise SystemExit(f"the start model {START_MODEL} is not in {out_dir}")
-    print(f"  starting both runs from {path}", flush=True)
+        raise SystemExit(f"the start model {filename} is not in {out_dir}")
+    print(f"  starting from {path}", flush=True)
     return torch.load(path, weights_only=True)
 
 
@@ -422,6 +432,69 @@ def train_direct(pool: Any, out_dir: str, episodes: int,
             "result": result}
 
 
+def train_s5_from_s4(pool: Any, out_dir: str, episodes: int,
+                     max_updates: int) -> Dict[str, Any]:
+    """Continue S4's best weights at D = 650, with a real chance to learn.
+
+    The spread is reset to config.CONTINUE_STD by train_one_seed's start_state
+    path. S5 of the staged run began at std 0.046, about where the direct run
+    had stopped improving. The critic is fresh and warms up again, because the
+    value normaliser it was trained against was never saved.
+
+    The curve is rewritten after every evaluation, so a stopped run keeps it.
+
+    Args:
+        pool:        The process pool.
+        out_dir:     Where models and CSVs go.
+        episodes:    Episodes per update.
+        max_updates: Cap on updates.
+
+    Returns:
+        The curve rows and the result.
+    """
+    distance = STAGES[-1]
+    path = os.path.join(out_dir, "2c_curriculum_s5_from_s4_curve.csv")
+    note = ("phase 2c curriculum, S5 continued from S4's best weights, D = 650 "
+            "only, validation 301-330")
+    print(f"\n=== {S5_FROM_S4}: D = {distance:.0f} m only, from "
+          f"{S5_FROM_S4_START}, std reset to {config.CONTINUE_STD}, patience "
+          f"{S5_FROM_S4_PATIENCE}, min {MIN_UPDATES_PER_STAGE}, cap "
+          f"{max_updates}, warm-up {CRITIC_ONLY_UPDATES} ===", flush=True)
+
+    written = [0]
+
+    def keep_curve(_log: Sequence[Dict[str, Any]],
+                   evaluations: Sequence[Dict[str, Any]]) -> None:
+        if len(evaluations) != written[0]:
+            written[0] = len(evaluations)
+            write_csv(path, curve_rows(S5_FROM_S4, "S5", distance, 0,
+                                       evaluations), CURVE_COLUMNS, note)
+
+    result = train_one_seed(
+        PPO_SEED, pool, out_dir, max_updates, episodes,
+        layouts=sample_layouts,
+        eval_jobs=validation_jobs(distance),
+        min_improvement=MIN_IMPROVEMENT_CURRICULUM,
+        patience=S5_FROM_S4_PATIENCE,
+        model_name=os.path.join(MODEL_SUBDIR,
+                                "c_actor_curriculum_s5_from_s4.pt"),
+        critic_name=os.path.join(MODEL_SUBDIR,
+                                 "c_critic_curriculum_s5_from_s4.pt"),
+        progress=keep_curve,
+        moving=True,
+        min_updates=MIN_UPDATES_PER_STAGE,
+        anchor=False,
+        start_state=start_weights(out_dir, S5_FROM_S4_START),
+        warmup=CRITIC_ONLY_UPDATES,
+        stage_schedule=lambda update, count: [distance] * count,
+    )
+    print(f"  {S5_FROM_S4}: {result['updates_used']} updates, best "
+          f"{result['best']:.2f}% at update {result['best_update']}"
+          + ("  (HIT THE CAP)" if result["updates_used"] >= max_updates
+             else ""), flush=True)
+    return result
+
+
 def write_config(path: str, staged: Dict[str, Any], budget: int) -> None:
     """Record every setting and seed, so the run can be rebuilt.
 
@@ -563,7 +636,7 @@ def main() -> None:
     parser.add_argument("--max-updates", type=int, default=MAX_UPDATES_M4)
     parser.add_argument("--runs", type=str, nargs="+",
                         default=[STAGED, DIRECT],
-                        choices=[STAGED, DIRECT])
+                        choices=[STAGED, DIRECT, S5_FROM_S4])
     parser.add_argument("--budget", type=int, default=None,
                         help="updates for the direct run; the default is "
                              "whatever the staged run used")
@@ -612,6 +685,10 @@ def main() -> None:
                 direct_rows, CURVE_COLUMNS,
                 "phase 2c curriculum, DIRECT run, validation 301-330",
             )
+
+        if S5_FROM_S4 in args.runs:
+            train_s5_from_s4(pool, args.out_dir, args.episodes,
+                             args.max_updates)
 
     if staged["rows"] or direct_rows:
         draw_curves(args.out_dir, staged["rows"], direct_rows)
