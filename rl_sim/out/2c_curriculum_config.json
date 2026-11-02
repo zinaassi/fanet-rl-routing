@@ -1,0 +1,176 @@
+{
+  "commit": "f945fe5",
+  "mission": {
+    "name": "near_gs",
+    "start_radius_m": 100.0,
+    "min_spacing_m": 20.0,
+    "stages_m": [
+      250.0,
+      350.0,
+      450.0,
+      550.0,
+      650.0
+    ],
+    "replay_fraction": 0.25
+  },
+  "world": {
+    "avoid": true,
+    "ideal_hello": false,
+    "hello_interval_s": 1.0,
+    "share_targets": true,
+    "load_ms": 200,
+    "routing": "greedy",
+    "queue_capacity": 10,
+    "num_m_drones": 18,
+    "num_c_drones": 7
+  },
+  "ppo": {
+    "gamma": 0.97,
+    "gae_lambda": 0.95,
+    "clip": 0.1,
+    "epochs_per_update": 5,
+    "learning_rate": 0.0003,
+    "grad_clip": 0.5,
+    "minibatch": 1024,
+    "episodes_per_update": 40,
+    "critic_only_updates": 10,
+    "evaluate_every": 10,
+    "patience": 8,
+    "max_updates_per_stage": 600,
+    "min_updates_per_stage": 100,
+    "min_improvement": 0.0,
+    "anchor": false,
+    "continue_std": 0.1,
+    "start_model": "c_actor_m3_seed1.pt"
+  },
+  "seeds": {
+    "ppo_seed": 1,
+    "replay_seed_sequence": [
+      1,
+      12648430
+    ],
+    "agent_stream_tag": 683543,
+    "mobility_stream_tag": 176407,
+    "hello_stream_tag": 319760,
+    "c_drone_stream_tag": 797956,
+    "training_layouts": [
+      101,
+      300
+    ],
+    "validation_layouts": [
+      301,
+      302,
+      303,
+      304,
+      305,
+      306,
+      307,
+      308,
+      309,
+      310,
+      311,
+      312,
+      313,
+      314,
+      315,
+      316,
+      317,
+      318,
+      319,
+      320,
+      321,
+      322,
+      323,
+      324,
+      325,
+      326,
+      327,
+      328,
+      329,
+      330
+    ],
+    "validation_run_seeds": {
+      "301": 9100,
+      "302": 9101,
+      "303": 9102,
+      "304": 9103,
+      "305": 9104,
+      "306": 9105,
+      "307": 9106,
+      "308": 9107,
+      "309": 9108,
+      "310": 9109,
+      "311": 9110,
+      "312": 9111,
+      "313": 9112,
+      "314": 9113,
+      "315": 9114,
+      "316": 9115,
+      "317": 9116,
+      "318": 9117,
+      "319": 9118,
+      "320": 9119,
+      "321": 9120,
+      "322": 9121,
+      "323": 9122,
+      "324": 9123,
+      "325": 9124,
+      "326": 9125,
+      "327": 9126,
+      "328": 9127,
+      "329": 9128,
+      "330": 9129
+    }
+  },
+  "budget": {
+    "staged_total_updates": 1240,
+    "direct_total_updates": 1240,
+    "per_stage": [
+      {
+        "stage": "S1",
+        "mission_distance_m": 250.0,
+        "updates": 120,
+        "best": 1.08,
+        "kept": 1.08,
+        "best_update": 40,
+        "hit_cap": false
+      },
+      {
+        "stage": "S2",
+        "mission_distance_m": 350.0,
+        "updates": 310,
+        "best": 5.38,
+        "kept": 5.38,
+        "best_update": 230,
+        "hit_cap": false
+      },
+      {
+        "stage": "S3",
+        "mission_distance_m": 450.0,
+        "updates": 470,
+        "best": 11.37,
+        "kept": 11.37,
+        "best_update": 390,
+        "hit_cap": false
+      },
+      {
+        "stage": "S4",
+        "mission_distance_m": 550.0,
+        "updates": 240,
+        "best": 16.66,
+        "kept": 16.66,
+        "best_update": 160,
+        "hit_cap": false
+      },
+      {
+        "stage": "S5",
+        "mission_distance_m": 650.0,
+        "updates": 100,
+        "best": 21.0,
+        "kept": 21.0,
+        "best_update": 10,
+        "hit_cap": false
+      }
+    ]
+  }
+}
