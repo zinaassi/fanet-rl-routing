@@ -119,6 +119,14 @@ S5_FROM_S4: str = "s5_from_s4"
 S5_FROM_S4_START: str = "c_actor_curriculum_S4.pt"
 S5_FROM_S4_PATIENCE: int = 16
 
+#: The fairer test: redo every stage that may have stopped short. It continues
+#: S2's best weights through S3, S4 and S5, with S5_FROM_S4_PATIENCE and the
+#: spread back at config.CONTINUE_STD at the start of each stage. Replay is as
+#: in the staged run, so it still draws on S1 and S2.
+S3_TO_S5: str = "s3_to_s5"
+S3_TO_S5_START: str = "c_actor_curriculum_S2.pt"
+S3_TO_S5_FIRST_STAGE: int = 2
+
 CURVE_COLUMNS = ("run", "stage", "mission_distance_m", "update",
                  "stage_update", "eval_loss", "saved", "views_agree")
 
@@ -495,6 +503,123 @@ def train_s5_from_s4(pool: Any, out_dir: str, episodes: int,
     return result
 
 
+def reset_spread(actor: Any) -> None:
+    """Put an actor's exploration spread back at config.CONTINUE_STD.
+
+    train_one_seed does this on its start_state path only, so a stage that
+    arrives through carry needs it done here.
+
+    Args:
+        actor: The Gaussian actor.
+    """
+    import torch
+
+    with torch.no_grad():
+        actor.log_std.fill_(float(np.log(config.CONTINUE_STD)))
+
+
+def train_s3_to_s5(pool: Any, out_dir: str, episodes: int,
+                   max_updates: int) -> List[Dict[str, Any]]:
+    """Run S3, S4 and S5 again from S2's best weights.
+
+    The critic, normaliser and optimisers carry across these three stages as
+    they do in the staged run. The critic is fresh at S3, because S2's
+    normaliser was never saved, so S3 alone warms up. Each stage's best weights
+    are loaded back before the next, and then the spread is reset.
+
+    The curve is rewritten after every evaluation, so a stopped run keeps it.
+
+    Args:
+        pool:        The process pool.
+        out_dir:     Where models and CSVs go.
+        episodes:    Episodes per update.
+        max_updates: Cap per stage.
+
+    Returns:
+        The per-stage summaries.
+    """
+    import torch
+
+    replay_rng = np.random.default_rng(
+        np.random.SeedSequence([PPO_SEED, REPLAY_SEED_TAG])
+    )
+    path = os.path.join(out_dir, "2c_curriculum_s3_to_s5_curve.csv")
+    note = ("phase 2c curriculum, S3 to S5 redone from S2's best weights, "
+            "spread reset each stage, validation 301-330")
+    carry: Optional[Dict[str, Any]] = None
+    rows: List[Dict[str, Any]] = []
+    used: List[Dict[str, Any]] = []
+    total = 0
+
+    for index in range(S3_TO_S5_FIRST_STAGE, len(STAGES)):
+        distance = STAGES[index]
+        label = f"S{index + 1}"
+        print(f"\n=== {S3_TO_S5} {label}: D = {distance:.0f} m, std reset to "
+              f"{config.CONTINUE_STD}, patience {S5_FROM_S4_PATIENCE}, min "
+              f"{MIN_UPDATES_PER_STAGE}, cap {max_updates} ===", flush=True)
+        written = [0]
+        done = list(rows)
+
+        def keep_curve(_log: Sequence[Dict[str, Any]],
+                       evaluations: Sequence[Dict[str, Any]],
+                       label: str = label, distance: float = distance,
+                       offset: int = total, done: List[Dict[str, Any]] = done,
+                       written: List[int] = written) -> None:
+            if len(evaluations) != written[0]:
+                written[0] = len(evaluations)
+                write_csv(path, done + curve_rows(S3_TO_S5, label, distance,
+                                                  offset, evaluations),
+                          CURVE_COLUMNS, note)
+
+        result = train_one_seed(
+            PPO_SEED, pool, out_dir, max_updates, episodes,
+            layouts=sample_layouts,
+            eval_jobs=validation_jobs(distance),
+            min_improvement=MIN_IMPROVEMENT_CURRICULUM,
+            patience=S5_FROM_S4_PATIENCE,
+            model_name=os.path.join(
+                MODEL_SUBDIR, f"c_actor_curriculum_s3_to_s5_{label}.pt"),
+            critic_name=os.path.join(
+                MODEL_SUBDIR, f"c_critic_curriculum_s3_to_s5_{label}.pt"),
+            progress=keep_curve,
+            moving=True,
+            min_updates=MIN_UPDATES_PER_STAGE,
+            anchor=False,
+            start_state=(start_weights(out_dir, S3_TO_S5_START)
+                         if carry is None else None),
+            carry=carry,
+            warmup=CRITIC_ONLY_UPDATES if carry is None else 0,
+            stage_schedule=replay_schedule(index, episodes, replay_rng),
+        )
+        rows.extend(curve_rows(S3_TO_S5, label, distance, total,
+                               result["evaluations"]))
+        spent = result["updates_used"]
+        total += spent
+        hit_cap = spent >= max_updates
+        used.append({"stage": label, "mission_distance_m": distance,
+                     "updates": spent, "best": result["best"],
+                     "best_update": result["best_update"],
+                     "hit_cap": hit_cap})
+        print(f"  {S3_TO_S5} {label}: {spent} updates, best "
+              f"{result['best']:.2f}% at update {result['best_update']}"
+              + ("  (HIT THE CAP)" if hit_cap else ""), flush=True)
+
+        carry = result["carry"]
+        carry["actor"].load_state_dict(
+            torch.load(result["model"], weights_only=True))
+        print(f"  loaded {label}'s best weights back", flush=True)
+        final_actor = carry["actor"].state_dict()
+        torch.save(final_actor, os.path.join(
+            out_dir, MODEL_DIR, "c_actor_curriculum_s3_to_s5.pt"))
+        torch.save(carry["critic"].state_dict(), os.path.join(
+            out_dir, MODEL_DIR, "c_critic_curriculum_s3_to_s5.pt"))
+        reset_spread(carry["actor"])
+
+    print(f"  {S3_TO_S5}: {total} updates in all, final weights are S5's best",
+          flush=True)
+    return used
+
+
 def write_config(path: str, staged: Dict[str, Any], budget: int) -> None:
     """Record every setting and seed, so the run can be rebuilt.
 
@@ -636,7 +761,7 @@ def main() -> None:
     parser.add_argument("--max-updates", type=int, default=MAX_UPDATES_M4)
     parser.add_argument("--runs", type=str, nargs="+",
                         default=[STAGED, DIRECT],
-                        choices=[STAGED, DIRECT, S5_FROM_S4])
+                        choices=[STAGED, DIRECT, S5_FROM_S4, S3_TO_S5])
     parser.add_argument("--budget", type=int, default=None,
                         help="updates for the direct run; the default is "
                              "whatever the staged run used")
@@ -689,6 +814,10 @@ def main() -> None:
         if S5_FROM_S4 in args.runs:
             train_s5_from_s4(pool, args.out_dir, args.episodes,
                              args.max_updates)
+
+        if S3_TO_S5 in args.runs:
+            train_s3_to_s5(pool, args.out_dir, args.episodes,
+                           args.max_updates)
 
     if staged["rows"] or direct_rows:
         draw_curves(args.out_dir, staged["rows"], direct_rows)

@@ -314,3 +314,42 @@ def test_the_s5_test_writes_beside_the_committed_tables() -> None:
     assert len(POLICIES) == 5
     assert S5_TEST_POLICY not in POLICIES
     assert ("staged_final", "midpoint") in PAIRS
+
+
+# --- the S3-to-S5 rerun ----------------------------------------------------
+
+def test_the_rerun_starts_at_s3_from_s2s_weights() -> None:
+    """Three stages, S2's best weights, patience 16."""
+    from scripts.train_c_ppo_curriculum import (
+        S3_TO_S5_FIRST_STAGE,
+        S3_TO_S5_START,
+        S5_FROM_S4_PATIENCE,
+    )
+
+    assert S3_TO_S5_START == "c_actor_curriculum_S2.pt"
+    assert STAGES[S3_TO_S5_FIRST_STAGE:] == (450.0, 550.0, 650.0)
+    assert S5_FROM_S4_PATIENCE == 16
+
+
+def test_reset_spread_puts_the_std_back() -> None:
+    """A carried actor's annealed spread returns to CONTINUE_STD."""
+    torch = pytest.importorskip("torch")
+    from agents.c_actor import GaussianActor
+    from scripts.train_c_ppo_curriculum import reset_spread
+
+    actor = GaussianActor()
+    with torch.no_grad():
+        actor.log_std.fill_(float(np.log(0.04)))
+    reset_spread(actor)
+
+    assert float(actor.log_std.detach().exp().mean()) == pytest.approx(
+        config.CONTINUE_STD)
+
+
+def test_the_rerun_resets_only_after_saving_the_best_weights() -> None:
+    """The saved final actor must be S5's best, not one with a reset spread."""
+    from scripts.train_c_ppo_curriculum import train_s3_to_s5
+
+    source = inspect.getsource(train_s3_to_s5)
+    assert source.index("carry[\"actor\"].load_state_dict") < source.index(
+        "torch.save(final_actor") < source.index("reset_spread(carry")

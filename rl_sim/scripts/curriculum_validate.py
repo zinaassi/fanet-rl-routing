@@ -93,6 +93,16 @@ S5_TEST_PAIRS: Tuple[Tuple[str, str], ...] = (
 )
 
 
+S3_TEST_POLICY: Tuple[str, str] = ("s3_to_s5",
+                                   "c_actor_curriculum_s3_to_s5.pt")
+S3_TEST_PAIRS: Tuple[Tuple[str, str], ...] = (
+    ("s3_to_s5", "direct_final"),
+    ("s3_to_s5", "staged_final"),
+    ("s3_to_s5", "midpoint"),
+    ("s3_to_s5", "hover"),
+)
+
+
 def load_actors(out_dir: str) -> Dict[str, Any]:
     """Load the weights of every learned policy.
 
@@ -397,6 +407,9 @@ def main() -> None:
     parser.add_argument("--s5-test", action="store_true",
                         help="add the S5-from-S4 actor; writes "
                              "2c_curriculum_s5test_*.csv instead")
+    parser.add_argument("--s3-test", action="store_true",
+                        help="add the S3-to-S5 actor; writes "
+                             "2c_curriculum_s3test_*.csv instead")
     args = parser.parse_args()
 
     global POLICIES, PAIRS
@@ -405,6 +418,11 @@ def main() -> None:
         POLICIES = POLICIES + (S5_TEST_POLICY,)
         PAIRS = S5_TEST_PAIRS
         prefix = "2c_curriculum_s5test_validation"
+
+    if args.s3_test:
+        POLICIES = POLICIES + (S3_TEST_POLICY,)
+        PAIRS = S3_TEST_PAIRS
+        prefix = "2c_curriculum_s3test_validation"
 
     actors = load_actors(args.out_dir)
     rows = run_grid(args.workers, actors)
