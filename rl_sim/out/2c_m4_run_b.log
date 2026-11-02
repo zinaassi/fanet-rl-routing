@@ -1,0 +1,81 @@
+
+=== run b ===
+  run b starts from M3 seed 1 (out/models/c_actor_m3_seed1.pt), with a fresh critic and no anchor term
+  seed 1 update   1  train  28.12%  reward +0.4141  anchor 0.00  std 0.091   31.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update   2  train  28.28%  reward +0.4117  anchor 0.00  std 0.091   27.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update   3  train  27.52%  reward +0.4247  anchor 0.00  std 0.091   28.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update   4  train  27.80%  reward +0.4196  anchor 0.00  std 0.091   28.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update   5  train  28.65%  reward +0.4037  anchor 0.00  std 0.091   29.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update   6  train  27.93%  reward +0.4153  anchor 0.00  std 0.091   28.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update   7  train  29.48%  reward +0.3886  anchor 0.00  std 0.091   29.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update   8  train  28.77%  reward +0.4013  anchor 0.00  std 0.091   29.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update   9  train  29.62%  reward +0.3839  anchor 0.00  std 0.091   28.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  10  train  28.08%  reward +0.4138  anchor 0.00  std 0.091   28.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  10  EVALUATION  29.01%  <- best, saved
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  11  train  28.45%  reward +0.4054  anchor 0.00  std 0.091   31.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  12  train  28.55%  reward +0.4042  anchor 0.00  std 0.091   30.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  13  train  28.31%  reward +0.4115  anchor 0.00  std 0.091   30.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  14  train  27.95%  reward +0.4161  anchor 0.00  std 0.091   30.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  15  train  28.40%  reward +0.4084  anchor 0.00  std 0.091   30.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  16  train  29.06%  reward +0.3952  anchor 0.00  std 0.091   30.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  17  train  28.98%  reward +0.3963  anchor 0.00  std 0.091   31.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  18  train  27.95%  reward +0.4173  anchor 0.00  std 0.091   31.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  19  train  28.17%  reward +0.4108  anchor 0.00  std 0.091   34.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  20  train  29.18%  reward +0.3933  anchor 0.00  std 0.091   32.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  20  EVALUATION  29.45%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  21  train  29.33%  reward +0.3894  anchor 0.00  std 0.091   32.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  22  train  29.65%  reward +0.3861  anchor 0.00  std 0.092   32.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  23  train  30.19%  reward +0.3730  anchor 0.00  std 0.092   31.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 1 update  24  train  29.03%  reward +0.3963  anchor 0.00  std 0.092   31.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv

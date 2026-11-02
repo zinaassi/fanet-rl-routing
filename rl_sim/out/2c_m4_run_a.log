@@ -1,0 +1,1215 @@
+
+=== run a ===
+  run a starts from M3 seed 2 (out/models/c_actor_m3_seed2.pt), with a fresh critic and no anchor term
+  seed 2 update   1  train  31.28%  reward +0.3494  anchor 0.00  std 0.084   47.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update   2  train  31.46%  reward +0.3460  anchor 0.00  std 0.084   44.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update   3  train  32.57%  reward +0.3264  anchor 0.00  std 0.084   41.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update   4  train  31.32%  reward +0.3490  anchor 0.00  std 0.084   43.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update   5  train  29.77%  reward +0.3828  anchor 0.00  std 0.084   41.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update   6  train  31.28%  reward +0.3498  anchor 0.00  std 0.084   46.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update   7  train  31.77%  reward +0.3396  anchor 0.00  std 0.084   41.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update   8  train  31.80%  reward +0.3396  anchor 0.00  std 0.084   42.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update   9  train  32.00%  reward +0.3364  anchor 0.00  std 0.084   43.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  10  train  31.47%  reward +0.3485  anchor 0.00  std 0.084   42.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  10  EVALUATION  31.53%  <- best, saved
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  11  train  32.54%  reward +0.3264  anchor 0.00  std 0.084   48.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  12  train  31.07%  reward +0.3533  anchor 0.00  std 0.084   55.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  13  train  30.65%  reward +0.3622  anchor 0.00  std 0.084   46.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  14  train  31.97%  reward +0.3405  anchor 0.00  std 0.083   51.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  15  train  30.35%  reward +0.3715  anchor 0.00  std 0.083   45.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  16  train  32.63%  reward +0.3225  anchor 0.00  std 0.083   43.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  17  train  32.11%  reward +0.3322  anchor 0.00  std 0.083   46.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  18  train  33.04%  reward +0.3196  anchor 0.00  std 0.083   45.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  19  train  32.69%  reward +0.3226  anchor 0.00  std 0.083   45.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  20  train  31.04%  reward +0.3545  anchor 0.00  std 0.083   45.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  20  EVALUATION  31.62%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  21  train  32.44%  reward +0.3298  anchor 0.00  std 0.083   44.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  22  train  32.42%  reward +0.3283  anchor 0.00  std 0.083   52.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  23  train  31.71%  reward +0.3425  anchor 0.00  std 0.083   46.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  24  train  31.60%  reward +0.3465  anchor 0.00  std 0.082   48.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  25  train  32.56%  reward +0.3255  anchor 0.00  std 0.082   50.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  26  train  31.33%  reward +0.3494  anchor 0.00  std 0.082   46.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  27  train  32.61%  reward +0.3249  anchor 0.00  std 0.082   47.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  28  train  32.22%  reward +0.3317  anchor 0.00  std 0.081   46.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  29  train  31.37%  reward +0.3483  anchor 0.00  std 0.081   47.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  30  train  33.37%  reward +0.3116  anchor 0.00  std 0.082   46.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  30  EVALUATION  30.22%  <- best, saved
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  31  train  30.71%  reward +0.3591  anchor 0.00  std 0.081   47.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  32  train  30.51%  reward +0.3632  anchor 0.00  std 0.081   49.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  33  train  32.08%  reward +0.3348  anchor 0.00  std 0.082   49.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  34  train  30.91%  reward +0.3577  anchor 0.00  std 0.081   50.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  35  train  30.90%  reward +0.3616  anchor 0.00  std 0.081   50.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  36  train  32.72%  reward +0.3220  anchor 0.00  std 0.081   47.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  37  train  32.50%  reward +0.3263  anchor 0.00  std 0.081   50.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  38  train  32.70%  reward +0.3233  anchor 0.00  std 0.081   48.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  39  train  33.53%  reward +0.3076  anchor 0.00  std 0.081   50.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  40  train  31.90%  reward +0.3394  anchor 0.00  std 0.081   49.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  40  EVALUATION  30.52%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  41  train  32.08%  reward +0.3373  anchor 0.00  std 0.081   50.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  42  train  32.24%  reward +0.3332  anchor 0.00  std 0.081   52.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  43  train  31.69%  reward +0.3435  anchor 0.00  std 0.081   48.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  44  train  31.93%  reward +0.3400  anchor 0.00  std 0.081   45.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  45  train  32.53%  reward +0.3247  anchor 0.00  std 0.081   47.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  46  train  34.15%  reward +0.2952  anchor 0.00  std 0.081   46.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  47  train  32.18%  reward +0.3309  anchor 0.00  std 0.081   48.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  48  train  33.05%  reward +0.3122  anchor 0.00  std 0.081   47.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  49  train  32.68%  reward +0.3261  anchor 0.00  std 0.081   45.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  50  train  32.54%  reward +0.3267  anchor 0.00  std 0.081   47.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  50  EVALUATION  31.90%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  51  train  32.60%  reward +0.3257  anchor 0.00  std 0.081   45.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  52  train  32.06%  reward +0.3351  anchor 0.00  std 0.080   44.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  53  train  32.61%  reward +0.3233  anchor 0.00  std 0.080   44.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  54  train  32.18%  reward +0.3344  anchor 0.00  std 0.080   46.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  55  train  32.84%  reward +0.3219  anchor 0.00  std 0.080   45.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  56  train  33.13%  reward +0.3139  anchor 0.00  std 0.080   45.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  57  train  33.52%  reward +0.3063  anchor 0.00  std 0.080   45.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  58  train  33.18%  reward +0.3118  anchor 0.00  std 0.079   48.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  59  train  31.47%  reward +0.3470  anchor 0.00  std 0.079   45.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  60  train  32.31%  reward +0.3323  anchor 0.00  std 0.079   44.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  60  EVALUATION  30.83%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  61  train  32.30%  reward +0.3321  anchor 0.00  std 0.079   46.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  62  train  32.22%  reward +0.3335  anchor 0.00  std 0.079   44.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  63  train  31.65%  reward +0.3440  anchor 0.00  std 0.079   44.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  64  train  31.43%  reward +0.3463  anchor 0.00  std 0.079   45.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  65  train  33.02%  reward +0.3182  anchor 0.00  std 0.079   44.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  66  train  33.35%  reward +0.3117  anchor 0.00  std 0.079   44.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  67  train  32.78%  reward +0.3209  anchor 0.00  std 0.079   44.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  68  train  32.10%  reward +0.3361  anchor 0.00  std 0.079   43.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  69  train  32.34%  reward +0.3314  anchor 0.00  std 0.079   46.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  70  train  32.06%  reward +0.3350  anchor 0.00  std 0.079   44.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  70  EVALUATION  31.29%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  71  train  32.29%  reward +0.3325  anchor 0.00  std 0.079   45.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  72  train  33.18%  reward +0.3135  anchor 0.00  std 0.078   45.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  73  train  33.22%  reward +0.3129  anchor 0.00  std 0.078   43.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  74  train  32.53%  reward +0.3245  anchor 0.00  std 0.078   47.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  75  train  33.06%  reward +0.3139  anchor 0.00  std 0.078   45.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  76  train  32.80%  reward +0.3226  anchor 0.00  std 0.078   44.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  77  train  32.55%  reward +0.3254  anchor 0.00  std 0.078   44.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  78  train  32.96%  reward +0.3174  anchor 0.00  std 0.078   44.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  79  train  31.43%  reward +0.3477  anchor 0.00  std 0.078   44.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  80  train  34.30%  reward +0.2933  anchor 0.00  std 0.078   45.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  80  EVALUATION  33.25%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  81  train  33.95%  reward +0.3005  anchor 0.00  std 0.078   44.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  82  train  33.59%  reward +0.3075  anchor 0.00  std 0.078   44.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  83  train  31.58%  reward +0.3411  anchor 0.00  std 0.078   46.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  84  train  33.56%  reward +0.3068  anchor 0.00  std 0.077   44.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  85  train  33.87%  reward +0.2981  anchor 0.00  std 0.077   43.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  86  train  33.68%  reward +0.3041  anchor 0.00  std 0.077   47.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  87  train  32.57%  reward +0.3265  anchor 0.00  std 0.077   44.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  88  train  33.34%  reward +0.3122  anchor 0.00  std 0.077   44.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  89  train  33.37%  reward +0.3116  anchor 0.00  std 0.077   44.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  90  train  33.08%  reward +0.3153  anchor 0.00  std 0.077   45.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  90  EVALUATION  31.47%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  91  train  32.93%  reward +0.3170  anchor 0.00  std 0.077   46.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  92  train  33.73%  reward +0.3034  anchor 0.00  std 0.077   48.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  93  train  33.56%  reward +0.3074  anchor 0.00  std 0.077   47.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  94  train  32.78%  reward +0.3207  anchor 0.00  std 0.076   46.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  95  train  32.89%  reward +0.3201  anchor 0.00  std 0.076   43.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  96  train  32.94%  reward +0.3200  anchor 0.00  std 0.076   44.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  97  train  31.82%  reward +0.3397  anchor 0.00  std 0.076   45.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  98  train  32.34%  reward +0.3315  anchor 0.00  std 0.076   45.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update  99  train  32.85%  reward +0.3175  anchor 0.00  std 0.075   43.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 100  train  32.51%  reward +0.3250  anchor 0.00  std 0.075   46.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 100  EVALUATION  31.67%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 101  train  31.89%  reward +0.3407  anchor 0.00  std 0.075   47.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 102  train  32.75%  reward +0.3207  anchor 0.00  std 0.075   47.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 103  train  32.26%  reward +0.3329  anchor 0.00  std 0.075   51.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 104  train  30.25%  reward +0.3714  anchor 0.00  std 0.075   46.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 105  train  31.88%  reward +0.3387  anchor 0.00  std 0.075   47.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 106  train  31.58%  reward +0.3443  anchor 0.00  std 0.075   45.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 107  train  31.38%  reward +0.3504  anchor 0.00  std 0.075   47.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 108  train  30.89%  reward +0.3578  anchor 0.00  std 0.075   45.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 109  train  31.09%  reward +0.3549  anchor 0.00  std 0.075   47.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 110  train  29.63%  reward +0.3826  anchor 0.00  std 0.075   47.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 110  EVALUATION  30.30%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 111  train  30.39%  reward +0.3696  anchor 0.00  std 0.075   47.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 112  train  30.45%  reward +0.3669  anchor 0.00  std 0.075   48.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 113  train  30.78%  reward +0.3615  anchor 0.00  std 0.075   49.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 114  train  31.13%  reward +0.3526  anchor 0.00  std 0.075   48.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 115  train  29.50%  reward +0.3876  anchor 0.00  std 0.075   48.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 116  train  30.49%  reward +0.3672  anchor 0.00  std 0.074   47.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 117  train  30.54%  reward +0.3643  anchor 0.00  std 0.074   46.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 118  train  31.04%  reward +0.3543  anchor 0.00  std 0.074   44.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 119  train  30.68%  reward +0.3652  anchor 0.00  std 0.074   45.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 120  train  31.19%  reward +0.3505  anchor 0.00  std 0.074   46.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 120  EVALUATION  30.66%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 121  train  31.91%  reward +0.3406  anchor 0.00  std 0.074   44.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 122  train  30.52%  reward +0.3660  anchor 0.00  std 0.074   45.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 123  train  29.93%  reward +0.3778  anchor 0.00  std 0.073   45.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 124  train  30.46%  reward +0.3684  anchor 0.00  std 0.073   44.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 125  train  30.74%  reward +0.3606  anchor 0.00  std 0.073   45.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 126  train  31.70%  reward +0.3416  anchor 0.00  std 0.073   44.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 127  train  31.52%  reward +0.3457  anchor 0.00  std 0.073   44.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 128  train  29.96%  reward +0.3780  anchor 0.00  std 0.073   43.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 129  train  29.30%  reward +0.3882  anchor 0.00  std 0.073   44.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 130  train  29.36%  reward +0.3895  anchor 0.00  std 0.073   47.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 130  EVALUATION  29.46%  <- best, saved
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 131  train  30.96%  reward +0.3561  anchor 0.00  std 0.073   43.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 132  train  28.59%  reward +0.4040  anchor 0.00  std 0.073   43.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 133  train  29.46%  reward +0.3872  anchor 0.00  std 0.073   45.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 134  train  30.17%  reward +0.3743  anchor 0.00  std 0.073   44.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 135  train  29.49%  reward +0.3858  anchor 0.00  std 0.073   46.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 136  train  29.34%  reward +0.3883  anchor 0.00  std 0.073   46.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 137  train  31.04%  reward +0.3558  anchor 0.00  std 0.073   44.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 138  train  30.20%  reward +0.3718  anchor 0.00  std 0.073   44.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 139  train  28.91%  reward +0.3965  anchor 0.00  std 0.073   45.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 140  train  30.16%  reward +0.3715  anchor 0.00  std 0.073   45.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 140  EVALUATION  29.33%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 141  train  29.07%  reward +0.3945  anchor 0.00  std 0.073   43.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 142  train  30.27%  reward +0.3714  anchor 0.00  std 0.073   44.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 143  train  30.46%  reward +0.3671  anchor 0.00  std 0.072   45.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 144  train  30.48%  reward +0.3695  anchor 0.00  std 0.072   44.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 145  train  29.44%  reward +0.3863  anchor 0.00  std 0.072   43.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 146  train  30.79%  reward +0.3613  anchor 0.00  std 0.072   45.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 147  train  29.81%  reward +0.3799  anchor 0.00  std 0.072   46.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 148  train  30.79%  reward +0.3622  anchor 0.00  std 0.072   44.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 149  train  31.14%  reward +0.3546  anchor 0.00  std 0.071   44.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 150  train  29.11%  reward +0.3959  anchor 0.00  std 0.071   48.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 150  EVALUATION  30.03%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 151  train  29.81%  reward +0.3804  anchor 0.00  std 0.071   47.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 152  train  30.50%  reward +0.3641  anchor 0.00  std 0.071   44.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 153  train  29.69%  reward +0.3813  anchor 0.00  std 0.071   47.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 154  train  29.82%  reward +0.3804  anchor 0.00  std 0.071   44.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 155  train  30.07%  reward +0.3726  anchor 0.00  std 0.071   48.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 156  train  30.59%  reward +0.3635  anchor 0.00  std 0.071   50.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 157  train  30.60%  reward +0.3676  anchor 0.00  std 0.070   47.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 158  train  29.81%  reward +0.3819  anchor 0.00  std 0.070   49.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 159  train  30.34%  reward +0.3687  anchor 0.00  std 0.070   51.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 160  train  31.36%  reward +0.3493  anchor 0.00  std 0.070   47.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 160  EVALUATION  29.82%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 161  train  30.92%  reward +0.3562  anchor 0.00  std 0.070   44.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 162  train  30.67%  reward +0.3633  anchor 0.00  std 0.070   47.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 163  train  30.81%  reward +0.3606  anchor 0.00  std 0.070   46.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 164  train  29.57%  reward +0.3865  anchor 0.00  std 0.070   46.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 165  train  30.13%  reward +0.3722  anchor 0.00  std 0.070   45.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 166  train  29.95%  reward +0.3765  anchor 0.00  std 0.070   46.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 167  train  29.43%  reward +0.3877  anchor 0.00  std 0.070   44.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 168  train  30.23%  reward +0.3724  anchor 0.00  std 0.070   48.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 169  train  29.70%  reward +0.3824  anchor 0.00  std 0.070   47.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 170  train  29.83%  reward +0.3797  anchor 0.00  std 0.070   45.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 170  EVALUATION  30.11%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 171  train  30.67%  reward +0.3627  anchor 0.00  std 0.070   47.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 172  train  30.93%  reward +0.3605  anchor 0.00  std 0.070   57.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 173  train  30.83%  reward +0.3596  anchor 0.00  std 0.070   50.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 174  train  31.10%  reward +0.3559  anchor 0.00  std 0.070   43.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 175  train  30.49%  reward +0.3681  anchor 0.00  std 0.070   44.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 176  train  31.02%  reward +0.3563  anchor 0.00  std 0.070   42.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 177  train  28.92%  reward +0.3985  anchor 0.00  std 0.070   43.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 178  train  28.52%  reward +0.4044  anchor 0.00  std 0.070   44.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 179  train  29.64%  reward +0.3824  anchor 0.00  std 0.069   43.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 180  train  29.61%  reward +0.3855  anchor 0.00  std 0.069   35.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 180  EVALUATION  29.81%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 181  train  30.25%  reward +0.3727  anchor 0.00  std 0.069   33.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 182  train  30.83%  reward +0.3604  anchor 0.00  std 0.069   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 183  train  30.75%  reward +0.3620  anchor 0.00  std 0.069   30.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 184  train  28.94%  reward +0.3968  anchor 0.00  std 0.069   32.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 185  train  30.81%  reward +0.3595  anchor 0.00  std 0.069   29.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 186  train  30.71%  reward +0.3643  anchor 0.00  std 0.069   30.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 187  train  28.04%  reward +0.4138  anchor 0.00  std 0.069   32.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 188  train  30.11%  reward +0.3726  anchor 0.00  std 0.069   34.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 189  train  29.78%  reward +0.3794  anchor 0.00  std 0.069   34.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 190  train  29.17%  reward +0.3928  anchor 0.00  std 0.069   40.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 190  EVALUATION  29.90%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 191  train  29.81%  reward +0.3806  anchor 0.00  std 0.069   52.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 192  train  29.33%  reward +0.3903  anchor 0.00  std 0.068   48.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 193  train  30.16%  reward +0.3710  anchor 0.00  std 0.069   48.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 194  train  31.76%  reward +0.3388  anchor 0.00  std 0.068   45.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 195  train  30.59%  reward +0.3646  anchor 0.00  std 0.069   48.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 196  train  31.28%  reward +0.3525  anchor 0.00  std 0.068   46.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 197  train  30.21%  reward +0.3733  anchor 0.00  std 0.068   47.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 198  train  30.96%  reward +0.3584  anchor 0.00  std 0.068   46.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 199  train  30.80%  reward +0.3639  anchor 0.00  std 0.068   47.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 200  train  30.69%  reward +0.3619  anchor 0.00  std 0.068   45.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 200  EVALUATION  31.66%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 201  train  32.70%  reward +0.3236  anchor 0.00  std 0.068   48.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 202  train  31.77%  reward +0.3414  anchor 0.00  std 0.067   44.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 203  train  31.81%  reward +0.3407  anchor 0.00  std 0.067   46.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 204  train  32.43%  reward +0.3271  anchor 0.00  std 0.067   49.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 205  train  31.09%  reward +0.3548  anchor 0.00  std 0.067   47.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 206  train  30.84%  reward +0.3601  anchor 0.00  std 0.067   46.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 207  train  29.63%  reward +0.3827  anchor 0.00  std 0.067   48.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 208  train  31.33%  reward +0.3522  anchor 0.00  std 0.067   44.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 209  train  30.58%  reward +0.3645  anchor 0.00  std 0.067   45.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 210  train  31.67%  reward +0.3446  anchor 0.00  std 0.067   48.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 210  EVALUATION  30.77%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 211  train  30.53%  reward +0.3655  anchor 0.00  std 0.067   42.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 212  train  30.28%  reward +0.3710  anchor 0.00  std 0.067   36.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 213  train  30.55%  reward +0.3644  anchor 0.00  std 0.067   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 214  train  31.07%  reward +0.3550  anchor 0.00  std 0.067   31.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 215  train  30.70%  reward +0.3590  anchor 0.00  std 0.067   30.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 216  train  30.00%  reward +0.3735  anchor 0.00  std 0.067   30.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 217  train  29.89%  reward +0.3776  anchor 0.00  std 0.067   33.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 218  train  30.43%  reward +0.3669  anchor 0.00  std 0.067   30.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 219  train  30.48%  reward +0.3680  anchor 0.00  std 0.066   30.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 220  train  29.48%  reward +0.3852  anchor 0.00  std 0.066   30.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 220  EVALUATION  30.23%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 221  train  29.79%  reward +0.3776  anchor 0.00  std 0.066   32.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 222  train  30.83%  reward +0.3593  anchor 0.00  std 0.066   32.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 223  train  28.36%  reward +0.4058  anchor 0.00  std 0.066   31.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 224  train  29.01%  reward +0.3964  anchor 0.00  std 0.066   30.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 225  train  30.09%  reward +0.3743  anchor 0.00  std 0.066   30.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 226  train  30.48%  reward +0.3670  anchor 0.00  std 0.066   32.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 227  train  28.77%  reward +0.4017  anchor 0.00  std 0.066   31.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 228  train  30.93%  reward +0.3588  anchor 0.00  std 0.066   31.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 229  train  29.46%  reward +0.3878  anchor 0.00  std 0.066   30.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 230  train  29.93%  reward +0.3762  anchor 0.00  std 0.066   30.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 230  EVALUATION  29.60%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 231  train  30.83%  reward +0.3597  anchor 0.00  std 0.065   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 232  train  29.12%  reward +0.3928  anchor 0.00  std 0.065   30.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 233  train  30.15%  reward +0.3724  anchor 0.00  std 0.065   31.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 234  train  30.05%  reward +0.3758  anchor 0.00  std 0.065   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 235  train  29.51%  reward +0.3848  anchor 0.00  std 0.065   31.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 236  train  29.79%  reward +0.3774  anchor 0.00  std 0.065   31.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 237  train  29.65%  reward +0.3844  anchor 0.00  std 0.065   31.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 238  train  29.57%  reward +0.3848  anchor 0.00  std 0.065   31.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 239  train  30.07%  reward +0.3746  anchor 0.00  std 0.065   30.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 240  train  28.87%  reward +0.3967  anchor 0.00  std 0.065   31.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 240  EVALUATION  29.79%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 241  train  28.98%  reward +0.3936  anchor 0.00  std 0.065   31.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 242  train  29.70%  reward +0.3795  anchor 0.00  std 0.065   30.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 243  train  28.97%  reward +0.3943  anchor 0.00  std 0.065   31.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 244  train  29.38%  reward +0.3882  anchor 0.00  std 0.065   32.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 245  train  29.88%  reward +0.3784  anchor 0.00  std 0.065   31.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 246  train  28.17%  reward +0.4117  anchor 0.00  std 0.064   44.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 247  train  30.59%  reward +0.3668  anchor 0.00  std 0.064   44.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 248  train  29.69%  reward +0.3840  anchor 0.00  std 0.064   41.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 249  train  30.05%  reward +0.3743  anchor 0.00  std 0.064   32.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 250  train  30.35%  reward +0.3688  anchor 0.00  std 0.064   31.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 250  EVALUATION  29.29%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 251  train  30.86%  reward +0.3584  anchor 0.00  std 0.064   34.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 252  train  29.08%  reward +0.3953  anchor 0.00  std 0.064   30.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 253  train  28.73%  reward +0.4025  anchor 0.00  std 0.064   30.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 254  train  29.38%  reward +0.3871  anchor 0.00  std 0.063   31.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 255  train  29.82%  reward +0.3811  anchor 0.00  std 0.063   30.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 256  train  26.90%  reward +0.4373  anchor 0.00  std 0.063   31.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 257  train  28.50%  reward +0.4064  anchor 0.00  std 0.063   32.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 258  train  28.11%  reward +0.4156  anchor 0.00  std 0.063   31.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 259  train  28.21%  reward +0.4122  anchor 0.00  std 0.063   30.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 260  train  29.04%  reward +0.3951  anchor 0.00  std 0.063   33.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 260  EVALUATION  29.08%  <- best, saved
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 261  train  29.22%  reward +0.3912  anchor 0.00  std 0.063   30.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 262  train  30.32%  reward +0.3711  anchor 0.00  std 0.063   30.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 263  train  28.69%  reward +0.4013  anchor 0.00  std 0.063   47.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 264  train  30.11%  reward +0.3735  anchor 0.00  std 0.063   51.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 265  train  30.97%  reward +0.3606  anchor 0.00  std 0.063   50.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 266  train  30.23%  reward +0.3709  anchor 0.00  std 0.063   51.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 267  train  29.25%  reward +0.3916  anchor 0.00  std 0.062   50.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 268  train  30.79%  reward +0.3606  anchor 0.00  std 0.062   49.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 269  train  28.74%  reward +0.3997  anchor 0.00  std 0.062   47.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 270  train  29.78%  reward +0.3784  anchor 0.00  std 0.062   45.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 270  EVALUATION  28.31%  <- best, saved
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 271  train  28.19%  reward +0.4122  anchor 0.00  std 0.062   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 272  train  29.73%  reward +0.3802  anchor 0.00  std 0.062   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 273  train  29.23%  reward +0.3881  anchor 0.00  std 0.062   30.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 274  train  28.62%  reward +0.4023  anchor 0.00  std 0.061   34.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 275  train  30.92%  reward +0.3607  anchor 0.00  std 0.061   31.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 276  train  28.81%  reward +0.3990  anchor 0.00  std 0.061   32.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 277  train  28.79%  reward +0.4007  anchor 0.00  std 0.061   32.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 278  train  28.07%  reward +0.4148  anchor 0.00  std 0.061   31.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 279  train  29.92%  reward +0.3773  anchor 0.00  std 0.061   30.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 280  train  29.40%  reward +0.3883  anchor 0.00  std 0.061   30.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 280  EVALUATION  28.39%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 281  train  29.36%  reward +0.3897  anchor 0.00  std 0.061   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 282  train  29.91%  reward +0.3784  anchor 0.00  std 0.061   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 283  train  29.83%  reward +0.3795  anchor 0.00  std 0.061   31.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 284  train  28.71%  reward +0.4007  anchor 0.00  std 0.061   30.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 285  train  29.41%  reward +0.3870  anchor 0.00  std 0.061   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 286  train  28.17%  reward +0.4115  anchor 0.00  std 0.061   32.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 287  train  27.90%  reward +0.4180  anchor 0.00  std 0.061   34.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 288  train  27.59%  reward +0.4246  anchor 0.00  std 0.061   33.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 289  train  30.23%  reward +0.3745  anchor 0.00  std 0.061   33.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 290  train  29.32%  reward +0.3926  anchor 0.00  std 0.061   32.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 290  EVALUATION  28.80%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 291  train  28.51%  reward +0.4047  anchor 0.00  std 0.061   34.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 292  train  29.31%  reward +0.3890  anchor 0.00  std 0.061   32.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 293  train  29.05%  reward +0.3956  anchor 0.00  std 0.061   32.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 294  train  28.67%  reward +0.4026  anchor 0.00  std 0.061   31.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 295  train  30.44%  reward +0.3693  anchor 0.00  std 0.061   30.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 296  train  30.61%  reward +0.3637  anchor 0.00  std 0.061   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 297  train  29.58%  reward +0.3839  anchor 0.00  std 0.061   31.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 298  train  29.78%  reward +0.3810  anchor 0.00  std 0.061   31.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 299  train  29.56%  reward +0.3838  anchor 0.00  std 0.060   31.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 300  train  30.42%  reward +0.3669  anchor 0.00  std 0.060   32.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 300  EVALUATION  29.63%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 301  train  30.23%  reward +0.3726  anchor 0.00  std 0.060   30.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 302  train  29.39%  reward +0.3902  anchor 0.00  std 0.060   31.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 303  train  29.36%  reward +0.3876  anchor 0.00  std 0.060   31.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 304  train  28.67%  reward +0.4032  anchor 0.00  std 0.060   34.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 305  train  28.95%  reward +0.3944  anchor 0.00  std 0.060   32.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 306  train  30.64%  reward +0.3644  anchor 0.00  std 0.060   31.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 307  train  31.34%  reward +0.3491  anchor 0.00  std 0.060   31.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 308  train  29.91%  reward +0.3753  anchor 0.00  std 0.060   30.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 309  train  28.53%  reward +0.4025  anchor 0.00  std 0.060   33.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 310  train  29.80%  reward +0.3821  anchor 0.00  std 0.060   30.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 310  EVALUATION  29.54%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 311  train  28.96%  reward +0.3956  anchor 0.00  std 0.060   30.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 312  train  29.46%  reward +0.3873  anchor 0.00  std 0.060   30.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 313  train  29.55%  reward +0.3899  anchor 0.00  std 0.060   33.0s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 314  train  28.59%  reward +0.4026  anchor 0.00  std 0.060   29.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 315  train  28.71%  reward +0.4016  anchor 0.00  std 0.060   29.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 316  train  30.18%  reward +0.3717  anchor 0.00  std 0.060   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 317  train  30.34%  reward +0.3668  anchor 0.00  std 0.060   30.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 318  train  30.56%  reward +0.3620  anchor 0.00  std 0.060   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 319  train  29.02%  reward +0.3936  anchor 0.00  std 0.060   30.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 320  train  29.75%  reward +0.3808  anchor 0.00  std 0.060   29.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 320  EVALUATION  30.14%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 321  train  30.08%  reward +0.3786  anchor 0.00  std 0.060   29.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 322  train  29.58%  reward +0.3875  anchor 0.00  std 0.060   30.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 323  train  28.79%  reward +0.3988  anchor 0.00  std 0.060   29.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 324  train  30.16%  reward +0.3735  anchor 0.00  std 0.060   29.8s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 325  train  28.89%  reward +0.3978  anchor 0.00  std 0.060   29.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 326  train  30.25%  reward +0.3705  anchor 0.00  std 0.060   30.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 327  train  29.58%  reward +0.3874  anchor 0.00  std 0.059   29.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 328  train  29.02%  reward +0.3937  anchor 0.00  std 0.059   30.2s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 329  train  28.46%  reward +0.4054  anchor 0.00  std 0.059   29.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 330  train  29.25%  reward +0.3900  anchor 0.00  std 0.059   29.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 330  EVALUATION  29.54%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 331  train  29.71%  reward +0.3820  anchor 0.00  std 0.059   29.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 332  train  28.03%  reward +0.4147  anchor 0.00  std 0.059   30.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 333  train  27.77%  reward +0.4222  anchor 0.00  std 0.059   29.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 334  train  28.97%  reward +0.3972  anchor 0.00  std 0.059   29.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 335  train  28.59%  reward +0.4035  anchor 0.00  std 0.059   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 336  train  29.41%  reward +0.3882  anchor 0.00  std 0.059   30.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 337  train  29.05%  reward +0.3952  anchor 0.00  std 0.059   30.1s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 338  train  29.69%  reward +0.3830  anchor 0.00  std 0.059   29.9s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 339  train  28.84%  reward +0.3986  anchor 0.00  std 0.059   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 340  train  29.51%  reward +0.3870  anchor 0.00  std 0.059   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 340  EVALUATION  28.43%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 341  train  29.31%  reward +0.3911  anchor 0.00  std 0.059   30.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 342  train  29.48%  reward +0.3865  anchor 0.00  std 0.059   29.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 343  train  29.72%  reward +0.3796  anchor 0.00  std 0.059   30.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 344  train  29.32%  reward +0.3885  anchor 0.00  std 0.059   29.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 345  train  29.38%  reward +0.3901  anchor 0.00  std 0.058   29.7s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 346  train  28.06%  reward +0.4162  anchor 0.00  std 0.058   30.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 347  train  29.93%  reward +0.3762  anchor 0.00  std 0.058   29.6s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 348  train  29.30%  reward +0.3877  anchor 0.00  std 0.058   30.4s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 349  train  28.73%  reward +0.4024  anchor 0.00  std 0.058   30.5s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 350  train  30.77%  reward +0.3594  anchor 0.00  std 0.058   29.3s
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2 update 350  EVALUATION  29.98%
+  wrote out/2c_m4_log.csv
+  wrote out/2c_m4_eval.csv
+  seed 2: early stop — 8 checks without a 0.2 point gain
+  run a: kept 28.31% at update 270  (lowest seen 28.31%)
+  elapsed 4.21 h
+
+Comparing 210 runs on validation 301-330 in the MOVING world ...
+  views agreed in 210 of 210 runs
+
+  Validation 301-330 — % of packets created, MOVING world
+  ------------------------------------------------------------------------------------------------------------------------------------------------------
+          policy    total     std    channel  queue_ful   no_route   dead_end        ttl  hop_limit  link_brok  stale_lin    conn%  loss|conn    flown  from GS
+  ------------------------------------------------------------------------------------------------------------------------------------------------------
+           hover   43.95%    6.88     13.77%     15.53%      9.60%      0.46%      0.00%      0.00%      0.32%      4.26%   98.55%     43.15%        0      334
+        midpoint   29.82%    5.42     11.58%     12.61%      1.29%      0.07%      0.00%      0.00%      0.09%      4.17%   99.27%     29.31%     1790      233
+           clone   33.80%    5.71     14.36%      7.92%      4.73%      0.61%      0.00%      0.00%      0.13%      6.06%   97.16%     31.86%     2783      191
+       m3 seed 0   29.61%    5.18     13.94%      6.75%      2.85%      0.37%      0.00%      0.00%      0.10%      5.61%   98.32%     28.43%     2737      189
+       m3 seed 1   29.01%    3.94     13.76%      6.35%      2.63%      0.32%      0.00%      0.00%      0.19%      5.77%   98.55%     28.00%     2728      180
+       m3 seed 2   31.53%    3.60     13.45%      4.99%      6.19%      0.67%      0.00%      0.00%      0.24%      6.00%   96.45%     29.00%     2861      186
+        m4 run a   28.31%    4.47     12.84%      7.09%      2.61%      0.39%      0.00%      0.00%      0.17%      5.21%   97.72%     26.65%     2826      211
+  ------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  Loss per ten seconds, by the slice a packet was created in — % of packets created in that slice
+  -----------------------------------------------------------------------------------------------
+          policy    5-15s   15-25s   25-35s   35-45s   45-55s   55-65s   65-75s   75-85s   85-95s
+  -----------------------------------------------------------------------------------------------
+           hover   26.09%   25.98%   28.02%   33.03%   40.06%   49.54%   60.84%   64.57%   67.36%
+        midpoint   21.41%   19.24%   19.93%   22.49%   28.48%   31.21%   38.24%   42.30%   45.04%
+           clone   20.97%   20.79%   22.93%   26.02%   31.73%   38.09%   44.19%   48.69%   50.74%
+       m3 seed 0   19.37%   19.29%   21.54%   24.13%   29.79%   32.65%   37.51%   40.10%   42.14%
+       m3 seed 1   18.41%   19.91%   20.53%   23.43%   27.22%   30.97%   36.52%   41.11%   42.98%
+       m3 seed 2   18.96%   18.95%   20.91%   24.17%   31.52%   36.25%   41.63%   43.67%   47.70%
+        m4 run a   18.35%   17.41%   18.80%   22.43%   27.41%   31.11%   37.32%   40.21%   41.73%
+  -----------------------------------------------------------------------------------------------
+
+  Paired over 30 layouts — points of total loss, negative means the actor loses fewer
+  --------------------------------------------------------------------------------------------
+           actor   against   mean diff    wins      sign p    t-test p
+  --------------------------------------------------------------------------------------------
+           clone     hover     -10.15   26/30    5.95e-05    3.47e-08
+       m3 seed 0     hover     -14.33   28/30    8.68e-07    2.70e-10
+       m3 seed 1     hover     -14.94   30/30    1.86e-09    7.65e-13
+       m3 seed 2     hover     -12.42   29/30    5.77e-08    5.46e-11
+        m4 run a     hover     -15.64   30/30    1.86e-09    1.07e-13
+           clone  midpoint      +3.98    9/30    4.28e-02    1.56e-03
+       m3 seed 0  midpoint      -0.20   16/30    8.56e-01    8.46e-01
+       m3 seed 1  midpoint      -0.81   17/30    5.85e-01    3.78e-01
+       m3 seed 2  midpoint      +1.71    8/30    1.61e-02    1.04e-01
+        m4 run a  midpoint      -1.51   21/30    4.28e-02    1.68e-01
+  --------------------------------------------------------------------------------------------
+
+  kept versions
+    run a: update 270  (28.31%)
+  wrote out/2c_m4_learning.png
+  wrote out/2c_m4_compare.csv
+  wrote out/2c_m4_paired.csv
+
+  total 4.25 h
+EXIT=0

@@ -1,0 +1,543 @@
+
+=== training seed 0 ===
+  seed 0 update   1  train  16.17%  reward +0.6588  anchor 1.00  std 0.100   23.3s
+  seed 0 update   2  train  15.99%  reward +0.6615  anchor 1.00  std 0.100   21.8s
+  seed 0 update   3  train  15.65%  reward +0.6657  anchor 1.00  std 0.100   22.2s
+  seed 0 update   4  train  15.81%  reward +0.6630  anchor 1.00  std 0.100   30.8s
+  seed 0 update   5  train  15.88%  reward +0.6634  anchor 1.00  std 0.100   26.7s
+  seed 0 update   6  train  15.99%  reward +0.6618  anchor 1.00  std 0.100   23.2s
+  seed 0 update   7  train  15.34%  reward +0.6734  anchor 1.00  std 0.100   27.5s
+  seed 0 update   8  train  15.99%  reward +0.6610  anchor 1.00  std 0.100   22.4s
+  seed 0 update   9  train  16.16%  reward +0.6573  anchor 1.00  std 0.100   26.9s
+  seed 0 update  10  train  16.02%  reward +0.6628  anchor 1.00  std 0.100   26.2s
+  seed 0 update  10  EVALUATION  15.12%  <- best, saved
+  seed 0 update  11  train  15.83%  reward +0.6657  anchor 0.98  std 0.100   26.3s
+  seed 0 update  12  train  15.17%  reward +0.6765  anchor 0.96  std 0.100   27.9s
+  seed 0 update  13  train  15.04%  reward +0.6787  anchor 0.94  std 0.100   29.5s
+  seed 0 update  14  train  15.33%  reward +0.6728  anchor 0.92  std 0.100   30.4s
+  seed 0 update  15  train  14.77%  reward +0.6866  anchor 0.90  std 0.099   28.9s
+  seed 0 update  16  train  14.80%  reward +0.6858  anchor 0.88  std 0.099   31.9s
+  seed 0 update  17  train  14.94%  reward +0.6817  anchor 0.86  std 0.099   29.3s
+  seed 0 update  18  train  14.75%  reward +0.6828  anchor 0.84  std 0.099   30.7s
+  seed 0 update  19  train  14.57%  reward +0.6883  anchor 0.82  std 0.100   30.2s
+  seed 0 update  20  train  14.49%  reward +0.6888  anchor 0.80  std 0.100   27.6s
+  seed 0 update  20  EVALUATION  14.25%  <- best, saved
+  seed 0 update  21  train  14.78%  reward +0.6831  anchor 0.78  std 0.100   31.6s
+  seed 0 update  22  train  14.57%  reward +0.6898  anchor 0.76  std 0.100   36.3s
+  seed 0 update  23  train  14.82%  reward +0.6841  anchor 0.74  std 0.100   28.2s
+  seed 0 update  24  train  14.29%  reward +0.6945  anchor 0.72  std 0.100   30.9s
+  seed 0 update  25  train  14.43%  reward +0.6919  anchor 0.70  std 0.100   34.2s
+  seed 0 update  26  train  14.52%  reward +0.6906  anchor 0.68  std 0.100   30.8s
+  seed 0 update  27  train  14.81%  reward +0.6843  anchor 0.66  std 0.099   28.8s
+  seed 0 update  28  train  14.43%  reward +0.6909  anchor 0.64  std 0.100   23.7s
+  seed 0 update  29  train  14.36%  reward +0.6949  anchor 0.62  std 0.099   28.8s
+  seed 0 update  30  train  14.47%  reward +0.6925  anchor 0.60  std 0.099   28.4s
+  seed 0 update  30  EVALUATION  13.88%
+  seed 0 update  31  train  14.22%  reward +0.6941  anchor 0.58  std 0.099   27.5s
+  seed 0 update  32  train  14.19%  reward +0.6964  anchor 0.56  std 0.100   24.7s
+  seed 0 update  33  train  14.44%  reward +0.6923  anchor 0.54  std 0.099   27.8s
+  seed 0 update  34  train  14.30%  reward +0.6961  anchor 0.52  std 0.099   25.4s
+  seed 0 update  35  train  13.85%  reward +0.7011  anchor 0.50  std 0.099   27.8s
+  seed 0 update  36  train  14.53%  reward +0.6898  anchor 0.48  std 0.099   24.7s
+  seed 0 update  37  train  14.06%  reward +0.7001  anchor 0.46  std 0.099   27.3s
+  seed 0 update  38  train  13.68%  reward +0.7064  anchor 0.44  std 0.098   24.7s
+  seed 0 update  39  train  13.44%  reward +0.7127  anchor 0.42  std 0.098   26.4s
+  seed 0 update  40  train  13.73%  reward +0.7065  anchor 0.40  std 0.098   25.2s
+  seed 0 update  40  EVALUATION  13.58%
+  seed 0 update  41  train  13.58%  reward +0.7090  anchor 0.38  std 0.098   27.4s
+  seed 0 update  42  train  12.92%  reward +0.7209  anchor 0.36  std 0.098   28.2s
+  seed 0 update  43  train  13.12%  reward +0.7168  anchor 0.34  std 0.098   26.8s
+  seed 0 update  44  train  13.21%  reward +0.7132  anchor 0.32  std 0.098   25.8s
+  seed 0 update  45  train  13.44%  reward +0.7088  anchor 0.30  std 0.098   25.9s
+  seed 0 update  46  train  13.20%  reward +0.7152  anchor 0.28  std 0.097   27.1s
+  seed 0 update  47  train  12.95%  reward +0.7190  anchor 0.26  std 0.097   26.0s
+  seed 0 update  48  train  13.08%  reward +0.7177  anchor 0.24  std 0.097   28.2s
+  seed 0 update  49  train  12.62%  reward +0.7271  anchor 0.22  std 0.097   25.1s
+  seed 0 update  50  train  12.93%  reward +0.7206  anchor 0.20  std 0.097   26.9s
+  seed 0 update  50  EVALUATION  11.56%  <- best, saved
+  seed 0 update  51  train  12.79%  reward +0.7236  anchor 0.18  std 0.097   27.3s
+  seed 0 update  52  train  13.01%  reward +0.7184  anchor 0.16  std 0.098   26.4s
+  seed 0 update  53  train  12.44%  reward +0.7295  anchor 0.14  std 0.097   26.9s
+  seed 0 update  54  train  12.85%  reward +0.7230  anchor 0.12  std 0.097   27.4s
+  seed 0 update  55  train  12.27%  reward +0.7355  anchor 0.10  std 0.097   23.9s
+  seed 0 update  56  train  12.43%  reward +0.7305  anchor 0.08  std 0.097   17.5s
+  seed 0 update  57  train  12.53%  reward +0.7295  anchor 0.06  std 0.096   17.1s
+  seed 0 update  58  train  12.37%  reward +0.7329  anchor 0.04  std 0.096   17.2s
+  seed 0 update  59  train  12.76%  reward +0.7253  anchor 0.02  std 0.096   17.3s
+  seed 0 update  60  train  12.09%  reward +0.7367  anchor 0.00  std 0.096   17.3s
+  seed 0 update  60  EVALUATION  11.21%
+  seed 0 update  61  train  12.28%  reward +0.7353  anchor 0.00  std 0.095   16.8s
+  seed 0 update  62  train  12.02%  reward +0.7369  anchor 0.00  std 0.095   17.2s
+  seed 0 update  63  train  11.55%  reward +0.7495  anchor 0.00  std 0.095   17.2s
+  seed 0 update  64  train  11.33%  reward +0.7494  anchor 0.00  std 0.095   17.0s
+  seed 0 update  65  train  11.95%  reward +0.7405  anchor 0.00  std 0.095   22.0s
+  seed 0 update  66  train  12.29%  reward +0.7344  anchor 0.00  std 0.094   17.3s
+  seed 0 update  67  train  12.04%  reward +0.7383  anchor 0.00  std 0.094   19.2s
+  seed 0 update  68  train  12.12%  reward +0.7367  anchor 0.00  std 0.094   17.0s
+  seed 0 update  69  train  11.98%  reward +0.7421  anchor 0.00  std 0.094   17.5s
+  seed 0 update  70  train  11.23%  reward +0.7530  anchor 0.00  std 0.094   17.3s
+  seed 0 update  70  EVALUATION  11.32%
+  seed 0 update  71  train  11.64%  reward +0.7449  anchor 0.00  std 0.094   16.6s
+  seed 0 update  72  train  11.36%  reward +0.7536  anchor 0.00  std 0.093   17.3s
+  seed 0 update  73  train  11.23%  reward +0.7536  anchor 0.00  std 0.093   17.1s
+  seed 0 update  74  train  11.65%  reward +0.7476  anchor 0.00  std 0.093   17.0s
+  seed 0 update  75  train  11.43%  reward +0.7512  anchor 0.00  std 0.093   17.2s
+  seed 0 update  76  train  11.29%  reward +0.7534  anchor 0.00  std 0.093   17.2s
+  seed 0 update  77  train  11.52%  reward +0.7488  anchor 0.00  std 0.092   17.2s
+  seed 0 update  78  train  11.37%  reward +0.7510  anchor 0.00  std 0.092   17.6s
+  seed 0 update  79  train  11.64%  reward +0.7463  anchor 0.00  std 0.092   17.4s
+  seed 0 update  80  train  11.51%  reward +0.7505  anchor 0.00  std 0.092   18.3s
+  seed 0 update  80  EVALUATION  11.74%
+  seed 0 update  81  train  11.24%  reward +0.7543  anchor 0.00  std 0.092   19.3s
+  seed 0 update  82  train  11.32%  reward +0.7521  anchor 0.00  std 0.092   17.7s
+  seed 0 update  83  train  10.99%  reward +0.7569  anchor 0.00  std 0.091   17.2s
+  seed 0 update  84  train  11.24%  reward +0.7535  anchor 0.00  std 0.091   17.1s
+  seed 0 update  85  train  11.03%  reward +0.7570  anchor 0.00  std 0.091   17.2s
+  seed 0 update  86  train  10.98%  reward +0.7591  anchor 0.00  std 0.091   17.2s
+  seed 0 update  87  train  11.14%  reward +0.7561  anchor 0.00  std 0.091   17.1s
+  seed 0 update  88  train  11.17%  reward +0.7562  anchor 0.00  std 0.091   17.1s
+  seed 0 update  89  train  11.63%  reward +0.7434  anchor 0.00  std 0.091   17.2s
+  seed 0 update  90  train  10.65%  reward +0.7659  anchor 0.00  std 0.091   17.1s
+  seed 0 update  90  EVALUATION   9.59%  <- best, saved
+  seed 0 update  91  train  11.09%  reward +0.7573  anchor 0.00  std 0.091   16.5s
+  seed 0 update  92  train  10.94%  reward +0.7590  anchor 0.00  std 0.091   17.4s
+  seed 0 update  93  train  11.39%  reward +0.7503  anchor 0.00  std 0.090   17.1s
+  seed 0 update  94  train  10.96%  reward +0.7583  anchor 0.00  std 0.090   17.3s
+  seed 0 update  95  train  11.03%  reward +0.7573  anchor 0.00  std 0.090   17.4s
+  seed 0 update  96  train  10.73%  reward +0.7632  anchor 0.00  std 0.090   18.3s
+  seed 0 update  97  train  11.00%  reward +0.7587  anchor 0.00  std 0.090   18.6s
+  seed 0 update  98  train  10.65%  reward +0.7656  anchor 0.00  std 0.090   17.6s
+  seed 0 update  99  train  10.75%  reward +0.7641  anchor 0.00  std 0.090   17.9s
+  seed 0 update 100  train  10.74%  reward +0.7645  anchor 0.00  std 0.090   17.1s
+  seed 0 update 100  EVALUATION   9.98%
+  seed 0 update 101  train  10.40%  reward +0.7710  anchor 0.00  std 0.090   17.3s
+  seed 0 update 102  train  10.53%  reward +0.7658  anchor 0.00  std 0.090   17.5s
+  seed 0 update 103  train  10.62%  reward +0.7662  anchor 0.00  std 0.090   17.8s
+  seed 0 update 104  train  10.58%  reward +0.7677  anchor 0.00  std 0.090   17.0s
+  seed 0 update 105  train  10.55%  reward +0.7662  anchor 0.00  std 0.089   17.4s
+  seed 0 update 106  train  10.45%  reward +0.7683  anchor 0.00  std 0.089   17.1s
+  seed 0 update 107  train  10.49%  reward +0.7678  anchor 0.00  std 0.089   18.0s
+  seed 0 update 108  train  10.23%  reward +0.7739  anchor 0.00  std 0.089   17.6s
+  seed 0 update 109  train  10.24%  reward +0.7726  anchor 0.00  std 0.089   17.2s
+  seed 0 update 110  train  10.12%  reward +0.7764  anchor 0.00  std 0.089   17.1s
+  seed 0 update 110  EVALUATION   9.62%
+  seed 0 update 111  train  10.09%  reward +0.7766  anchor 0.00  std 0.089   16.7s
+  seed 0 update 112  train  10.21%  reward +0.7743  anchor 0.00  std 0.088   17.1s
+  seed 0 update 113  train  10.22%  reward +0.7746  anchor 0.00  std 0.088   16.9s
+  seed 0 update 114  train  10.27%  reward +0.7710  anchor 0.00  std 0.088   16.9s
+  seed 0 update 115  train  10.23%  reward +0.7729  anchor 0.00  std 0.088   16.9s
+  seed 0 update 116  train  10.28%  reward +0.7723  anchor 0.00  std 0.088   16.8s
+  seed 0 update 117  train   9.89%  reward +0.7814  anchor 0.00  std 0.087   17.0s
+  seed 0 update 118  train  10.11%  reward +0.7759  anchor 0.00  std 0.087   16.8s
+  seed 0 update 119  train  10.33%  reward +0.7718  anchor 0.00  std 0.087   17.0s
+  seed 0 update 120  train  10.13%  reward +0.7754  anchor 0.00  std 0.087   17.0s
+  seed 0 update 120  EVALUATION   9.65%
+  seed 0 update 121  train  10.28%  reward +0.7723  anchor 0.00  std 0.087   16.4s
+  seed 0 update 122  train  10.02%  reward +0.7785  anchor 0.00  std 0.087   16.7s
+  seed 0 update 123  train  10.14%  reward +0.7756  anchor 0.00  std 0.087   16.6s
+  seed 0 update 124  train   9.91%  reward +0.7791  anchor 0.00  std 0.087   16.9s
+  seed 0 update 125  train   9.91%  reward +0.7789  anchor 0.00  std 0.087   16.9s
+  seed 0 update 126  train   9.87%  reward +0.7811  anchor 0.00  std 0.087   16.9s
+  seed 0 update 127  train   9.96%  reward +0.7785  anchor 0.00  std 0.086   17.1s
+  seed 0 update 128  train   9.69%  reward +0.7837  anchor 0.00  std 0.086   16.7s
+  seed 0 update 129  train  10.10%  reward +0.7773  anchor 0.00  std 0.086   16.8s
+  seed 0 update 130  train  10.11%  reward +0.7762  anchor 0.00  std 0.086   16.8s
+  seed 0 update 130  EVALUATION   8.94%  <- best, saved
+  seed 0 update 131  train   9.82%  reward +0.7806  anchor 0.00  std 0.085   16.1s
+  seed 0 update 132  train   9.77%  reward +0.7822  anchor 0.00  std 0.085   17.7s
+  seed 0 update 133  train   9.70%  reward +0.7844  anchor 0.00  std 0.085   17.3s
+  seed 0 update 134  train   9.87%  reward +0.7786  anchor 0.00  std 0.084   17.0s
+  seed 0 update 135  train   9.63%  reward +0.7863  anchor 0.00  std 0.084   18.0s
+  seed 0 update 136  train   9.86%  reward +0.7803  anchor 0.00  std 0.084   18.0s
+  seed 0 update 137  train   9.68%  reward +0.7843  anchor 0.00  std 0.084   17.7s
+  seed 0 update 138  train   9.76%  reward +0.7844  anchor 0.00  std 0.084   18.2s
+  seed 0 update 139  train   9.66%  reward +0.7856  anchor 0.00  std 0.083   21.1s
+  seed 0 update 140  train   9.82%  reward +0.7825  anchor 0.00  std 0.083   17.4s
+  seed 0 update 140  EVALUATION   9.26%
+  seed 0 update 141  train   9.84%  reward +0.7808  anchor 0.00  std 0.083   16.3s
+  seed 0 update 142  train   9.62%  reward +0.7872  anchor 0.00  std 0.083   17.6s
+  seed 0 update 143  train   9.88%  reward +0.7803  anchor 0.00  std 0.083   17.1s
+  seed 0 update 144  train   9.74%  reward +0.7831  anchor 0.00  std 0.083   16.8s
+  seed 0 update 145  train   9.83%  reward +0.7817  anchor 0.00  std 0.083   17.1s
+  seed 0 update 146  train   9.66%  reward +0.7854  anchor 0.00  std 0.083   16.9s
+  seed 0 update 147  train   9.81%  reward +0.7823  anchor 0.00  std 0.083   16.8s
+  seed 0 update 148  train   9.62%  reward +0.7855  anchor 0.00  std 0.082   17.2s
+  seed 0 update 149  train   9.74%  reward +0.7855  anchor 0.00  std 0.082   16.9s
+  seed 0 update 150  train   9.55%  reward +0.7868  anchor 0.00  std 0.082   16.9s
+  seed 0 update 150  EVALUATION   8.63%
+  seed 0 update 151  train   9.85%  reward +0.7820  anchor 0.00  std 0.082   16.4s
+  seed 0 update 152  train   9.96%  reward +0.7805  anchor 0.00  std 0.082   16.9s
+  seed 0 update 153  train   9.65%  reward +0.7837  anchor 0.00  std 0.082   17.1s
+  seed 0 update 154  train   9.83%  reward +0.7816  anchor 0.00  std 0.082   16.8s
+  seed 0 update 155  train   9.47%  reward +0.7883  anchor 0.00  std 0.082   17.5s
+  seed 0 update 156  train   9.50%  reward +0.7874  anchor 0.00  std 0.081   17.0s
+  seed 0 update 157  train   9.48%  reward +0.7898  anchor 0.00  std 0.081   16.8s
+  seed 0 update 158  train   9.45%  reward +0.7879  anchor 0.00  std 0.081   16.7s
+  seed 0 update 159  train   9.51%  reward +0.7881  anchor 0.00  std 0.081   16.8s
+  seed 0 update 160  train   9.60%  reward +0.7875  anchor 0.00  std 0.081   17.1s
+  seed 0 update 160  EVALUATION   8.86%
+  seed 0 update 161  train   9.93%  reward +0.7796  anchor 0.00  std 0.080   16.9s
+  seed 0 update 162  train   9.74%  reward +0.7824  anchor 0.00  std 0.080   17.2s
+  seed 0 update 163  train   9.39%  reward +0.7875  anchor 0.00  std 0.080   16.8s
+  seed 0 update 164  train   9.35%  reward +0.7889  anchor 0.00  std 0.079   16.8s
+  seed 0 update 165  train   9.49%  reward +0.7879  anchor 0.00  std 0.079   16.8s
+  seed 0 update 166  train   9.75%  reward +0.7831  anchor 0.00  std 0.079   17.0s
+  seed 0 update 167  train   9.56%  reward +0.7857  anchor 0.00  std 0.079   17.3s
+  seed 0 update 168  train   9.58%  reward +0.7857  anchor 0.00  std 0.078   17.2s
+  seed 0 update 169  train   9.60%  reward +0.7853  anchor 0.00  std 0.078   17.1s
+  seed 0 update 170  train   9.43%  reward +0.7893  anchor 0.00  std 0.078   16.8s
+  seed 0 update 170  EVALUATION   8.68%
+  seed 0 update 171  train   9.55%  reward +0.7875  anchor 0.00  std 0.078   16.0s
+  seed 0 update 172  train   9.27%  reward +0.7925  anchor 0.00  std 0.078   17.0s
+  seed 0 update 173  train   9.43%  reward +0.7895  anchor 0.00  std 0.078   17.0s
+  seed 0 update 174  train   9.45%  reward +0.7880  anchor 0.00  std 0.078   16.9s
+  seed 0 update 175  train   9.28%  reward +0.7930  anchor 0.00  std 0.077   16.9s
+  seed 0 update 176  train   9.35%  reward +0.7907  anchor 0.00  std 0.077   17.2s
+  seed 0 update 177  train   9.21%  reward +0.7931  anchor 0.00  std 0.077   17.0s
+  seed 0 update 178  train   9.35%  reward +0.7906  anchor 0.00  std 0.077   17.0s
+  seed 0 update 179  train   9.35%  reward +0.7911  anchor 0.00  std 0.077   16.9s
+  seed 0 update 180  train   9.24%  reward +0.7922  anchor 0.00  std 0.077   16.9s
+  seed 0 update 180  EVALUATION   8.41%
+  seed 0: early stop — 5 checks without a 0.5 point gain
+  seed 0: best 8.41% at update 130
+
+=== training seed 1 ===
+  seed 1 update   1  train  15.37%  reward +0.6728  anchor 1.00  std 0.100   15.9s
+  seed 1 update   2  train  15.65%  reward +0.6670  anchor 1.00  std 0.100   16.4s
+  seed 1 update   3  train  15.40%  reward +0.6731  anchor 1.00  std 0.100   16.3s
+  seed 1 update   4  train  15.69%  reward +0.6686  anchor 1.00  std 0.100   16.3s
+  seed 1 update   5  train  15.83%  reward +0.6636  anchor 1.00  std 0.100   16.6s
+  seed 1 update   6  train  15.97%  reward +0.6612  anchor 1.00  std 0.100   16.4s
+  seed 1 update   7  train  15.97%  reward +0.6604  anchor 1.00  std 0.100   16.2s
+  seed 1 update   8  train  16.07%  reward +0.6602  anchor 1.00  std 0.100   16.6s
+  seed 1 update   9  train  15.80%  reward +0.6638  anchor 1.00  std 0.100   16.7s
+  seed 1 update  10  train  15.25%  reward +0.6755  anchor 1.00  std 0.100   16.6s
+  seed 1 update  10  EVALUATION  15.12%  <- best, saved
+  seed 1 update  11  train  15.73%  reward +0.6653  anchor 0.98  std 0.100   16.1s
+  seed 1 update  12  train  15.79%  reward +0.6658  anchor 0.96  std 0.100   17.1s
+  seed 1 update  13  train  15.46%  reward +0.6719  anchor 0.94  std 0.100   17.1s
+  seed 1 update  14  train  15.29%  reward +0.6742  anchor 0.92  std 0.101   16.9s
+  seed 1 update  15  train  15.68%  reward +0.6668  anchor 0.90  std 0.101   17.1s
+  seed 1 update  16  train  15.55%  reward +0.6691  anchor 0.88  std 0.100   17.1s
+  seed 1 update  17  train  15.43%  reward +0.6711  anchor 0.86  std 0.100   17.1s
+  seed 1 update  18  train  14.74%  reward +0.6867  anchor 0.84  std 0.101   17.0s
+  seed 1 update  19  train  14.74%  reward +0.6853  anchor 0.82  std 0.100   17.0s
+  seed 1 update  20  train  14.46%  reward +0.6903  anchor 0.80  std 0.100   17.7s
+  seed 1 update  20  EVALUATION  13.00%  <- best, saved
+  seed 1 update  21  train  14.42%  reward +0.6892  anchor 0.78  std 0.100   16.6s
+  seed 1 update  22  train  14.39%  reward +0.6923  anchor 0.76  std 0.100   17.2s
+  seed 1 update  23  train  14.34%  reward +0.6923  anchor 0.74  std 0.100   17.1s
+  seed 1 update  24  train  14.21%  reward +0.6945  anchor 0.72  std 0.100   17.3s
+  seed 1 update  25  train  13.89%  reward +0.7016  anchor 0.70  std 0.100   17.0s
+  seed 1 update  26  train  14.01%  reward +0.7003  anchor 0.68  std 0.099   17.0s
+  seed 1 update  27  train  14.10%  reward +0.6987  anchor 0.66  std 0.099   16.9s
+  seed 1 update  28  train  13.62%  reward +0.7052  anchor 0.64  std 0.099   17.1s
+  seed 1 update  29  train  13.56%  reward +0.7085  anchor 0.62  std 0.099   17.2s
+  seed 1 update  30  train  13.39%  reward +0.7094  anchor 0.60  std 0.099   17.1s
+  seed 1 update  30  EVALUATION  12.57%
+  seed 1 update  31  train  13.46%  reward +0.7097  anchor 0.58  std 0.098   16.6s
+  seed 1 update  32  train  13.40%  reward +0.7113  anchor 0.56  std 0.098   17.3s
+  seed 1 update  33  train  13.69%  reward +0.7052  anchor 0.54  std 0.098   17.1s
+  seed 1 update  34  train  13.60%  reward +0.7086  anchor 0.52  std 0.098   17.3s
+  seed 1 update  35  train  13.40%  reward +0.7123  anchor 0.50  std 0.098   17.0s
+  seed 1 update  36  train  13.32%  reward +0.7120  anchor 0.48  std 0.097   17.1s
+  seed 1 update  37  train  13.10%  reward +0.7165  anchor 0.46  std 0.097   17.0s
+  seed 1 update  38  train  13.00%  reward +0.7191  anchor 0.44  std 0.097   17.4s
+  seed 1 update  39  train  12.50%  reward +0.7292  anchor 0.42  std 0.097   17.1s
+  seed 1 update  40  train  12.47%  reward +0.7290  anchor 0.40  std 0.097   17.1s
+  seed 1 update  40  EVALUATION  11.31%  <- best, saved
+  seed 1 update  41  train  12.41%  reward +0.7326  anchor 0.38  std 0.096   16.0s
+  seed 1 update  42  train  12.37%  reward +0.7330  anchor 0.36  std 0.096   17.1s
+  seed 1 update  43  train  12.34%  reward +0.7336  anchor 0.34  std 0.096   17.0s
+  seed 1 update  44  train  12.06%  reward +0.7370  anchor 0.32  std 0.096   17.1s
+  seed 1 update  45  train  12.00%  reward +0.7378  anchor 0.30  std 0.096   17.0s
+  seed 1 update  46  train  12.10%  reward +0.7374  anchor 0.28  std 0.095   17.2s
+  seed 1 update  47  train  11.79%  reward +0.7448  anchor 0.26  std 0.095   16.9s
+  seed 1 update  48  train  12.45%  reward +0.7308  anchor 0.24  std 0.095   17.1s
+  seed 1 update  49  train  11.96%  reward +0.7405  anchor 0.22  std 0.095   17.1s
+  seed 1 update  50  train  11.95%  reward +0.7409  anchor 0.20  std 0.095   17.0s
+  seed 1 update  50  EVALUATION  11.06%
+  seed 1 update  51  train  11.76%  reward +0.7429  anchor 0.18  std 0.094   16.4s
+  seed 1 update  52  train  11.75%  reward +0.7414  anchor 0.16  std 0.094   17.0s
+  seed 1 update  53  train  11.62%  reward +0.7473  anchor 0.14  std 0.094   17.0s
+  seed 1 update  54  train  11.70%  reward +0.7471  anchor 0.12  std 0.093   17.0s
+  seed 1 update  55  train  11.42%  reward +0.7513  anchor 0.10  std 0.093   17.1s
+  seed 1 update  56  train  11.69%  reward +0.7449  anchor 0.08  std 0.093   16.9s
+  seed 1 update  57  train  11.79%  reward +0.7428  anchor 0.06  std 0.092   16.9s
+  seed 1 update  58  train  11.40%  reward +0.7514  anchor 0.04  std 0.092   17.0s
+  seed 1 update  59  train  11.30%  reward +0.7536  anchor 0.02  std 0.092   16.9s
+  seed 1 update  60  train  11.19%  reward +0.7558  anchor 0.00  std 0.091   17.0s
+  seed 1 update  60  EVALUATION   9.45%  <- best, saved
+  seed 1 update  61  train  11.20%  reward +0.7529  anchor 0.00  std 0.091   16.4s
+  seed 1 update  62  train  11.12%  reward +0.7567  anchor 0.00  std 0.091   17.0s
+  seed 1 update  63  train  10.90%  reward +0.7599  anchor 0.00  std 0.091   16.8s
+  seed 1 update  64  train  10.97%  reward +0.7561  anchor 0.00  std 0.090   16.8s
+  seed 1 update  65  train  10.55%  reward +0.7655  anchor 0.00  std 0.090   17.0s
+  seed 1 update  66  train  10.76%  reward +0.7622  anchor 0.00  std 0.090   16.7s
+  seed 1 update  67  train  10.56%  reward +0.7658  anchor 0.00  std 0.090   17.1s
+  seed 1 update  68  train  10.62%  reward +0.7650  anchor 0.00  std 0.090   16.9s
+  seed 1 update  69  train  10.57%  reward +0.7669  anchor 0.00  std 0.090   16.7s
+  seed 1 update  70  train  10.82%  reward +0.7618  anchor 0.00  std 0.090   16.8s
+  seed 1 update  70  EVALUATION   9.77%
+  seed 1 update  71  train  10.62%  reward +0.7659  anchor 0.00  std 0.090   16.1s
+  seed 1 update  72  train  10.53%  reward +0.7675  anchor 0.00  std 0.090   16.9s
+  seed 1 update  73  train  10.42%  reward +0.7691  anchor 0.00  std 0.089   17.7s
+  seed 1 update  74  train  10.37%  reward +0.7701  anchor 0.00  std 0.089   16.7s
+  seed 1 update  75  train  10.23%  reward +0.7735  anchor 0.00  std 0.089   16.8s
+  seed 1 update  76  train  10.36%  reward +0.7695  anchor 0.00  std 0.089   17.0s
+  seed 1 update  77  train  10.78%  reward +0.7638  anchor 0.00  std 0.089   16.9s
+  seed 1 update  78  train  10.43%  reward +0.7697  anchor 0.00  std 0.089   17.0s
+  seed 1 update  79  train  10.49%  reward +0.7688  anchor 0.00  std 0.089   16.7s
+  seed 1 update  80  train  10.32%  reward +0.7718  anchor 0.00  std 0.089   16.9s
+  seed 1 update  80  EVALUATION   9.48%
+  seed 1 update  81  train  10.21%  reward +0.7745  anchor 0.00  std 0.089   16.4s
+  seed 1 update  82  train  10.44%  reward +0.7697  anchor 0.00  std 0.088   17.4s
+  seed 1 update  83  train  10.34%  reward +0.7687  anchor 0.00  std 0.088   17.0s
+  seed 1 update  84  train  10.51%  reward +0.7681  anchor 0.00  std 0.088   16.9s
+  seed 1 update  85  train  10.46%  reward +0.7687  anchor 0.00  std 0.088   16.9s
+  seed 1 update  86  train  10.12%  reward +0.7749  anchor 0.00  std 0.087   17.0s
+  seed 1 update  87  train  10.36%  reward +0.7696  anchor 0.00  std 0.087   16.8s
+  seed 1 update  88  train  10.17%  reward +0.7728  anchor 0.00  std 0.087   16.8s
+  seed 1 update  89  train  10.08%  reward +0.7762  anchor 0.00  std 0.087   17.2s
+  seed 1 update  90  train  10.15%  reward +0.7767  anchor 0.00  std 0.087   16.6s
+  seed 1 update  90  EVALUATION   9.36%
+  seed 1 update  91  train   9.98%  reward +0.7774  anchor 0.00  std 0.086   16.7s
+  seed 1 update  92  train   9.76%  reward +0.7840  anchor 0.00  std 0.087   16.7s
+  seed 1 update  93  train   9.84%  reward +0.7802  anchor 0.00  std 0.087   17.0s
+  seed 1 update  94  train   9.89%  reward +0.7786  anchor 0.00  std 0.086   16.7s
+  seed 1 update  95  train   9.82%  reward +0.7807  anchor 0.00  std 0.086   16.7s
+  seed 1 update  96  train   9.94%  reward +0.7778  anchor 0.00  std 0.085   17.0s
+  seed 1 update  97  train  10.00%  reward +0.7785  anchor 0.00  std 0.085   16.5s
+  seed 1 update  98  train   9.76%  reward +0.7826  anchor 0.00  std 0.085   17.0s
+  seed 1 update  99  train   9.74%  reward +0.7823  anchor 0.00  std 0.085   18.5s
+  seed 1 update 100  train   9.57%  reward +0.7857  anchor 0.00  std 0.085   18.5s
+  seed 1 update 100  EVALUATION   8.52%  <- best, saved
+  seed 1 update 101  train   9.74%  reward +0.7828  anchor 0.00  std 0.085   16.3s
+  seed 1 update 102  train   9.60%  reward +0.7848  anchor 0.00  std 0.085   16.9s
+  seed 1 update 103  train   9.63%  reward +0.7851  anchor 0.00  std 0.084   16.7s
+  seed 1 update 104  train   9.58%  reward +0.7854  anchor 0.00  std 0.084   16.9s
+  seed 1 update 105  train   9.63%  reward +0.7854  anchor 0.00  std 0.084   17.2s
+  seed 1 update 106  train   9.71%  reward +0.7839  anchor 0.00  std 0.084   16.9s
+  seed 1 update 107  train   9.52%  reward +0.7880  anchor 0.00  std 0.084   16.8s
+  seed 1 update 108  train   9.71%  reward +0.7833  anchor 0.00  std 0.084   16.9s
+  seed 1 update 109  train   9.42%  reward +0.7869  anchor 0.00  std 0.084   16.8s
+  seed 1 update 110  train   9.27%  reward +0.7908  anchor 0.00  std 0.084   16.8s
+  seed 1 update 110  EVALUATION   8.52%
+  seed 1 update 111  train   9.35%  reward +0.7908  anchor 0.00  std 0.084   16.2s
+  seed 1 update 112  train   9.32%  reward +0.7915  anchor 0.00  std 0.083   16.6s
+  seed 1 update 113  train   9.34%  reward +0.7908  anchor 0.00  std 0.083   16.8s
+  seed 1 update 114  train   9.04%  reward +0.7941  anchor 0.00  std 0.083   16.8s
+  seed 1 update 115  train   9.31%  reward +0.7912  anchor 0.00  std 0.083   16.6s
+  seed 1 update 116  train   9.18%  reward +0.7945  anchor 0.00  std 0.082   16.9s
+  seed 1 update 117  train   9.14%  reward +0.7938  anchor 0.00  std 0.082   17.5s
+  seed 1 update 118  train   9.14%  reward +0.7935  anchor 0.00  std 0.082   16.6s
+  seed 1 update 119  train   9.26%  reward +0.7915  anchor 0.00  std 0.082   16.8s
+  seed 1 update 120  train   9.26%  reward +0.7912  anchor 0.00  std 0.081   16.7s
+  seed 1 update 120  EVALUATION   8.49%
+  seed 1 update 121  train   9.23%  reward +0.7925  anchor 0.00  std 0.081   16.2s
+  seed 1 update 122  train   9.16%  reward +0.7932  anchor 0.00  std 0.081   16.8s
+  seed 1 update 123  train   8.98%  reward +0.7972  anchor 0.00  std 0.081   16.8s
+  seed 1 update 124  train   9.35%  reward +0.7921  anchor 0.00  std 0.081   16.7s
+  seed 1 update 125  train   9.11%  reward +0.7949  anchor 0.00  std 0.081   16.6s
+  seed 1 update 126  train   9.40%  reward +0.7909  anchor 0.00  std 0.081   16.7s
+  seed 1 update 127  train   9.24%  reward +0.7947  anchor 0.00  std 0.080   17.0s
+  seed 1 update 128  train   9.22%  reward +0.7941  anchor 0.00  std 0.080   16.8s
+  seed 1 update 129  train   9.26%  reward +0.7912  anchor 0.00  std 0.080   17.0s
+  seed 1 update 130  train   9.00%  reward +0.7982  anchor 0.00  std 0.080   16.6s
+  seed 1 update 130  EVALUATION   8.57%
+  seed 1 update 131  train   9.10%  reward +0.7953  anchor 0.00  std 0.080   16.1s
+  seed 1 update 132  train   9.04%  reward +0.7968  anchor 0.00  std 0.080   16.5s
+  seed 1 update 133  train   8.94%  reward +0.7976  anchor 0.00  std 0.080   16.7s
+  seed 1 update 134  train   9.11%  reward +0.7956  anchor 0.00  std 0.080   16.7s
+  seed 1 update 135  train   8.95%  reward +0.7981  anchor 0.00  std 0.079   16.9s
+  seed 1 update 136  train   8.88%  reward +0.8008  anchor 0.00  std 0.079   16.7s
+  seed 1 update 137  train   9.14%  reward +0.7922  anchor 0.00  std 0.079   16.8s
+  seed 1 update 138  train   8.82%  reward +0.8001  anchor 0.00  std 0.079   16.9s
+  seed 1 update 139  train   8.93%  reward +0.7991  anchor 0.00  std 0.079   16.7s
+  seed 1 update 140  train   9.04%  reward +0.7965  anchor 0.00  std 0.079   16.8s
+  seed 1 update 140  EVALUATION   8.24%
+  seed 1 update 141  train   9.10%  reward +0.7963  anchor 0.00  std 0.079   16.3s
+  seed 1 update 142  train   9.11%  reward +0.7937  anchor 0.00  std 0.079   16.7s
+  seed 1 update 143  train   8.99%  reward +0.7967  anchor 0.00  std 0.079   16.8s
+  seed 1 update 144  train   8.75%  reward +0.8010  anchor 0.00  std 0.079   16.7s
+  seed 1 update 145  train   8.91%  reward +0.7990  anchor 0.00  std 0.079   16.5s
+  seed 1 update 146  train   8.92%  reward +0.7990  anchor 0.00  std 0.079   16.7s
+  seed 1 update 147  train   9.05%  reward +0.7965  anchor 0.00  std 0.078   16.7s
+  seed 1 update 148  train   8.86%  reward +0.7976  anchor 0.00  std 0.078   17.2s
+  seed 1 update 149  train   8.87%  reward +0.8005  anchor 0.00  std 0.078   17.2s
+  seed 1 update 150  train   8.80%  reward +0.8001  anchor 0.00  std 0.078   16.5s
+  seed 1 update 150  EVALUATION   8.46%
+  seed 1: early stop — 5 checks without a 0.5 point gain
+  seed 1: best 8.24% at update 100
+
+=== training seed 2 ===
+  seed 2 update   1  train  15.60%  reward +0.6680  anchor 1.00  std 0.100   15.4s
+  seed 2 update   2  train  15.63%  reward +0.6662  anchor 1.00  std 0.100   16.4s
+  seed 2 update   3  train  15.95%  reward +0.6610  anchor 1.00  std 0.100   16.3s
+  seed 2 update   4  train  16.04%  reward +0.6605  anchor 1.00  std 0.100   16.1s
+  seed 2 update   5  train  16.12%  reward +0.6590  anchor 1.00  std 0.100   16.6s
+  seed 2 update   6  train  15.88%  reward +0.6648  anchor 1.00  std 0.100   16.4s
+  seed 2 update   7  train  15.61%  reward +0.6669  anchor 1.00  std 0.100   16.4s
+  seed 2 update   8  train  15.94%  reward +0.6615  anchor 1.00  std 0.100   16.0s
+  seed 2 update   9  train  15.73%  reward +0.6654  anchor 1.00  std 0.100   16.3s
+  seed 2 update  10  train  15.57%  reward +0.6700  anchor 1.00  std 0.100   16.3s
+  seed 2 update  10  EVALUATION  15.12%  <- best, saved
+  seed 2 update  11  train  16.30%  reward +0.6557  anchor 0.98  std 0.100   16.3s
+  seed 2 update  12  train  15.86%  reward +0.6652  anchor 0.96  std 0.100   17.4s
+  seed 2 update  13  train  14.92%  reward +0.6803  anchor 0.94  std 0.100   16.9s
+  seed 2 update  14  train  15.22%  reward +0.6764  anchor 0.92  std 0.100   17.2s
+  seed 2 update  15  train  14.42%  reward +0.6914  anchor 0.90  std 0.100   17.5s
+  seed 2 update  16  train  14.86%  reward +0.6815  anchor 0.88  std 0.099   17.0s
+  seed 2 update  17  train  14.94%  reward +0.6815  anchor 0.86  std 0.099   17.1s
+  seed 2 update  18  train  14.89%  reward +0.6840  anchor 0.84  std 0.099   17.0s
+  seed 2 update  19  train  15.02%  reward +0.6805  anchor 0.82  std 0.099   17.2s
+  seed 2 update  20  train  14.70%  reward +0.6851  anchor 0.80  std 0.099   17.1s
+  seed 2 update  20  EVALUATION  14.31%  <- best, saved
+  seed 2 update  21  train  14.15%  reward +0.6966  anchor 0.78  std 0.099   16.4s
+  seed 2 update  22  train  14.41%  reward +0.6891  anchor 0.76  std 0.099   17.2s
+  seed 2 update  23  train  14.24%  reward +0.6951  anchor 0.74  std 0.099   16.9s
+  seed 2 update  24  train  14.02%  reward +0.6993  anchor 0.72  std 0.099   17.2s
+  seed 2 update  25  train  13.91%  reward +0.7031  anchor 0.70  std 0.099   17.0s
+  seed 2 update  26  train  14.14%  reward +0.6962  anchor 0.68  std 0.099   17.0s
+  seed 2 update  27  train  13.73%  reward +0.7028  anchor 0.66  std 0.099   17.1s
+  seed 2 update  28  train  13.42%  reward +0.7102  anchor 0.64  std 0.099   16.9s
+  seed 2 update  29  train  13.59%  reward +0.7094  anchor 0.62  std 0.099   17.0s
+  seed 2 update  30  train  13.21%  reward +0.7147  anchor 0.60  std 0.099   16.9s
+  seed 2 update  30  EVALUATION  12.69%  <- best, saved
+  seed 2 update  31  train  13.16%  reward +0.7144  anchor 0.58  std 0.099   16.3s
+  seed 2 update  32  train  13.16%  reward +0.7146  anchor 0.56  std 0.098   17.1s
+  seed 2 update  33  train  12.67%  reward +0.7247  anchor 0.54  std 0.098   16.9s
+  seed 2 update  34  train  12.81%  reward +0.7239  anchor 0.52  std 0.098   16.9s
+  seed 2 update  35  train  12.67%  reward +0.7263  anchor 0.50  std 0.097   16.9s
+  seed 2 update  36  train  12.12%  reward +0.7360  anchor 0.48  std 0.097   16.9s
+  seed 2 update  37  train  11.80%  reward +0.7421  anchor 0.46  std 0.097   17.0s
+  seed 2 update  38  train  12.13%  reward +0.7340  anchor 0.44  std 0.097   16.8s
+  seed 2 update  39  train  12.14%  reward +0.7377  anchor 0.42  std 0.097   16.9s
+  seed 2 update  40  train  12.13%  reward +0.7360  anchor 0.40  std 0.097   16.9s
+  seed 2 update  40  EVALUATION  11.65%  <- best, saved
+  seed 2 update  41  train  12.33%  reward +0.7321  anchor 0.38  std 0.097   16.2s
+  seed 2 update  42  train  11.89%  reward +0.7423  anchor 0.36  std 0.096   16.8s
+  seed 2 update  43  train  11.71%  reward +0.7453  anchor 0.34  std 0.096   16.9s
+  seed 2 update  44  train  11.83%  reward +0.7432  anchor 0.32  std 0.096   16.9s
+  seed 2 update  45  train  11.91%  reward +0.7402  anchor 0.30  std 0.096   16.8s
+  seed 2 update  46  train  11.89%  reward +0.7420  anchor 0.28  std 0.096   17.0s
+  seed 2 update  47  train  12.09%  reward +0.7365  anchor 0.26  std 0.095   16.9s
+  seed 2 update  48  train  11.67%  reward +0.7463  anchor 0.24  std 0.095   16.8s
+  seed 2 update  49  train  12.13%  reward +0.7352  anchor 0.22  std 0.095   16.8s
+  seed 2 update  50  train  11.89%  reward +0.7396  anchor 0.20  std 0.095   16.8s
+  seed 2 update  50  EVALUATION  11.42%
+  seed 2 update  51  train  11.94%  reward +0.7387  anchor 0.18  std 0.094   16.3s
+  seed 2 update  52  train  11.29%  reward +0.7522  anchor 0.16  std 0.094   17.0s
+  seed 2 update  53  train  12.14%  reward +0.7380  anchor 0.14  std 0.094   16.9s
+  seed 2 update  54  train  11.83%  reward +0.7408  anchor 0.12  std 0.094   17.0s
+  seed 2 update  55  train  11.89%  reward +0.7425  anchor 0.10  std 0.094   17.0s
+  seed 2 update  56  train  11.55%  reward +0.7471  anchor 0.08  std 0.095   16.9s
+  seed 2 update  57  train  11.38%  reward +0.7482  anchor 0.06  std 0.095   16.9s
+  seed 2 update  58  train  11.44%  reward +0.7484  anchor 0.04  std 0.094   16.8s
+  seed 2 update  59  train  11.50%  reward +0.7500  anchor 0.02  std 0.094   16.8s
+  seed 2 update  60  train  11.52%  reward +0.7473  anchor 0.00  std 0.094   16.9s
+  seed 2 update  60  EVALUATION  11.63%
+  seed 2 update  61  train  11.31%  reward +0.7512  anchor 0.00  std 0.094   16.4s
+  seed 2 update  62  train  11.26%  reward +0.7522  anchor 0.00  std 0.093   16.8s
+  seed 2 update  63  train  11.29%  reward +0.7524  anchor 0.00  std 0.093   16.9s
+  seed 2 update  64  train  11.46%  reward +0.7509  anchor 0.00  std 0.093   16.5s
+  seed 2 update  65  train  11.02%  reward +0.7581  anchor 0.00  std 0.093   17.0s
+  seed 2 update  66  train  10.87%  reward +0.7607  anchor 0.00  std 0.092   16.6s
+  seed 2 update  67  train  11.16%  reward +0.7552  anchor 0.00  std 0.092   17.1s
+  seed 2 update  68  train  10.93%  reward +0.7598  anchor 0.00  std 0.092   17.0s
+  seed 2 update  69  train  10.64%  reward +0.7637  anchor 0.00  std 0.091   16.6s
+  seed 2 update  70  train  10.73%  reward +0.7636  anchor 0.00  std 0.091   16.6s
+  seed 2 update  70  EVALUATION  10.59%  <- best, saved
+  seed 2 update  71  train  10.61%  reward +0.7643  anchor 0.00  std 0.091   16.6s
+  seed 2 update  72  train  10.57%  reward +0.7666  anchor 0.00  std 0.091   17.2s
+  seed 2 update  73  train  10.71%  reward +0.7650  anchor 0.00  std 0.090   16.7s
+  seed 2 update  74  train  10.53%  reward +0.7676  anchor 0.00  std 0.090   16.9s
+  seed 2 update  75  train  10.52%  reward +0.7660  anchor 0.00  std 0.090   17.1s
+  seed 2 update  76  train  10.75%  reward +0.7639  anchor 0.00  std 0.090   16.9s
+  seed 2 update  77  train  10.83%  reward +0.7614  anchor 0.00  std 0.090   16.8s
+  seed 2 update  78  train  10.30%  reward +0.7713  anchor 0.00  std 0.090   16.8s
+  seed 2 update  79  train  10.59%  reward +0.7666  anchor 0.00  std 0.090   16.9s
+  seed 2 update  80  train  10.56%  reward +0.7673  anchor 0.00  std 0.090   16.8s
+  seed 2 update  80  EVALUATION   8.85%  <- best, saved
+  seed 2 update  81  train  10.26%  reward +0.7733  anchor 0.00  std 0.090   16.1s
+  seed 2 update  82  train  10.48%  reward +0.7689  anchor 0.00  std 0.089   16.8s
+  seed 2 update  83  train  10.50%  reward +0.7682  anchor 0.00  std 0.089   16.7s
+  seed 2 update  84  train  10.02%  reward +0.7784  anchor 0.00  std 0.089   16.7s
+  seed 2 update  85  train  10.23%  reward +0.7726  anchor 0.00  std 0.089   16.8s
+  seed 2 update  86  train  10.20%  reward +0.7755  anchor 0.00  std 0.089   16.8s
+  seed 2 update  87  train  10.39%  reward +0.7713  anchor 0.00  std 0.088   16.9s
+  seed 2 update  88  train  10.09%  reward +0.7745  anchor 0.00  std 0.088   16.8s
+  seed 2 update  89  train  10.41%  reward +0.7697  anchor 0.00  std 0.088   17.0s
+  seed 2 update  90  train  10.16%  reward +0.7746  anchor 0.00  std 0.088   17.0s
+  seed 2 update  90  EVALUATION   9.49%
+  seed 2 update  91  train  10.20%  reward +0.7725  anchor 0.00  std 0.087   16.6s
+  seed 2 update  92  train  10.39%  reward +0.7716  anchor 0.00  std 0.088   16.6s
+  seed 2 update  93  train  10.09%  reward +0.7764  anchor 0.00  std 0.088   17.3s
+  seed 2 update  94  train  10.05%  reward +0.7765  anchor 0.00  std 0.087   16.7s
+  seed 2 update  95  train  10.18%  reward +0.7735  anchor 0.00  std 0.087   17.0s
+  seed 2 update  96  train   9.98%  reward +0.7775  anchor 0.00  std 0.087   17.2s
+  seed 2 update  97  train  10.43%  reward +0.7688  anchor 0.00  std 0.087   17.2s
+  seed 2 update  98  train  10.25%  reward +0.7739  anchor 0.00  std 0.087   17.1s
+  seed 2 update  99  train  10.29%  reward +0.7711  anchor 0.00  std 0.087   16.7s
+  seed 2 update 100  train   9.93%  reward +0.7804  anchor 0.00  std 0.087   16.7s
+  seed 2 update 100  EVALUATION   9.35%
+  seed 2 update 101  train  10.20%  reward +0.7743  anchor 0.00  std 0.087   16.4s
+  seed 2 update 102  train  10.04%  reward +0.7765  anchor 0.00  std 0.086   16.8s
+  seed 2 update 103  train  10.04%  reward +0.7760  anchor 0.00  std 0.086   16.9s
+  seed 2 update 104  train  10.37%  reward +0.7700  anchor 0.00  std 0.086   16.5s
+  seed 2 update 105  train   9.90%  reward +0.7800  anchor 0.00  std 0.086   16.9s
+  seed 2 update 106  train   9.98%  reward +0.7783  anchor 0.00  std 0.085   16.8s
+  seed 2 update 107  train   9.95%  reward +0.7778  anchor 0.00  std 0.086   16.6s
+  seed 2 update 108  train   9.57%  reward +0.7858  anchor 0.00  std 0.086   16.8s
+  seed 2 update 109  train   9.48%  reward +0.7875  anchor 0.00  std 0.085   16.8s
+  seed 2 update 110  train   9.52%  reward +0.7868  anchor 0.00  std 0.085   16.7s
+  seed 2 update 110  EVALUATION   9.79%
+  seed 2 update 111  train   9.66%  reward +0.7843  anchor 0.00  std 0.085   16.1s
+  seed 2 update 112  train   9.73%  reward +0.7835  anchor 0.00  std 0.085   16.6s
+  seed 2 update 113  train   9.70%  reward +0.7829  anchor 0.00  std 0.085   16.8s
+  seed 2 update 114  train   9.87%  reward +0.7809  anchor 0.00  std 0.085   17.0s
+  seed 2 update 115  train   9.39%  reward +0.7901  anchor 0.00  std 0.084   16.6s
+  seed 2 update 116  train   9.61%  reward +0.7865  anchor 0.00  std 0.084   16.7s
+  seed 2 update 117  train   9.49%  reward +0.7896  anchor 0.00  std 0.084   17.2s
+  seed 2 update 118  train   9.43%  reward +0.7907  anchor 0.00  std 0.084   16.4s
+  seed 2 update 119  train   9.26%  reward +0.7914  anchor 0.00  std 0.083   17.1s
+  seed 2 update 120  train   9.06%  reward +0.7981  anchor 0.00  std 0.083   17.0s
+  seed 2 update 120  EVALUATION   9.61%
+  seed 2 update 121  train   9.22%  reward +0.7951  anchor 0.00  std 0.083   16.3s
+  seed 2 update 122  train   9.38%  reward +0.7904  anchor 0.00  std 0.083   16.7s
+  seed 2 update 123  train   9.30%  reward +0.7928  anchor 0.00  std 0.083   16.9s
+  seed 2 update 124  train   9.24%  reward +0.7925  anchor 0.00  std 0.083   17.0s
+  seed 2 update 125  train   9.14%  reward +0.7952  anchor 0.00  std 0.082   16.6s
+  seed 2 update 126  train   9.21%  reward +0.7938  anchor 0.00  std 0.082   17.0s
+  seed 2 update 127  train   9.14%  reward +0.7936  anchor 0.00  std 0.082   16.8s
+  seed 2 update 128  train   9.23%  reward +0.7924  anchor 0.00  std 0.081   16.7s
+  seed 2 update 129  train   9.20%  reward +0.7943  anchor 0.00  std 0.081   17.1s
+  seed 2 update 130  train   9.49%  reward +0.7878  anchor 0.00  std 0.081   16.9s
+  seed 2 update 130  EVALUATION   9.43%
+  seed 2: early stop — 5 checks without a 0.5 point gain
+  seed 2: best 8.85% at update 80
+
+Comparing 18 runs on layout 101 ...
+  views agreed in all 18 runs
+
+  Layout 101, mean of run seeds 9001, 9002, 9003 — % of packets created
+  ----------------------------------------------------------------------------------------------------------------------
+        policy   total    channel  queue_ful   no_route   dead_end        ttl  hop_limit  link_brok  stale_lin    flown  from GS
+  ----------------------------------------------------------------------------------------------------------------------
+         hover  13.83%     13.83%      0.00%      0.00%      0.00%      0.00%      0.00%      0.00%      0.00%        0      341
+      midpoint  17.16%     12.72%      4.03%      0.00%      0.00%      0.00%      0.00%      0.00%      0.41%     2091      208
+         clone  15.12%     11.93%      2.96%      0.00%      0.00%      0.00%      0.00%      0.00%      0.23%     2911      182
+     rl seed 0   8.94%      8.47%      0.20%      0.00%      0.00%      0.00%      0.00%      0.00%      0.26%     2820      180
+     rl seed 1   8.52%      8.47%      0.04%      0.00%      0.00%      0.00%      0.00%      0.00%      0.01%     2948      184
+     rl seed 2   8.85%      8.54%      0.31%      0.00%      0.00%      0.00%      0.00%      0.00%      0.00%     2942      183
+  ----------------------------------------------------------------------------------------------------------------------
+
+  kept versions
+    training seed 0: update 130
+    training seed 1: update 100
+    training seed 2: update 80
+  wrote out/2c_ppo_learning.png
+  wrote out/2c_ppo_log.csv
+  wrote out/2c_ppo_eval.csv
+  wrote out/2c_ppo_compare.csv
+EXIT=0
