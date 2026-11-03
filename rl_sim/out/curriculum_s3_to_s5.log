@@ -1,0 +1,1598 @@
+Phase 2c curriculum — settings, and the file each came from
+  ------------------------------------------------------------------------
+  mission                      near_gs                spec
+  START_RADIUS_M               100.0                  config.py
+  MIN_SPACING_M                20.0                   config.py
+  AVOID                        True                   train_c_ppo._world
+  CONTINUE_STD                 0.1                    config.py
+  stages (MISSION_DISTANCE_M)  250/350/450/550/650    this file
+  replay fraction              0.25                   this file
+  training layouts             101-300                train_c_ppo_m3.py
+  validation layouts           301-330                train_c_ppo_m3.py
+  episodes per update          40                     train_c_ppo_m4.py
+  critic-only warm-up          10                     train_c_ppo.py
+  evaluate every               10                     train_c_ppo.py
+  patience                     8                      train_c_ppo_m4.py
+  max updates per stage        600                    train_c_ppo_m4.py
+  min updates per stage        100                    spec
+  keep threshold               0.0                    spec — M4 used 0.2, see the note in this file
+  anchor term                  off                    train_c_ppo_m4.py RUNS[0]
+  gamma                        0.97                   train_c_ppo.py
+  GAE lambda                   0.95                   train_c_ppo.py
+  clip                         0.1                    train_c_ppo.py
+  epochs per update            5                      train_c_ppo.py
+  learning rate                0.0003                 train_c_ppo.py
+  grad clip                    0.5                    train_c_ppo.py
+  minibatch                    1024                   train_c_ppo.py
+  load                         200 ms                 train_c_ppo.py
+  routing                      greedy                 train_c_ppo.py
+  start weights                c_actor_m3_seed1.pt    spec
+  PPO seed                     1                      this file
+  ------------------------------------------------------------------------
+
+=== s3_to_s5 S3: D = 450 m, std reset to 0.1, patience 16, min 100, cap 600 ===
+  starting from out/models/2c/c_actor_curriculum_S2.pt
+  seed 1 update   1  train   9.22%  reward +0.8002  anchor 0.00  std 0.100   58.8s
+  seed 1 update   2  train   8.77%  reward +0.8080  anchor 0.00  std 0.100   54.4s
+  seed 1 update   3  train   9.99%  reward +0.7858  anchor 0.00  std 0.100   55.5s
+  seed 1 update   4  train   9.10%  reward +0.8025  anchor 0.00  std 0.100   53.2s
+  seed 1 update   5  train   8.86%  reward +0.8066  anchor 0.00  std 0.100   51.9s
+  seed 1 update   6  train   9.15%  reward +0.8010  anchor 0.00  std 0.100   51.4s
+  seed 1 update   7  train   9.23%  reward +0.7995  anchor 0.00  std 0.100   50.9s
+  seed 1 update   8  train   9.18%  reward +0.7988  anchor 0.00  std 0.100   53.4s
+  seed 1 update   9  train   8.94%  reward +0.8065  anchor 0.00  std 0.100   56.8s
+  seed 1 update  10  train   8.63%  reward +0.8097  anchor 0.00  std 0.100   59.1s
+  seed 1 update  10  EVALUATION  13.10%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  11  train   9.23%  reward +0.7992  anchor 0.00  std 0.100   56.2s
+  seed 1 update  12  train   8.48%  reward +0.8147  anchor 0.00  std 0.100   57.1s
+  seed 1 update  13  train   9.34%  reward +0.7981  anchor 0.00  std 0.100   53.1s
+  seed 1 update  14  train   9.32%  reward +0.7986  anchor 0.00  std 0.100   54.2s
+  seed 1 update  15  train   9.77%  reward +0.7890  anchor 0.00  std 0.100   56.3s
+  seed 1 update  16  train   9.11%  reward +0.8021  anchor 0.00  std 0.100   55.9s
+  seed 1 update  17  train   9.28%  reward +0.7969  anchor 0.00  std 0.100   56.5s
+  seed 1 update  18  train   8.81%  reward +0.8080  anchor 0.00  std 0.100   55.8s
+  seed 1 update  19  train   9.11%  reward +0.8002  anchor 0.00  std 0.100   62.3s
+  seed 1 update  20  train   9.42%  reward +0.7967  anchor 0.00  std 0.100   66.3s
+  seed 1 update  20  EVALUATION  12.28%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  21  train   9.14%  reward +0.8019  anchor 0.00  std 0.100   65.9s
+  seed 1 update  22  train   9.35%  reward +0.7968  anchor 0.00  std 0.100   76.0s
+  seed 1 update  23  train   8.77%  reward +0.8077  anchor 0.00  std 0.100   82.5s
+  seed 1 update  24  train   9.02%  reward +0.8056  anchor 0.00  std 0.100   84.2s
+  seed 1 update  25  train   8.68%  reward +0.8104  anchor 0.00  std 0.100   81.1s
+  seed 1 update  26  train   9.31%  reward +0.7977  anchor 0.00  std 0.100   79.9s
+  seed 1 update  27  train   8.69%  reward +0.8109  anchor 0.00  std 0.100   78.5s
+  seed 1 update  28  train   8.97%  reward +0.8040  anchor 0.00  std 0.100   80.5s
+  seed 1 update  29  train   8.94%  reward +0.8073  anchor 0.00  std 0.100   92.8s
+  seed 1 update  30  train   8.40%  reward +0.8162  anchor 0.00  std 0.100   86.3s
+  seed 1 update  30  EVALUATION  12.38%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  31  train   9.43%  reward +0.7951  anchor 0.00  std 0.100   82.7s
+  seed 1 update  32  train   9.98%  reward +0.7853  anchor 0.00  std 0.100   79.1s
+  seed 1 update  33  train   9.13%  reward +0.8048  anchor 0.00  std 0.099   78.9s
+  seed 1 update  34  train   8.99%  reward +0.8042  anchor 0.00  std 0.099   81.9s
+  seed 1 update  35  train   9.40%  reward +0.7972  anchor 0.00  std 0.099   89.0s
+  seed 1 update  36  train   9.38%  reward +0.7966  anchor 0.00  std 0.099   84.4s
+  seed 1 update  37  train   9.25%  reward +0.7993  anchor 0.00  std 0.099   75.3s
+  seed 1 update  38  train   8.48%  reward +0.8136  anchor 0.00  std 0.099   58.8s
+  seed 1 update  39  train   8.54%  reward +0.8133  anchor 0.00  std 0.099   49.7s
+  seed 1 update  40  train   9.10%  reward +0.8013  anchor 0.00  std 0.099   49.5s
+  seed 1 update  40  EVALUATION  12.56%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  41  train   9.84%  reward +0.7887  anchor 0.00  std 0.099   42.8s
+  seed 1 update  42  train   8.93%  reward +0.8061  anchor 0.00  std 0.099   48.1s
+  seed 1 update  43  train   9.06%  reward +0.8042  anchor 0.00  std 0.099   52.9s
+  seed 1 update  44  train   9.15%  reward +0.8019  anchor 0.00  std 0.098   65.1s
+  seed 1 update  45  train   8.91%  reward +0.8070  anchor 0.00  std 0.099   52.8s
+  seed 1 update  46  train   9.29%  reward +0.7999  anchor 0.00  std 0.099   63.6s
+  seed 1 update  47  train   8.61%  reward +0.8115  anchor 0.00  std 0.098   75.1s
+  seed 1 update  48  train   8.54%  reward +0.8139  anchor 0.00  std 0.098   67.5s
+  seed 1 update  49  train   9.17%  reward +0.8005  anchor 0.00  std 0.098   93.9s
+  seed 1 update  50  train   8.71%  reward +0.8117  anchor 0.00  std 0.098   83.0s
+  seed 1 update  50  EVALUATION  12.67%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  51  train   9.33%  reward +0.7985  anchor 0.00  std 0.098   71.5s
+  seed 1 update  52  train   8.72%  reward +0.8095  anchor 0.00  std 0.098   71.2s
+  seed 1 update  53  train   9.44%  reward +0.7978  anchor 0.00  std 0.098   65.0s
+  seed 1 update  54  train   9.42%  reward +0.7970  anchor 0.00  std 0.098   62.7s
+  seed 1 update  55  train   9.49%  reward +0.7949  anchor 0.00  std 0.098   64.3s
+  seed 1 update  56  train   8.26%  reward +0.8189  anchor 0.00  std 0.098   58.7s
+  seed 1 update  57  train   9.14%  reward +0.8008  anchor 0.00  std 0.098   49.7s
+  seed 1 update  58  train   9.30%  reward +0.7997  anchor 0.00  std 0.098   48.3s
+  seed 1 update  59  train   8.61%  reward +0.8112  anchor 0.00  std 0.098   51.8s
+  seed 1 update  60  train   9.31%  reward +0.7990  anchor 0.00  std 0.098   56.3s
+  seed 1 update  60  EVALUATION  12.26%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  61  train   9.50%  reward +0.7943  anchor 0.00  std 0.098   61.7s
+  seed 1 update  62  train   8.84%  reward +0.8084  anchor 0.00  std 0.098   59.3s
+  seed 1 update  63  train   9.01%  reward +0.8033  anchor 0.00  std 0.098   63.7s
+  seed 1 update  64  train   9.37%  reward +0.7983  anchor 0.00  std 0.098   62.0s
+  seed 1 update  65  train   8.95%  reward +0.8052  anchor 0.00  std 0.098   61.8s
+  seed 1 update  66  train   9.02%  reward +0.8016  anchor 0.00  std 0.098   61.3s
+  seed 1 update  67  train   9.17%  reward +0.7989  anchor 0.00  std 0.098   59.9s
+  seed 1 update  68  train   9.65%  reward +0.7933  anchor 0.00  std 0.098   63.1s
+  seed 1 update  69  train   8.81%  reward +0.8087  anchor 0.00  std 0.098   61.4s
+  seed 1 update  70  train   9.48%  reward +0.7963  anchor 0.00  std 0.098   61.9s
+  seed 1 update  70  EVALUATION  12.06%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  71  train   8.97%  reward +0.8067  anchor 0.00  std 0.098   63.5s
+  seed 1 update  72  train   9.26%  reward +0.7996  anchor 0.00  std 0.098   63.9s
+  seed 1 update  73  train   8.74%  reward +0.8101  anchor 0.00  std 0.098   65.7s
+  seed 1 update  74  train   8.98%  reward +0.8047  anchor 0.00  std 0.098   61.2s
+  seed 1 update  75  train   9.10%  reward +0.8023  anchor 0.00  std 0.097   62.7s
+  seed 1 update  76  train   9.39%  reward +0.7975  anchor 0.00  std 0.097   63.2s
+  seed 1 update  77  train   8.51%  reward +0.8139  anchor 0.00  std 0.097   60.2s
+  seed 1 update  78  train   9.46%  reward +0.7953  anchor 0.00  std 0.097   64.3s
+  seed 1 update  79  train   9.02%  reward +0.8049  anchor 0.00  std 0.097   63.8s
+  seed 1 update  80  train   9.60%  reward +0.7942  anchor 0.00  std 0.097   61.8s
+  seed 1 update  80  EVALUATION  12.11%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  81  train   9.10%  reward +0.8036  anchor 0.00  std 0.097   50.2s
+  seed 1 update  82  train   9.07%  reward +0.8054  anchor 0.00  std 0.097   62.5s
+  seed 1 update  83  train   9.20%  reward +0.8005  anchor 0.00  std 0.097   67.5s
+  seed 1 update  84  train   9.39%  reward +0.7951  anchor 0.00  std 0.097   66.3s
+  seed 1 update  85  train   9.07%  reward +0.8045  anchor 0.00  std 0.097   62.9s
+  seed 1 update  86  train   9.41%  reward +0.7969  anchor 0.00  std 0.096   58.6s
+  seed 1 update  87  train   9.16%  reward +0.8033  anchor 0.00  std 0.096   59.5s
+  seed 1 update  88  train   8.80%  reward +0.8077  anchor 0.00  std 0.096   63.7s
+  seed 1 update  89  train   8.98%  reward +0.8052  anchor 0.00  std 0.096   62.4s
+  seed 1 update  90  train   8.95%  reward +0.8048  anchor 0.00  std 0.096   65.3s
+  seed 1 update  90  EVALUATION  11.98%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  91  train   9.17%  reward +0.8002  anchor 0.00  std 0.096   59.7s
+  seed 1 update  92  train   9.80%  reward +0.7888  anchor 0.00  std 0.096   67.0s
+  seed 1 update  93  train   8.46%  reward +0.8146  anchor 0.00  std 0.095   72.6s
+  seed 1 update  94  train   9.36%  reward +0.7978  anchor 0.00  std 0.095   67.9s
+  seed 1 update  95  train   8.86%  reward +0.8087  anchor 0.00  std 0.095   72.3s
+  seed 1 update  96  train   8.38%  reward +0.8181  anchor 0.00  std 0.095   68.8s
+  seed 1 update  97  train   9.15%  reward +0.8011  anchor 0.00  std 0.095   69.8s
+  seed 1 update  98  train   8.47%  reward +0.8166  anchor 0.00  std 0.095   66.7s
+  seed 1 update  99  train   9.80%  reward +0.7896  anchor 0.00  std 0.094   62.3s
+  seed 1 update 100  train   9.18%  reward +0.8002  anchor 0.00  std 0.094   61.0s
+  seed 1 update 100  EVALUATION  11.82%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 101  train   8.90%  reward +0.8066  anchor 0.00  std 0.094   60.6s
+  seed 1 update 102  train   8.68%  reward +0.8110  anchor 0.00  std 0.094   58.1s
+  seed 1 update 103  train   9.19%  reward +0.8003  anchor 0.00  std 0.094   60.9s
+  seed 1 update 104  train   8.12%  reward +0.8224  anchor 0.00  std 0.094   60.9s
+  seed 1 update 105  train   8.94%  reward +0.8056  anchor 0.00  std 0.094   59.1s
+  seed 1 update 106  train   9.77%  reward +0.7898  anchor 0.00  std 0.094   59.6s
+  seed 1 update 107  train   9.41%  reward +0.7975  anchor 0.00  std 0.094   58.0s
+  seed 1 update 108  train   9.09%  reward +0.8012  anchor 0.00  std 0.093   59.3s
+  seed 1 update 109  train   9.26%  reward +0.7978  anchor 0.00  std 0.093   61.1s
+  seed 1 update 110  train   9.00%  reward +0.8064  anchor 0.00  std 0.093   59.0s
+  seed 1 update 110  EVALUATION  12.14%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 111  train   8.73%  reward +0.8113  anchor 0.00  std 0.093   60.6s
+  seed 1 update 112  train   8.12%  reward +0.8211  anchor 0.00  std 0.093   59.6s
+  seed 1 update 113  train   8.85%  reward +0.8064  anchor 0.00  std 0.093   59.0s
+  seed 1 update 114  train   8.92%  reward +0.8070  anchor 0.00  std 0.093   58.8s
+  seed 1 update 115  train   8.34%  reward +0.8170  anchor 0.00  std 0.093   59.9s
+  seed 1 update 116  train   8.97%  reward +0.8040  anchor 0.00  std 0.093   60.1s
+  seed 1 update 117  train   8.59%  reward +0.8135  anchor 0.00  std 0.093   57.6s
+  seed 1 update 118  train   9.29%  reward +0.7986  anchor 0.00  std 0.093   59.0s
+  seed 1 update 119  train   8.57%  reward +0.8129  anchor 0.00  std 0.093   59.9s
+  seed 1 update 120  train   8.71%  reward +0.8103  anchor 0.00  std 0.093   59.0s
+  seed 1 update 120  EVALUATION  11.67%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 121  train   8.48%  reward +0.8163  anchor 0.00  std 0.092   60.1s
+  seed 1 update 122  train   8.57%  reward +0.8124  anchor 0.00  std 0.092   58.6s
+  seed 1 update 123  train   9.81%  reward +0.7912  anchor 0.00  std 0.092   57.1s
+  seed 1 update 124  train   8.81%  reward +0.8093  anchor 0.00  std 0.092   61.4s
+  seed 1 update 125  train   9.21%  reward +0.8023  anchor 0.00  std 0.092   58.3s
+  seed 1 update 126  train   8.50%  reward +0.8180  anchor 0.00  std 0.092   58.6s
+  seed 1 update 127  train   8.32%  reward +0.8167  anchor 0.00  std 0.091   60.2s
+  seed 1 update 128  train   8.38%  reward +0.8183  anchor 0.00  std 0.091   61.2s
+  seed 1 update 129  train   8.97%  reward +0.8057  anchor 0.00  std 0.091   57.7s
+  seed 1 update 130  train   8.66%  reward +0.8123  anchor 0.00  std 0.091   60.0s
+  seed 1 update 130  EVALUATION  11.61%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 131  train   9.11%  reward +0.8047  anchor 0.00  std 0.091   56.6s
+  seed 1 update 132  train   8.87%  reward +0.8057  anchor 0.00  std 0.091   58.7s
+  seed 1 update 133  train   9.05%  reward +0.8043  anchor 0.00  std 0.091   58.2s
+  seed 1 update 134  train   9.24%  reward +0.7997  anchor 0.00  std 0.091   60.0s
+  seed 1 update 135  train   8.90%  reward +0.8061  anchor 0.00  std 0.091   57.9s
+  seed 1 update 136  train   9.01%  reward +0.8053  anchor 0.00  std 0.091   60.2s
+  seed 1 update 137  train   9.05%  reward +0.8047  anchor 0.00  std 0.091   57.6s
+  seed 1 update 138  train   8.46%  reward +0.8170  anchor 0.00  std 0.091   58.3s
+  seed 1 update 139  train   8.97%  reward +0.8048  anchor 0.00  std 0.090   59.3s
+  seed 1 update 140  train   9.04%  reward +0.8042  anchor 0.00  std 0.090   57.4s
+  seed 1 update 140  EVALUATION  11.99%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 141  train   8.88%  reward +0.8054  anchor 0.00  std 0.090   58.3s
+  seed 1 update 142  train   9.21%  reward +0.8004  anchor 0.00  std 0.090   60.1s
+  seed 1 update 143  train   8.80%  reward +0.8095  anchor 0.00  std 0.089   57.1s
+  seed 1 update 144  train   8.83%  reward +0.8072  anchor 0.00  std 0.089   61.2s
+  seed 1 update 145  train   8.70%  reward +0.8126  anchor 0.00  std 0.089   59.1s
+  seed 1 update 146  train   8.89%  reward +0.8053  anchor 0.00  std 0.089   58.7s
+  seed 1 update 147  train   9.57%  reward +0.7927  anchor 0.00  std 0.089   59.6s
+  seed 1 update 148  train   8.39%  reward +0.8168  anchor 0.00  std 0.089   58.5s
+  seed 1 update 149  train   9.32%  reward +0.7996  anchor 0.00  std 0.088   60.5s
+  seed 1 update 150  train   9.71%  reward +0.7926  anchor 0.00  std 0.088   63.6s
+  seed 1 update 150  EVALUATION  11.87%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 151  train   8.74%  reward +0.8111  anchor 0.00  std 0.089   62.4s
+  seed 1 update 152  train   9.20%  reward +0.8011  anchor 0.00  std 0.089   61.4s
+  seed 1 update 153  train   8.35%  reward +0.8162  anchor 0.00  std 0.089   60.6s
+  seed 1 update 154  train   9.05%  reward +0.8040  anchor 0.00  std 0.089   60.2s
+  seed 1 update 155  train   8.80%  reward +0.8085  anchor 0.00  std 0.088   62.6s
+  seed 1 update 156  train   8.81%  reward +0.8073  anchor 0.00  std 0.088   61.7s
+  seed 1 update 157  train   8.62%  reward +0.8139  anchor 0.00  std 0.088   58.3s
+  seed 1 update 158  train   8.47%  reward +0.8168  anchor 0.00  std 0.088   60.6s
+  seed 1 update 159  train   8.90%  reward +0.8067  anchor 0.00  std 0.088   60.6s
+  seed 1 update 160  train   9.10%  reward +0.8024  anchor 0.00  std 0.088   59.0s
+  seed 1 update 160  EVALUATION  12.08%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 161  train   9.30%  reward +0.7989  anchor 0.00  std 0.088   58.4s
+  seed 1 update 162  train   9.01%  reward +0.8045  anchor 0.00  std 0.088   60.6s
+  seed 1 update 163  train   9.25%  reward +0.7998  anchor 0.00  std 0.088   60.9s
+  seed 1 update 164  train   8.21%  reward +0.8211  anchor 0.00  std 0.088   60.8s
+  seed 1 update 165  train   9.55%  reward +0.7943  anchor 0.00  std 0.088   59.8s
+  seed 1 update 166  train   8.76%  reward +0.8114  anchor 0.00  std 0.087   59.5s
+  seed 1 update 167  train   8.98%  reward +0.8051  anchor 0.00  std 0.087   61.4s
+  seed 1 update 168  train   9.16%  reward +0.8025  anchor 0.00  std 0.087   56.8s
+  seed 1 update 169  train   8.44%  reward +0.8154  anchor 0.00  std 0.087   60.9s
+  seed 1 update 170  train   8.45%  reward +0.8167  anchor 0.00  std 0.087   62.6s
+  seed 1 update 170  EVALUATION  12.10%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 171  train   8.50%  reward +0.8134  anchor 0.00  std 0.087   59.6s
+  seed 1 update 172  train   9.24%  reward +0.8018  anchor 0.00  std 0.086   58.1s
+  seed 1 update 173  train   8.50%  reward +0.8137  anchor 0.00  std 0.086   60.0s
+  seed 1 update 174  train  10.34%  reward +0.7783  anchor 0.00  std 0.087   58.0s
+  seed 1 update 175  train   8.78%  reward +0.8102  anchor 0.00  std 0.086   61.1s
+  seed 1 update 176  train   9.30%  reward +0.7980  anchor 0.00  std 0.086   59.6s
+  seed 1 update 177  train   9.24%  reward +0.7987  anchor 0.00  std 0.086   59.8s
+  seed 1 update 178  train   8.49%  reward +0.8134  anchor 0.00  std 0.086   57.7s
+  seed 1 update 179  train   8.24%  reward +0.8210  anchor 0.00  std 0.086   60.7s
+  seed 1 update 180  train   8.64%  reward +0.8117  anchor 0.00  std 0.086   57.8s
+  seed 1 update 180  EVALUATION  11.96%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 181  train   9.09%  reward +0.8036  anchor 0.00  std 0.086   60.3s
+  seed 1 update 182  train   8.93%  reward +0.8080  anchor 0.00  std 0.086   56.2s
+  seed 1 update 183  train   8.29%  reward +0.8190  anchor 0.00  std 0.085   62.8s
+  seed 1 update 184  train   8.25%  reward +0.8183  anchor 0.00  std 0.085   58.1s
+  seed 1 update 185  train   9.01%  reward +0.8056  anchor 0.00  std 0.085   57.3s
+  seed 1 update 186  train   9.12%  reward +0.8012  anchor 0.00  std 0.085   58.0s
+  seed 1 update 187  train   8.69%  reward +0.8113  anchor 0.00  std 0.085   60.4s
+  seed 1 update 188  train   8.96%  reward +0.8070  anchor 0.00  std 0.085   59.5s
+  seed 1 update 189  train   9.30%  reward +0.7999  anchor 0.00  std 0.085   57.8s
+  seed 1 update 190  train   8.53%  reward +0.8139  anchor 0.00  std 0.085   58.5s
+  seed 1 update 190  EVALUATION  11.80%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 191  train   8.85%  reward +0.8062  anchor 0.00  std 0.084   59.9s
+  seed 1 update 192  train   9.73%  reward +0.7911  anchor 0.00  std 0.084   60.5s
+  seed 1 update 193  train   9.67%  reward +0.7912  anchor 0.00  std 0.084   58.5s
+  seed 1 update 194  train   8.48%  reward +0.8153  anchor 0.00  std 0.083   58.6s
+  seed 1 update 195  train   8.55%  reward +0.8136  anchor 0.00  std 0.083   60.4s
+  seed 1 update 196  train   8.83%  reward +0.8074  anchor 0.00  std 0.083   59.1s
+  seed 1 update 197  train   8.28%  reward +0.8201  anchor 0.00  std 0.082   59.9s
+  seed 1 update 198  train   8.79%  reward +0.8084  anchor 0.00  std 0.082   57.8s
+  seed 1 update 199  train   9.04%  reward +0.8050  anchor 0.00  std 0.082   60.5s
+  seed 1 update 200  train   8.55%  reward +0.8167  anchor 0.00  std 0.082   59.3s
+  seed 1 update 200  EVALUATION  11.48%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 201  train   8.44%  reward +0.8169  anchor 0.00  std 0.082   60.6s
+  seed 1 update 202  train   8.65%  reward +0.8121  anchor 0.00  std 0.082   60.9s
+  seed 1 update 203  train   8.50%  reward +0.8158  anchor 0.00  std 0.082   60.8s
+  seed 1 update 204  train   8.05%  reward +0.8246  anchor 0.00  std 0.082   60.4s
+  seed 1 update 205  train   9.20%  reward +0.8021  anchor 0.00  std 0.081   59.1s
+  seed 1 update 206  train   9.16%  reward +0.8010  anchor 0.00  std 0.081   60.7s
+  seed 1 update 207  train   8.54%  reward +0.8144  anchor 0.00  std 0.081   58.8s
+  seed 1 update 208  train   8.54%  reward +0.8147  anchor 0.00  std 0.081   61.0s
+  seed 1 update 209  train   9.52%  reward +0.7955  anchor 0.00  std 0.081   60.2s
+  seed 1 update 210  train   8.61%  reward +0.8129  anchor 0.00  std 0.081   60.2s
+  seed 1 update 210  EVALUATION  11.43%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 211  train   8.22%  reward +0.8213  anchor 0.00  std 0.081   60.3s
+  seed 1 update 212  train   8.92%  reward +0.8074  anchor 0.00  std 0.080   64.5s
+  seed 1 update 213  train   8.04%  reward +0.8244  anchor 0.00  std 0.080   60.5s
+  seed 1 update 214  train   9.16%  reward +0.8020  anchor 0.00  std 0.080   58.9s
+  seed 1 update 215  train   8.46%  reward +0.8181  anchor 0.00  std 0.080   60.0s
+  seed 1 update 216  train   8.23%  reward +0.8189  anchor 0.00  std 0.080   60.1s
+  seed 1 update 217  train   8.40%  reward +0.8183  anchor 0.00  std 0.080   60.5s
+  seed 1 update 218  train   8.82%  reward +0.8088  anchor 0.00  std 0.080   58.7s
+  seed 1 update 219  train   8.79%  reward +0.8107  anchor 0.00  std 0.080   58.4s
+  seed 1 update 220  train   8.80%  reward +0.8098  anchor 0.00  std 0.080   60.7s
+  seed 1 update 220  EVALUATION  11.07%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 221  train   8.75%  reward +0.8090  anchor 0.00  std 0.080   58.6s
+  seed 1 update 222  train   8.62%  reward +0.8127  anchor 0.00  std 0.080   60.0s
+  seed 1 update 223  train   8.32%  reward +0.8198  anchor 0.00  std 0.080   57.6s
+  seed 1 update 224  train   9.07%  reward +0.8057  anchor 0.00  std 0.080   59.3s
+  seed 1 update 225  train   8.75%  reward +0.8114  anchor 0.00  std 0.079   60.1s
+  seed 1 update 226  train   8.17%  reward +0.8215  anchor 0.00  std 0.079   59.4s
+  seed 1 update 227  train   8.36%  reward +0.8168  anchor 0.00  std 0.079   59.6s
+  seed 1 update 228  train   8.51%  reward +0.8145  anchor 0.00  std 0.079   59.6s
+  seed 1 update 229  train   8.33%  reward +0.8182  anchor 0.00  std 0.079   59.4s
+  seed 1 update 230  train   9.37%  reward +0.7983  anchor 0.00  std 0.078   58.4s
+  seed 1 update 230  EVALUATION  11.30%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 231  train   8.86%  reward +0.8074  anchor 0.00  std 0.078   58.8s
+  seed 1 update 232  train   8.65%  reward +0.8119  anchor 0.00  std 0.078   59.7s
+  seed 1 update 233  train   8.65%  reward +0.8111  anchor 0.00  std 0.078   56.5s
+  seed 1 update 234  train   9.07%  reward +0.8052  anchor 0.00  std 0.078   59.8s
+  seed 1 update 235  train   8.42%  reward +0.8165  anchor 0.00  std 0.077   60.3s
+  seed 1 update 236  train   8.90%  reward +0.8076  anchor 0.00  std 0.077   57.2s
+  seed 1 update 237  train   8.76%  reward +0.8124  anchor 0.00  std 0.077   58.5s
+  seed 1 update 238  train   8.70%  reward +0.8121  anchor 0.00  std 0.077   59.3s
+  seed 1 update 239  train   7.95%  reward +0.8277  anchor 0.00  std 0.077   57.8s
+  seed 1 update 240  train   8.58%  reward +0.8144  anchor 0.00  std 0.077   59.2s
+  seed 1 update 240  EVALUATION  11.58%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 241  train   9.24%  reward +0.8010  anchor 0.00  std 0.077   60.6s
+  seed 1 update 242  train   8.45%  reward +0.8167  anchor 0.00  std 0.077   57.1s
+  seed 1 update 243  train   8.61%  reward +0.8121  anchor 0.00  std 0.077   58.6s
+  seed 1 update 244  train   8.30%  reward +0.8192  anchor 0.00  std 0.077   59.5s
+  seed 1 update 245  train   7.86%  reward +0.8270  anchor 0.00  std 0.077   60.2s
+  seed 1 update 246  train   8.53%  reward +0.8141  anchor 0.00  std 0.077   60.1s
+  seed 1 update 247  train   8.67%  reward +0.8100  anchor 0.00  std 0.077   57.3s
+  seed 1 update 248  train   8.15%  reward +0.8211  anchor 0.00  std 0.077   58.5s
+  seed 1 update 249  train   9.11%  reward +0.8018  anchor 0.00  std 0.076   60.0s
+  seed 1 update 250  train   9.36%  reward +0.7989  anchor 0.00  std 0.076   58.9s
+  seed 1 update 250  EVALUATION  11.45%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 251  train   8.55%  reward +0.8144  anchor 0.00  std 0.076   61.0s
+  seed 1 update 252  train   9.01%  reward +0.8057  anchor 0.00  std 0.076   58.4s
+  seed 1 update 253  train   8.96%  reward +0.8053  anchor 0.00  std 0.076   57.0s
+  seed 1 update 254  train   9.08%  reward +0.8046  anchor 0.00  std 0.076   58.9s
+  seed 1 update 255  train   8.34%  reward +0.8178  anchor 0.00  std 0.076   60.8s
+  seed 1 update 256  train   8.12%  reward +0.8230  anchor 0.00  std 0.076   58.7s
+  seed 1 update 257  train   8.54%  reward +0.8141  anchor 0.00  std 0.076   59.3s
+  seed 1 update 258  train   8.51%  reward +0.8144  anchor 0.00  std 0.076   57.6s
+  seed 1 update 259  train   8.61%  reward +0.8129  anchor 0.00  std 0.076   59.5s
+  seed 1 update 260  train   8.87%  reward +0.8093  anchor 0.00  std 0.076   58.0s
+  seed 1 update 260  EVALUATION  11.70%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 261  train   8.08%  reward +0.8223  anchor 0.00  std 0.076   58.5s
+  seed 1 update 262  train   8.01%  reward +0.8251  anchor 0.00  std 0.076   57.5s
+  seed 1 update 263  train   8.75%  reward +0.8103  anchor 0.00  std 0.076   59.0s
+  seed 1 update 264  train   9.22%  reward +0.8005  anchor 0.00  std 0.076   59.7s
+  seed 1 update 265  train   8.19%  reward +0.8207  anchor 0.00  std 0.075   58.6s
+  seed 1 update 266  train   8.08%  reward +0.8222  anchor 0.00  std 0.075   58.6s
+  seed 1 update 267  train   8.88%  reward +0.8068  anchor 0.00  std 0.075   58.3s
+  seed 1 update 268  train   8.22%  reward +0.8213  anchor 0.00  std 0.075   57.4s
+  seed 1 update 269  train   8.58%  reward +0.8139  anchor 0.00  std 0.075   58.2s
+  seed 1 update 270  train   8.44%  reward +0.8174  anchor 0.00  std 0.075   60.3s
+  seed 1 update 270  EVALUATION  11.34%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 271  train   8.32%  reward +0.8185  anchor 0.00  std 0.075   58.8s
+  seed 1 update 272  train   8.59%  reward +0.8135  anchor 0.00  std 0.075   59.4s
+  seed 1 update 273  train   9.20%  reward +0.8008  anchor 0.00  std 0.075   59.0s
+  seed 1 update 274  train   8.49%  reward +0.8140  anchor 0.00  std 0.075   60.0s
+  seed 1 update 275  train   8.30%  reward +0.8199  anchor 0.00  std 0.075   60.3s
+  seed 1 update 276  train   9.98%  reward +0.7852  anchor 0.00  std 0.074   57.7s
+  seed 1 update 277  train   8.52%  reward +0.8156  anchor 0.00  std 0.074   59.4s
+  seed 1 update 278  train   8.66%  reward +0.8121  anchor 0.00  std 0.074   60.8s
+  seed 1 update 279  train   8.88%  reward +0.8080  anchor 0.00  std 0.074   60.7s
+  seed 1 update 280  train   8.64%  reward +0.8126  anchor 0.00  std 0.074   58.6s
+  seed 1 update 280  EVALUATION  11.25%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 281  train   8.60%  reward +0.8135  anchor 0.00  std 0.074   60.4s
+  seed 1 update 282  train   8.15%  reward +0.8217  anchor 0.00  std 0.074   59.3s
+  seed 1 update 283  train   9.18%  reward +0.8025  anchor 0.00  std 0.074   59.0s
+  seed 1 update 284  train   8.49%  reward +0.8145  anchor 0.00  std 0.073   60.3s
+  seed 1 update 285  train   8.25%  reward +0.8188  anchor 0.00  std 0.074   59.9s
+  seed 1 update 286  train   7.86%  reward +0.8298  anchor 0.00  std 0.073   60.7s
+  seed 1 update 287  train   9.22%  reward +0.7990  anchor 0.00  std 0.073   57.6s
+  seed 1 update 288  train   8.74%  reward +0.8101  anchor 0.00  std 0.073   59.4s
+  seed 1 update 289  train   8.23%  reward +0.8209  anchor 0.00  std 0.073   59.4s
+  seed 1 update 290  train   8.46%  reward +0.8151  anchor 0.00  std 0.073   58.7s
+  seed 1 update 290  EVALUATION  11.35%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 291  train   8.16%  reward +0.8202  anchor 0.00  std 0.073   59.2s
+  seed 1 update 292  train   8.42%  reward +0.8140  anchor 0.00  std 0.073   60.8s
+  seed 1 update 293  train   8.53%  reward +0.8147  anchor 0.00  std 0.072   60.2s
+  seed 1 update 294  train   8.65%  reward +0.8125  anchor 0.00  std 0.072   59.3s
+  seed 1 update 295  train   8.25%  reward +0.8207  anchor 0.00  std 0.072   59.6s
+  seed 1 update 296  train   8.98%  reward +0.8036  anchor 0.00  std 0.072   58.3s
+  seed 1 update 297  train   8.76%  reward +0.8094  anchor 0.00  std 0.072   59.8s
+  seed 1 update 298  train   7.92%  reward +0.8255  anchor 0.00  std 0.072   59.5s
+  seed 1 update 299  train   8.54%  reward +0.8145  anchor 0.00  std 0.072   58.8s
+  seed 1 update 300  train   8.10%  reward +0.8237  anchor 0.00  std 0.072   60.8s
+  seed 1 update 300  EVALUATION  11.38%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 301  train   9.11%  reward +0.8017  anchor 0.00  std 0.072   60.0s
+  seed 1 update 302  train   8.34%  reward +0.8190  anchor 0.00  std 0.072   61.2s
+  seed 1 update 303  train   8.55%  reward +0.8152  anchor 0.00  std 0.072   59.5s
+  seed 1 update 304  train   9.49%  reward +0.7939  anchor 0.00  std 0.072   59.6s
+  seed 1 update 305  train   8.76%  reward +0.8101  anchor 0.00  std 0.072   59.8s
+  seed 1 update 306  train   8.28%  reward +0.8199  anchor 0.00  std 0.072   59.9s
+  seed 1 update 307  train   8.46%  reward +0.8166  anchor 0.00  std 0.071   60.3s
+  seed 1 update 308  train   8.46%  reward +0.8157  anchor 0.00  std 0.071   57.3s
+  seed 1 update 309  train   8.54%  reward +0.8133  anchor 0.00  std 0.071   60.8s
+  seed 1 update 310  train   8.61%  reward +0.8128  anchor 0.00  std 0.071   58.7s
+  seed 1 update 310  EVALUATION  11.14%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 311  train   8.85%  reward +0.8081  anchor 0.00  std 0.071   60.1s
+  seed 1 update 312  train   9.27%  reward +0.7986  anchor 0.00  std 0.071   59.5s
+  seed 1 update 313  train   7.56%  reward +0.8337  anchor 0.00  std 0.071   60.1s
+  seed 1 update 314  train   8.42%  reward +0.8156  anchor 0.00  std 0.070   58.7s
+  seed 1 update 315  train   9.07%  reward +0.8027  anchor 0.00  std 0.070   59.6s
+  seed 1 update 316  train   8.16%  reward +0.8211  anchor 0.00  std 0.070   59.5s
+  seed 1 update 317  train   8.67%  reward +0.8119  anchor 0.00  std 0.070   58.8s
+  seed 1 update 318  train   8.87%  reward +0.8069  anchor 0.00  std 0.070   60.0s
+  seed 1 update 319  train   8.83%  reward +0.8081  anchor 0.00  std 0.070   58.9s
+  seed 1 update 320  train   8.43%  reward +0.8171  anchor 0.00  std 0.070   59.6s
+  seed 1 update 320  EVALUATION  11.62%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 321  train   8.18%  reward +0.8208  anchor 0.00  std 0.070   59.2s
+  seed 1 update 322  train   8.67%  reward +0.8137  anchor 0.00  std 0.070   58.2s
+  seed 1 update 323  train   8.43%  reward +0.8155  anchor 0.00  std 0.070   59.5s
+  seed 1 update 324  train   8.61%  reward +0.8130  anchor 0.00  std 0.070   59.1s
+  seed 1 update 325  train   9.11%  reward +0.8025  anchor 0.00  std 0.070   58.8s
+  seed 1 update 326  train   8.84%  reward +0.8091  anchor 0.00  std 0.070   60.2s
+  seed 1 update 327  train   8.75%  reward +0.8102  anchor 0.00  std 0.070   59.0s
+  seed 1 update 328  train   8.00%  reward +0.8251  anchor 0.00  std 0.070   59.4s
+  seed 1 update 329  train   8.83%  reward +0.8099  anchor 0.00  std 0.070   60.5s
+  seed 1 update 330  train   8.35%  reward +0.8174  anchor 0.00  std 0.070   58.8s
+  seed 1 update 330  EVALUATION  11.32%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 331  train   8.24%  reward +0.8184  anchor 0.00  std 0.070   58.0s
+  seed 1 update 332  train   8.33%  reward +0.8171  anchor 0.00  std 0.069   61.3s
+  seed 1 update 333  train   8.57%  reward +0.8141  anchor 0.00  std 0.069   58.7s
+  seed 1 update 334  train   8.99%  reward +0.8046  anchor 0.00  std 0.069   60.8s
+  seed 1 update 335  train   8.50%  reward +0.8154  anchor 0.00  std 0.069   59.3s
+  seed 1 update 336  train   8.42%  reward +0.8161  anchor 0.00  std 0.069   60.0s
+  seed 1 update 337  train   8.80%  reward +0.8094  anchor 0.00  std 0.069   58.5s
+  seed 1 update 338  train   8.85%  reward +0.8074  anchor 0.00  std 0.069   59.3s
+  seed 1 update 339  train   8.12%  reward +0.8229  anchor 0.00  std 0.068   58.5s
+  seed 1 update 340  train   8.47%  reward +0.8172  anchor 0.00  std 0.068   59.6s
+  seed 1 update 340  EVALUATION  10.91%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 341  train   8.50%  reward +0.8150  anchor 0.00  std 0.068   60.3s
+  seed 1 update 342  train   8.55%  reward +0.8132  anchor 0.00  std 0.068   59.7s
+  seed 1 update 343  train   8.40%  reward +0.8163  anchor 0.00  std 0.068   58.7s
+  seed 1 update 344  train   7.96%  reward +0.8276  anchor 0.00  std 0.068   60.8s
+  seed 1 update 345  train   8.04%  reward +0.8243  anchor 0.00  std 0.068   58.4s
+  seed 1 update 346  train   8.48%  reward +0.8169  anchor 0.00  std 0.067   58.8s
+  seed 1 update 347  train   8.89%  reward +0.8088  anchor 0.00  std 0.067   58.3s
+  seed 1 update 348  train   8.58%  reward +0.8127  anchor 0.00  std 0.067   59.4s
+  seed 1 update 349  train   9.15%  reward +0.8020  anchor 0.00  std 0.067   59.2s
+  seed 1 update 350  train   8.07%  reward +0.8241  anchor 0.00  std 0.067   56.8s
+  seed 1 update 350  EVALUATION  11.26%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 351  train   8.55%  reward +0.8128  anchor 0.00  std 0.067   60.8s
+  seed 1 update 352  train   7.95%  reward +0.8269  anchor 0.00  std 0.067   58.9s
+  seed 1 update 353  train   8.52%  reward +0.8138  anchor 0.00  std 0.067   58.8s
+  seed 1 update 354  train   8.76%  reward +0.8109  anchor 0.00  std 0.067   59.3s
+  seed 1 update 355  train   7.95%  reward +0.8265  anchor 0.00  std 0.067   58.3s
+  seed 1 update 356  train   8.18%  reward +0.8219  anchor 0.00  std 0.066   58.3s
+  seed 1 update 357  train   9.11%  reward +0.8035  anchor 0.00  std 0.066   60.0s
+  seed 1 update 358  train   8.79%  reward +0.8079  anchor 0.00  std 0.066   57.7s
+  seed 1 update 359  train   7.70%  reward +0.8301  anchor 0.00  std 0.066   60.9s
+  seed 1 update 360  train   7.99%  reward +0.8255  anchor 0.00  std 0.066   59.5s
+  seed 1 update 360  EVALUATION  11.06%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 361  train   8.78%  reward +0.8103  anchor 0.00  std 0.066   57.9s
+  seed 1 update 362  train   8.62%  reward +0.8115  anchor 0.00  std 0.066   60.5s
+  seed 1 update 363  train   8.77%  reward +0.8093  anchor 0.00  std 0.066   58.0s
+  seed 1 update 364  train   8.30%  reward +0.8199  anchor 0.00  std 0.065   59.5s
+  seed 1 update 365  train   8.06%  reward +0.8229  anchor 0.00  std 0.065   59.3s
+  seed 1 update 366  train   8.75%  reward +0.8109  anchor 0.00  std 0.065   58.5s
+  seed 1 update 367  train   9.03%  reward +0.8033  anchor 0.00  std 0.065   60.0s
+  seed 1 update 368  train   9.12%  reward +0.8038  anchor 0.00  std 0.065   59.9s
+  seed 1 update 369  train   8.88%  reward +0.8100  anchor 0.00  std 0.065   60.1s
+  seed 1 update 370  train   8.52%  reward +0.8155  anchor 0.00  std 0.065   64.7s
+  seed 1 update 370  EVALUATION  11.14%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 371  train   8.07%  reward +0.8250  anchor 0.00  std 0.065   59.6s
+  seed 1 update 372  train   7.74%  reward +0.8318  anchor 0.00  std 0.065   59.4s
+  seed 1 update 373  train   8.27%  reward +0.8191  anchor 0.00  std 0.065   60.5s
+  seed 1 update 374  train   8.88%  reward +0.8089  anchor 0.00  std 0.065   58.5s
+  seed 1 update 375  train   8.82%  reward +0.8098  anchor 0.00  std 0.065   59.9s
+  seed 1 update 376  train   7.94%  reward +0.8257  anchor 0.00  std 0.065   65.8s
+  seed 1 update 377  train   8.79%  reward +0.8091  anchor 0.00  std 0.065   59.6s
+  seed 1 update 378  train   9.31%  reward +0.7984  anchor 0.00  std 0.065   58.8s
+  seed 1 update 379  train   8.10%  reward +0.8219  anchor 0.00  std 0.064   60.5s
+  seed 1 update 380  train   7.70%  reward +0.8298  anchor 0.00  std 0.065   60.3s
+  seed 1 update 380  EVALUATION  11.10%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 381  train   7.51%  reward +0.8345  anchor 0.00  std 0.064   61.4s
+  seed 1 update 382  train   8.69%  reward +0.8114  anchor 0.00  std 0.064   62.6s
+  seed 1 update 383  train   8.54%  reward +0.8146  anchor 0.00  std 0.064   60.0s
+  seed 1 update 384  train   8.30%  reward +0.8189  anchor 0.00  std 0.064   59.2s
+  seed 1 update 385  train   8.90%  reward +0.8089  anchor 0.00  std 0.064   59.0s
+  seed 1 update 386  train   8.11%  reward +0.8229  anchor 0.00  std 0.064   59.4s
+  seed 1 update 387  train   9.02%  reward +0.8045  anchor 0.00  std 0.064   57.1s
+  seed 1 update 388  train   8.43%  reward +0.8160  anchor 0.00  std 0.064   60.6s
+  seed 1 update 389  train   8.23%  reward +0.8196  anchor 0.00  std 0.064   60.2s
+  seed 1 update 390  train   8.91%  reward +0.8068  anchor 0.00  std 0.064   59.7s
+  seed 1 update 390  EVALUATION  10.92%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 391  train   8.61%  reward +0.8128  anchor 0.00  std 0.064   59.0s
+  seed 1 update 392  train   8.55%  reward +0.8142  anchor 0.00  std 0.064   58.8s
+  seed 1 update 393  train   8.82%  reward +0.8087  anchor 0.00  std 0.064   59.7s
+  seed 1 update 394  train   8.35%  reward +0.8182  anchor 0.00  std 0.064   58.9s
+  seed 1 update 395  train   9.26%  reward +0.8003  anchor 0.00  std 0.064   59.6s
+  seed 1 update 396  train   9.15%  reward +0.8029  anchor 0.00  std 0.063   61.0s
+  seed 1 update 397  train   7.79%  reward +0.8301  anchor 0.00  std 0.063   60.8s
+  seed 1 update 398  train   8.30%  reward +0.8197  anchor 0.00  std 0.063   60.4s
+  seed 1 update 399  train   8.93%  reward +0.8060  anchor 0.00  std 0.063   59.1s
+  seed 1 update 400  train   8.22%  reward +0.8202  anchor 0.00  std 0.063   59.7s
+  seed 1 update 400  EVALUATION  11.09%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 401  train   8.49%  reward +0.8173  anchor 0.00  std 0.063   57.0s
+  seed 1 update 402  train   8.73%  reward +0.8114  anchor 0.00  std 0.063   61.3s
+  seed 1 update 403  train   8.97%  reward +0.8057  anchor 0.00  std 0.063   59.4s
+  seed 1 update 404  train   8.30%  reward +0.8194  anchor 0.00  std 0.062   60.0s
+  seed 1 update 405  train   8.40%  reward +0.8180  anchor 0.00  std 0.062   61.1s
+  seed 1 update 406  train   8.55%  reward +0.8134  anchor 0.00  std 0.062   57.5s
+  seed 1 update 407  train   8.36%  reward +0.8182  anchor 0.00  std 0.062   61.0s
+  seed 1 update 408  train   8.91%  reward +0.8056  anchor 0.00  std 0.062   58.5s
+  seed 1 update 409  train   8.56%  reward +0.8150  anchor 0.00  std 0.062   59.4s
+  seed 1 update 410  train   8.23%  reward +0.8210  anchor 0.00  std 0.062   61.3s
+  seed 1 update 410  EVALUATION  10.70%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 411  train   8.19%  reward +0.8223  anchor 0.00  std 0.062   47.9s
+  seed 1 update 412  train   8.45%  reward +0.8162  anchor 0.00  std 0.062   49.2s
+  seed 1 update 413  train   8.83%  reward +0.8098  anchor 0.00  std 0.062   51.6s
+  seed 1 update 414  train   8.53%  reward +0.8151  anchor 0.00  std 0.062   52.2s
+  seed 1 update 415  train   8.18%  reward +0.8210  anchor 0.00  std 0.062   49.7s
+  seed 1 update 416  train   8.01%  reward +0.8269  anchor 0.00  std 0.061   51.0s
+  seed 1 update 417  train   9.50%  reward +0.7961  anchor 0.00  std 0.061   50.3s
+  seed 1 update 418  train   8.47%  reward +0.8159  anchor 0.00  std 0.061   49.5s
+  seed 1 update 419  train   8.16%  reward +0.8228  anchor 0.00  std 0.061   50.3s
+  seed 1 update 420  train   8.17%  reward +0.8222  anchor 0.00  std 0.061   50.2s
+  seed 1 update 420  EVALUATION  11.03%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 421  train   8.27%  reward +0.8202  anchor 0.00  std 0.061   49.5s
+  seed 1 update 422  train   8.48%  reward +0.8175  anchor 0.00  std 0.061   49.0s
+  seed 1 update 423  train   8.37%  reward +0.8168  anchor 0.00  std 0.060   49.7s
+  seed 1 update 424  train   8.36%  reward +0.8177  anchor 0.00  std 0.060   49.1s
+  seed 1 update 425  train   8.43%  reward +0.8171  anchor 0.00  std 0.060   50.4s
+  seed 1 update 426  train   8.40%  reward +0.8145  anchor 0.00  std 0.060   48.7s
+  seed 1 update 427  train   8.48%  reward +0.8153  anchor 0.00  std 0.060   49.3s
+  seed 1 update 428  train   7.70%  reward +0.8317  anchor 0.00  std 0.060   50.1s
+  seed 1 update 429  train   8.40%  reward +0.8165  anchor 0.00  std 0.060   48.8s
+  seed 1 update 430  train   9.11%  reward +0.8033  anchor 0.00  std 0.059   49.5s
+  seed 1 update 430  EVALUATION  11.28%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 431  train   8.93%  reward +0.8068  anchor 0.00  std 0.059   50.1s
+  seed 1 update 432  train   7.79%  reward +0.8301  anchor 0.00  std 0.059   49.9s
+  seed 1 update 433  train   9.12%  reward +0.8028  anchor 0.00  std 0.059   47.1s
+  seed 1 update 434  train   8.53%  reward +0.8154  anchor 0.00  std 0.059   49.8s
+  seed 1 update 435  train   8.61%  reward +0.8130  anchor 0.00  std 0.059   48.4s
+  seed 1 update 436  train   8.84%  reward +0.8080  anchor 0.00  std 0.059   49.3s
+  seed 1 update 437  train   8.46%  reward +0.8163  anchor 0.00  std 0.059   50.1s
+  seed 1 update 438  train   7.96%  reward +0.8264  anchor 0.00  std 0.059   48.5s
+  seed 1 update 439  train   8.38%  reward +0.8170  anchor 0.00  std 0.059   48.0s
+  seed 1 update 440  train   7.86%  reward +0.8286  anchor 0.00  std 0.059   50.3s
+  seed 1 update 440  EVALUATION  11.11%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 441  train   8.13%  reward +0.8213  anchor 0.00  std 0.059   49.0s
+  seed 1 update 442  train   8.77%  reward +0.8101  anchor 0.00  std 0.058   49.7s
+  seed 1 update 443  train   8.65%  reward +0.8131  anchor 0.00  std 0.058   50.3s
+  seed 1 update 444  train   8.10%  reward +0.8220  anchor 0.00  std 0.058   50.0s
+  seed 1 update 445  train   8.32%  reward +0.8192  anchor 0.00  std 0.058   49.2s
+  seed 1 update 446  train   8.97%  reward +0.8057  anchor 0.00  std 0.058   47.4s
+  seed 1 update 447  train   8.30%  reward +0.8190  anchor 0.00  std 0.058   50.4s
+  seed 1 update 448  train   8.67%  reward +0.8127  anchor 0.00  std 0.058   48.5s
+  seed 1 update 449  train   8.13%  reward +0.8244  anchor 0.00  std 0.058   48.8s
+  seed 1 update 450  train   8.02%  reward +0.8241  anchor 0.00  std 0.058   49.0s
+  seed 1 update 450  EVALUATION  11.24%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 451  train   8.53%  reward +0.8152  anchor 0.00  std 0.058   48.8s
+  seed 1 update 452  train   8.31%  reward +0.8202  anchor 0.00  std 0.057   48.7s
+  seed 1 update 453  train   8.35%  reward +0.8193  anchor 0.00  std 0.057   50.6s
+  seed 1 update 454  train   7.97%  reward +0.8236  anchor 0.00  std 0.057   48.4s
+  seed 1 update 455  train   8.80%  reward +0.8104  anchor 0.00  std 0.057   49.7s
+  seed 1 update 456  train   8.38%  reward +0.8177  anchor 0.00  std 0.057   49.2s
+  seed 1 update 457  train   8.80%  reward +0.8107  anchor 0.00  std 0.057   49.0s
+  seed 1 update 458  train   8.88%  reward +0.8078  anchor 0.00  std 0.057   49.3s
+  seed 1 update 459  train   9.06%  reward +0.8048  anchor 0.00  std 0.057   50.7s
+  seed 1 update 460  train   8.55%  reward +0.8142  anchor 0.00  std 0.057   49.6s
+  seed 1 update 460  EVALUATION  11.21%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 461  train   8.90%  reward +0.8069  anchor 0.00  std 0.057   49.7s
+  seed 1 update 462  train   8.43%  reward +0.8170  anchor 0.00  std 0.057   48.1s
+  seed 1 update 463  train   8.88%  reward +0.8077  anchor 0.00  std 0.057   50.8s
+  seed 1 update 464  train   8.73%  reward +0.8110  anchor 0.00  std 0.057   47.0s
+  seed 1 update 465  train   9.15%  reward +0.8042  anchor 0.00  std 0.057   49.7s
+  seed 1 update 466  train   8.74%  reward +0.8076  anchor 0.00  std 0.057   53.1s
+  seed 1 update 467  train   8.83%  reward +0.8071  anchor 0.00  std 0.057   51.4s
+  seed 1 update 468  train   8.74%  reward +0.8101  anchor 0.00  std 0.057   50.9s
+  seed 1 update 469  train   9.15%  reward +0.8020  anchor 0.00  std 0.057   48.2s
+  seed 1 update 470  train   7.88%  reward +0.8267  anchor 0.00  std 0.056   49.4s
+  seed 1 update 470  EVALUATION  11.09%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 471  train   8.74%  reward +0.8105  anchor 0.00  std 0.056   50.2s
+  seed 1 update 472  train   9.02%  reward +0.8032  anchor 0.00  std 0.056   48.7s
+  seed 1 update 473  train   8.80%  reward +0.8073  anchor 0.00  std 0.056   49.9s
+  seed 1 update 474  train   8.94%  reward +0.8052  anchor 0.00  std 0.056   48.1s
+  seed 1 update 475  train   8.60%  reward +0.8130  anchor 0.00  std 0.056   50.8s
+  seed 1 update 476  train   8.44%  reward +0.8158  anchor 0.00  std 0.056   47.8s
+  seed 1 update 477  train   8.46%  reward +0.8182  anchor 0.00  std 0.056   51.7s
+  seed 1 update 478  train   8.16%  reward +0.8210  anchor 0.00  std 0.056   48.7s
+  seed 1 update 479  train   8.70%  reward +0.8114  anchor 0.00  std 0.056   49.0s
+  seed 1 update 480  train   8.37%  reward +0.8175  anchor 0.00  std 0.055   48.9s
+  seed 1 update 480  EVALUATION  11.15%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 481  train   9.05%  reward +0.8051  anchor 0.00  std 0.055   50.1s
+  seed 1 update 482  train   8.58%  reward +0.8130  anchor 0.00  std 0.055   49.0s
+  seed 1 update 483  train   8.75%  reward +0.8108  anchor 0.00  std 0.055   50.2s
+  seed 1 update 484  train   8.91%  reward +0.8057  anchor 0.00  std 0.055   49.5s
+  seed 1 update 485  train   8.57%  reward +0.8123  anchor 0.00  std 0.055   50.6s
+  seed 1 update 486  train   9.04%  reward +0.8050  anchor 0.00  std 0.055   49.8s
+  seed 1 update 487  train   8.39%  reward +0.8158  anchor 0.00  std 0.055   49.9s
+  seed 1 update 488  train   9.22%  reward +0.8012  anchor 0.00  std 0.055   49.1s
+  seed 1 update 489  train   8.82%  reward +0.8081  anchor 0.00  std 0.055   49.7s
+  seed 1 update 490  train   7.77%  reward +0.8277  anchor 0.00  std 0.054   50.8s
+  seed 1 update 490  EVALUATION  11.07%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 491  train   8.81%  reward +0.8080  anchor 0.00  std 0.054   49.9s
+  seed 1 update 492  train   8.82%  reward +0.8112  anchor 0.00  std 0.054   50.0s
+  seed 1 update 493  train   8.05%  reward +0.8230  anchor 0.00  std 0.054   50.3s
+  seed 1 update 494  train   8.20%  reward +0.8205  anchor 0.00  std 0.054   51.0s
+  seed 1 update 495  train   8.89%  reward +0.8073  anchor 0.00  std 0.054   50.5s
+  seed 1 update 496  train   8.62%  reward +0.8120  anchor 0.00  std 0.054   45.4s
+  seed 1 update 497  train   9.01%  reward +0.8041  anchor 0.00  std 0.054   45.9s
+  seed 1 update 498  train   9.04%  reward +0.8064  anchor 0.00  std 0.054   45.6s
+  seed 1 update 499  train   7.72%  reward +0.8308  anchor 0.00  std 0.054   43.7s
+  seed 1 update 500  train   8.45%  reward +0.8157  anchor 0.00  std 0.054   45.9s
+  seed 1 update 500  EVALUATION  11.23%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 501  train   8.56%  reward +0.8152  anchor 0.00  std 0.054   44.3s
+  seed 1 update 502  train   9.19%  reward +0.8027  anchor 0.00  std 0.053   46.1s
+  seed 1 update 503  train   8.66%  reward +0.8109  anchor 0.00  std 0.054   45.0s
+  seed 1 update 504  train   8.45%  reward +0.8159  anchor 0.00  std 0.054   44.5s
+  seed 1 update 505  train   8.48%  reward +0.8145  anchor 0.00  std 0.054   44.9s
+  seed 1 update 506  train   9.11%  reward +0.8040  anchor 0.00  std 0.053   46.4s
+  seed 1 update 507  train   8.47%  reward +0.8163  anchor 0.00  std 0.054   44.8s
+  seed 1 update 508  train   8.18%  reward +0.8196  anchor 0.00  std 0.054   45.7s
+  seed 1 update 509  train   8.35%  reward +0.8165  anchor 0.00  std 0.053   46.1s
+  seed 1 update 510  train   8.91%  reward +0.8051  anchor 0.00  std 0.053   44.8s
+  seed 1 update 510  EVALUATION  11.00%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 511  train   8.29%  reward +0.8174  anchor 0.00  std 0.053   45.5s
+  seed 1 update 512  train   8.61%  reward +0.8131  anchor 0.00  std 0.053   45.6s
+  seed 1 update 513  train   8.73%  reward +0.8109  anchor 0.00  std 0.053   45.9s
+  seed 1 update 514  train   8.66%  reward +0.8122  anchor 0.00  std 0.053   44.6s
+  seed 1 update 515  train   8.12%  reward +0.8223  anchor 0.00  std 0.053   45.7s
+  seed 1 update 516  train   8.63%  reward +0.8122  anchor 0.00  std 0.052   45.6s
+  seed 1 update 517  train   8.14%  reward +0.8236  anchor 0.00  std 0.052   45.2s
+  seed 1 update 518  train   8.27%  reward +0.8208  anchor 0.00  std 0.052   45.8s
+  seed 1 update 519  train   8.52%  reward +0.8148  anchor 0.00  std 0.052   44.9s
+  seed 1 update 520  train   8.53%  reward +0.8141  anchor 0.00  std 0.052   45.5s
+  seed 1 update 520  EVALUATION  11.09%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 521  train   8.58%  reward +0.8140  anchor 0.00  std 0.052   45.6s
+  seed 1 update 522  train   8.07%  reward +0.8246  anchor 0.00  std 0.052   45.4s
+  seed 1 update 523  train   9.10%  reward +0.8028  anchor 0.00  std 0.052   45.3s
+  seed 1 update 524  train   7.98%  reward +0.8265  anchor 0.00  std 0.052   46.0s
+  seed 1 update 525  train   8.32%  reward +0.8178  anchor 0.00  std 0.052   46.4s
+  seed 1 update 526  train   8.51%  reward +0.8146  anchor 0.00  std 0.052   45.6s
+  seed 1 update 527  train   8.48%  reward +0.8152  anchor 0.00  std 0.052   44.4s
+  seed 1 update 528  train   9.02%  reward +0.8036  anchor 0.00  std 0.052   46.4s
+  seed 1 update 529  train   8.81%  reward +0.8094  anchor 0.00  std 0.052   44.9s
+  seed 1 update 530  train   9.32%  reward +0.7984  anchor 0.00  std 0.052   45.0s
+  seed 1 update 530  EVALUATION  11.07%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 531  train   9.64%  reward +0.7932  anchor 0.00  std 0.052   46.0s
+  seed 1 update 532  train   7.74%  reward +0.8309  anchor 0.00  std 0.052   46.4s
+  seed 1 update 533  train   7.77%  reward +0.8300  anchor 0.00  std 0.052   45.8s
+  seed 1 update 534  train   8.64%  reward +0.8130  anchor 0.00  std 0.051   45.2s
+  seed 1 update 535  train   9.30%  reward +0.7990  anchor 0.00  std 0.052   46.7s
+  seed 1 update 536  train   9.51%  reward +0.7935  anchor 0.00  std 0.051   44.7s
+  seed 1 update 537  train   9.13%  reward +0.8034  anchor 0.00  std 0.051   45.8s
+  seed 1 update 538  train   8.75%  reward +0.8094  anchor 0.00  std 0.051   45.1s
+  seed 1 update 539  train   8.50%  reward +0.8134  anchor 0.00  std 0.051   45.5s
+  seed 1 update 540  train   9.69%  reward +0.7908  anchor 0.00  std 0.051   46.9s
+  seed 1 update 540  EVALUATION  11.38%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 541  train   8.67%  reward +0.8125  anchor 0.00  std 0.051   44.4s
+  seed 1 update 542  train   8.23%  reward +0.8198  anchor 0.00  std 0.051   45.4s
+  seed 1 update 543  train   8.53%  reward +0.8147  anchor 0.00  std 0.051   45.7s
+  seed 1 update 544  train   9.14%  reward +0.8036  anchor 0.00  std 0.051   45.6s
+  seed 1 update 545  train   7.86%  reward +0.8269  anchor 0.00  std 0.051   45.9s
+  seed 1 update 546  train   8.21%  reward +0.8216  anchor 0.00  std 0.050   46.0s
+  seed 1 update 547  train   8.52%  reward +0.8145  anchor 0.00  std 0.050   45.0s
+  seed 1 update 548  train   9.10%  reward +0.8040  anchor 0.00  std 0.050   45.1s
+  seed 1 update 549  train   7.69%  reward +0.8302  anchor 0.00  std 0.050   44.5s
+  seed 1 update 550  train   8.95%  reward +0.8064  anchor 0.00  std 0.050   45.7s
+  seed 1 update 550  EVALUATION  11.49%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 551  train   7.80%  reward +0.8291  anchor 0.00  std 0.050   46.5s
+  seed 1 update 552  train   8.29%  reward +0.8179  anchor 0.00  std 0.050   46.0s
+  seed 1 update 553  train   9.43%  reward +0.7956  anchor 0.00  std 0.050   44.3s
+  seed 1 update 554  train   8.97%  reward +0.8058  anchor 0.00  std 0.050   44.6s
+  seed 1 update 555  train   7.98%  reward +0.8227  anchor 0.00  std 0.050   45.8s
+  seed 1 update 556  train   8.47%  reward +0.8135  anchor 0.00  std 0.050   44.9s
+  seed 1 update 557  train   8.67%  reward +0.8125  anchor 0.00  std 0.050   45.8s
+  seed 1 update 558  train   9.50%  reward +0.7959  anchor 0.00  std 0.050   46.1s
+  seed 1 update 559  train   8.73%  reward +0.8085  anchor 0.00  std 0.050   45.4s
+  seed 1 update 560  train   8.44%  reward +0.8170  anchor 0.00  std 0.050   44.8s
+  seed 1 update 560  EVALUATION  11.16%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 561  train   8.59%  reward +0.8124  anchor 0.00  std 0.050   44.6s
+  seed 1 update 562  train   8.54%  reward +0.8131  anchor 0.00  std 0.049   46.0s
+  seed 1 update 563  train   9.00%  reward +0.8052  anchor 0.00  std 0.049   45.5s
+  seed 1 update 564  train   9.46%  reward +0.7947  anchor 0.00  std 0.049   43.5s
+  seed 1 update 565  train   8.97%  reward +0.8062  anchor 0.00  std 0.049   45.2s
+  seed 1 update 566  train   8.42%  reward +0.8165  anchor 0.00  std 0.049   44.8s
+  seed 1 update 567  train   7.63%  reward +0.8303  anchor 0.00  std 0.049   46.6s
+  seed 1 update 568  train   8.45%  reward +0.8153  anchor 0.00  std 0.049   46.6s
+  seed 1 update 569  train   8.81%  reward +0.8078  anchor 0.00  std 0.049   44.3s
+  seed 1 update 570  train   8.42%  reward +0.8156  anchor 0.00  std 0.049   44.9s
+  seed 1 update 570  EVALUATION  11.20%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1: early stop — 16 checks without a 0.0 point gain
+  s3_to_s5 S3: 570 updates, best 10.70% at update 410
+  loaded S3's best weights back
+
+=== s3_to_s5 S4: D = 550 m, std reset to 0.1, patience 16, min 100, cap 600 ===
+  seed 1 update   1  train  13.02%  reward +0.7248  anchor 0.00  std 0.100   44.6s
+  seed 1 update   2  train  12.52%  reward +0.7339  anchor 0.00  std 0.100   44.9s
+  seed 1 update   3  train  14.12%  reward +0.7028  anchor 0.00  std 0.100   41.6s
+  seed 1 update   4  train  12.38%  reward +0.7380  anchor 0.00  std 0.100   44.9s
+  seed 1 update   5  train  13.26%  reward +0.7196  anchor 0.00  std 0.100   43.5s
+  seed 1 update   6  train  13.10%  reward +0.7226  anchor 0.00  std 0.099   43.3s
+  seed 1 update   7  train  12.44%  reward +0.7351  anchor 0.00  std 0.099   44.1s
+  seed 1 update   8  train  12.92%  reward +0.7263  anchor 0.00  std 0.099   42.8s
+  seed 1 update   9  train  13.24%  reward +0.7208  anchor 0.00  std 0.098   43.8s
+  seed 1 update  10  train  13.03%  reward +0.7223  anchor 0.00  std 0.098   42.7s
+  seed 1 update  10  EVALUATION  17.58%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  11  train  13.83%  reward +0.7096  anchor 0.00  std 0.098   42.9s
+  seed 1 update  12  train  12.50%  reward +0.7343  anchor 0.00  std 0.098   43.1s
+  seed 1 update  13  train  13.08%  reward +0.7235  anchor 0.00  std 0.098   44.0s
+  seed 1 update  14  train  12.83%  reward +0.7281  anchor 0.00  std 0.098   45.4s
+  seed 1 update  15  train  13.60%  reward +0.7126  anchor 0.00  std 0.097   42.4s
+  seed 1 update  16  train  13.53%  reward +0.7137  anchor 0.00  std 0.097   42.7s
+  seed 1 update  17  train  13.39%  reward +0.7139  anchor 0.00  std 0.097   44.4s
+  seed 1 update  18  train  13.12%  reward +0.7237  anchor 0.00  std 0.096   41.7s
+  seed 1 update  19  train  13.46%  reward +0.7147  anchor 0.00  std 0.096   42.5s
+  seed 1 update  20  train  12.40%  reward +0.7375  anchor 0.00  std 0.096   44.1s
+  seed 1 update  20  EVALUATION  17.34%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  21  train  12.65%  reward +0.7323  anchor 0.00  std 0.096   44.0s
+  seed 1 update  22  train  13.31%  reward +0.7178  anchor 0.00  std 0.096   43.0s
+  seed 1 update  23  train  12.43%  reward +0.7353  anchor 0.00  std 0.096   43.7s
+  seed 1 update  24  train  12.96%  reward +0.7274  anchor 0.00  std 0.096   43.0s
+  seed 1 update  25  train  13.52%  reward +0.7166  anchor 0.00  std 0.095   43.7s
+  seed 1 update  26  train  13.26%  reward +0.7177  anchor 0.00  std 0.095   43.4s
+  seed 1 update  27  train  13.81%  reward +0.7095  anchor 0.00  std 0.095   43.6s
+  seed 1 update  28  train  12.62%  reward +0.7307  anchor 0.00  std 0.095   42.9s
+  seed 1 update  29  train  13.47%  reward +0.7173  anchor 0.00  std 0.095   42.3s
+  seed 1 update  30  train  12.22%  reward +0.7401  anchor 0.00  std 0.094   43.6s
+  seed 1 update  30  EVALUATION  17.16%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  31  train  13.39%  reward +0.7156  anchor 0.00  std 0.094   42.6s
+  seed 1 update  32  train  12.66%  reward +0.7313  anchor 0.00  std 0.094   44.3s
+  seed 1 update  33  train  13.63%  reward +0.7158  anchor 0.00  std 0.094   43.3s
+  seed 1 update  34  train  11.94%  reward +0.7457  anchor 0.00  std 0.094   42.6s
+  seed 1 update  35  train  12.84%  reward +0.7293  anchor 0.00  std 0.094   42.3s
+  seed 1 update  36  train  12.92%  reward +0.7266  anchor 0.00  std 0.094   45.1s
+  seed 1 update  37  train  12.62%  reward +0.7324  anchor 0.00  std 0.094   41.7s
+  seed 1 update  38  train  12.01%  reward +0.7429  anchor 0.00  std 0.093   44.3s
+  seed 1 update  39  train  11.84%  reward +0.7485  anchor 0.00  std 0.093   43.2s
+  seed 1 update  40  train  13.13%  reward +0.7218  anchor 0.00  std 0.093   43.2s
+  seed 1 update  40  EVALUATION  16.83%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  41  train  13.35%  reward +0.7186  anchor 0.00  std 0.092   43.3s
+  seed 1 update  42  train  13.08%  reward +0.7241  anchor 0.00  std 0.092   43.0s
+  seed 1 update  43  train  12.78%  reward +0.7292  anchor 0.00  std 0.092   43.2s
+  seed 1 update  44  train  13.10%  reward +0.7246  anchor 0.00  std 0.092   42.9s
+  seed 1 update  45  train  12.06%  reward +0.7447  anchor 0.00  std 0.092   44.9s
+  seed 1 update  46  train  13.05%  reward +0.7256  anchor 0.00  std 0.092   42.5s
+  seed 1 update  47  train  13.04%  reward +0.7236  anchor 0.00  std 0.092   42.3s
+  seed 1 update  48  train  12.44%  reward +0.7373  anchor 0.00  std 0.092   44.2s
+  seed 1 update  49  train  13.13%  reward +0.7219  anchor 0.00  std 0.091   42.6s
+  seed 1 update  50  train  12.42%  reward +0.7373  anchor 0.00  std 0.091   44.0s
+  seed 1 update  50  EVALUATION  17.23%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  51  train  12.48%  reward +0.7357  anchor 0.00  std 0.091   44.4s
+  seed 1 update  52  train  13.12%  reward +0.7231  anchor 0.00  std 0.091   42.9s
+  seed 1 update  53  train  13.79%  reward +0.7117  anchor 0.00  std 0.090   42.8s
+  seed 1 update  54  train  13.95%  reward +0.7059  anchor 0.00  std 0.090   43.6s
+  seed 1 update  55  train  13.95%  reward +0.7060  anchor 0.00  std 0.090   42.6s
+  seed 1 update  56  train  13.29%  reward +0.7200  anchor 0.00  std 0.090   43.0s
+  seed 1 update  57  train  12.45%  reward +0.7350  anchor 0.00  std 0.090   43.1s
+  seed 1 update  58  train  12.71%  reward +0.7322  anchor 0.00  std 0.089   43.6s
+  seed 1 update  59  train  13.37%  reward +0.7171  anchor 0.00  std 0.089   42.5s
+  seed 1 update  60  train  12.64%  reward +0.7328  anchor 0.00  std 0.089   43.5s
+  seed 1 update  60  EVALUATION  17.16%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  61  train  13.29%  reward +0.7195  anchor 0.00  std 0.089   44.7s
+  seed 1 update  62  train  12.38%  reward +0.7388  anchor 0.00  std 0.090   43.4s
+  seed 1 update  63  train  12.20%  reward +0.7391  anchor 0.00  std 0.089   44.2s
+  seed 1 update  64  train  13.73%  reward +0.7115  anchor 0.00  std 0.089   42.4s
+  seed 1 update  65  train  12.84%  reward +0.7275  anchor 0.00  std 0.089   42.2s
+  seed 1 update  66  train  12.97%  reward +0.7232  anchor 0.00  std 0.089   42.6s
+  seed 1 update  67  train  13.27%  reward +0.7166  anchor 0.00  std 0.089   42.9s
+  seed 1 update  68  train  13.65%  reward +0.7129  anchor 0.00  std 0.088   43.5s
+  seed 1 update  69  train  14.01%  reward +0.7043  anchor 0.00  std 0.088   42.3s
+  seed 1 update  70  train  13.78%  reward +0.7098  anchor 0.00  std 0.088   43.0s
+  seed 1 update  70  EVALUATION  16.84%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  71  train  12.55%  reward +0.7354  anchor 0.00  std 0.088   43.4s
+  seed 1 update  72  train  13.42%  reward +0.7164  anchor 0.00  std 0.088   70.0s
+  seed 1 update  73  train  12.80%  reward +0.7300  anchor 0.00  std 0.088   64.3s
+  seed 1 update  74  train  12.42%  reward +0.7360  anchor 0.00  std 0.088   59.7s
+  seed 1 update  75  train  12.70%  reward +0.7290  anchor 0.00  std 0.088   38.5s
+  seed 1 update  76  train  12.41%  reward +0.7358  anchor 0.00  std 0.088   37.7s
+  seed 1 update  77  train  12.34%  reward +0.7378  anchor 0.00  std 0.087   39.5s
+  seed 1 update  78  train  13.14%  reward +0.7218  anchor 0.00  std 0.087   37.4s
+  seed 1 update  79  train  13.42%  reward +0.7175  anchor 0.00  std 0.087   38.9s
+  seed 1 update  80  train  14.49%  reward +0.6991  anchor 0.00  std 0.087   38.0s
+  seed 1 update  80  EVALUATION  16.75%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  81  train  12.76%  reward +0.7302  anchor 0.00  std 0.087   43.1s
+  seed 1 update  82  train  12.46%  reward +0.7377  anchor 0.00  std 0.087   42.6s
+  seed 1 update  83  train  13.84%  reward +0.7098  anchor 0.00  std 0.087   38.5s
+  seed 1 update  84  train  12.62%  reward +0.7303  anchor 0.00  std 0.087   37.9s
+  seed 1 update  85  train  12.34%  reward +0.7398  anchor 0.00  std 0.086   38.4s
+  seed 1 update  86  train  13.08%  reward +0.7238  anchor 0.00  std 0.086   37.8s
+  seed 1 update  87  train  12.55%  reward +0.7357  anchor 0.00  std 0.086   40.2s
+  seed 1 update  88  train  12.73%  reward +0.7298  anchor 0.00  std 0.086   41.7s
+  seed 1 update  89  train  13.08%  reward +0.7241  anchor 0.00  std 0.086   38.3s
+  seed 1 update  90  train  12.76%  reward +0.7297  anchor 0.00  std 0.086   38.9s
+  seed 1 update  90  EVALUATION  16.77%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  91  train  13.36%  reward +0.7162  anchor 0.00  std 0.086   39.2s
+  seed 1 update  92  train  13.26%  reward +0.7190  anchor 0.00  std 0.086   38.4s
+  seed 1 update  93  train  12.80%  reward +0.7269  anchor 0.00  std 0.085   39.7s
+  seed 1 update  94  train  13.72%  reward +0.7091  anchor 0.00  std 0.085   38.2s
+  seed 1 update  95  train  13.41%  reward +0.7186  anchor 0.00  std 0.085   37.6s
+  seed 1 update  96  train  12.54%  reward +0.7344  anchor 0.00  std 0.085   40.3s
+  seed 1 update  97  train  13.70%  reward +0.7106  anchor 0.00  std 0.085   37.3s
+  seed 1 update  98  train  13.26%  reward +0.7219  anchor 0.00  std 0.085   37.9s
+  seed 1 update  99  train  14.25%  reward +0.7007  anchor 0.00  std 0.084   39.3s
+  seed 1 update 100  train  12.61%  reward +0.7308  anchor 0.00  std 0.084   38.6s
+  seed 1 update 100  EVALUATION  17.18%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 101  train  14.69%  reward +0.6921  anchor 0.00  std 0.084   38.5s
+  seed 1 update 102  train  12.77%  reward +0.7293  anchor 0.00  std 0.084   38.7s
+  seed 1 update 103  train  12.91%  reward +0.7259  anchor 0.00  std 0.084   38.5s
+  seed 1 update 104  train  12.63%  reward +0.7315  anchor 0.00  std 0.084   39.7s
+  seed 1 update 105  train  13.83%  reward +0.7084  anchor 0.00  std 0.084   39.0s
+  seed 1 update 106  train  13.97%  reward +0.7060  anchor 0.00  std 0.083   38.7s
+  seed 1 update 107  train  13.61%  reward +0.7133  anchor 0.00  std 0.083   38.6s
+  seed 1 update 108  train  13.90%  reward +0.7047  anchor 0.00  std 0.083   40.4s
+  seed 1 update 109  train  14.05%  reward +0.7022  anchor 0.00  std 0.082   38.1s
+  seed 1 update 110  train  12.76%  reward +0.7310  anchor 0.00  std 0.082   38.9s
+  seed 1 update 110  EVALUATION  16.95%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 111  train  13.70%  reward +0.7125  anchor 0.00  std 0.082   39.3s
+  seed 1 update 112  train  11.71%  reward +0.7493  anchor 0.00  std 0.082   38.5s
+  seed 1 update 113  train  13.59%  reward +0.7116  anchor 0.00  std 0.082   37.5s
+  seed 1 update 114  train  14.04%  reward +0.7057  anchor 0.00  std 0.082   38.2s
+  seed 1 update 115  train  13.21%  reward +0.7212  anchor 0.00  std 0.082   39.9s
+  seed 1 update 116  train  13.16%  reward +0.7202  anchor 0.00  std 0.082   37.8s
+  seed 1 update 117  train  13.12%  reward +0.7232  anchor 0.00  std 0.082   39.4s
+  seed 1 update 118  train  13.17%  reward +0.7196  anchor 0.00  std 0.082   39.0s
+  seed 1 update 119  train  12.63%  reward +0.7318  anchor 0.00  std 0.082   39.2s
+  seed 1 update 120  train  12.96%  reward +0.7251  anchor 0.00  std 0.081   38.6s
+  seed 1 update 120  EVALUATION  16.83%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 121  train  12.67%  reward +0.7326  anchor 0.00  std 0.081   38.1s
+  seed 1 update 122  train  13.04%  reward +0.7226  anchor 0.00  std 0.081   39.0s
+  seed 1 update 123  train  13.93%  reward +0.7087  anchor 0.00  std 0.080   38.0s
+  seed 1 update 124  train  13.09%  reward +0.7233  anchor 0.00  std 0.080   38.9s
+  seed 1 update 125  train  13.40%  reward +0.7184  anchor 0.00  std 0.080   39.2s
+  seed 1 update 126  train  12.88%  reward +0.7291  anchor 0.00  std 0.080   37.1s
+  seed 1 update 127  train  13.71%  reward +0.7096  anchor 0.00  std 0.080   38.4s
+  seed 1 update 128  train  12.63%  reward +0.7329  anchor 0.00  std 0.080   38.4s
+  seed 1 update 129  train  13.94%  reward +0.7069  anchor 0.00  std 0.080   38.2s
+  seed 1 update 130  train  12.62%  reward +0.7323  anchor 0.00  std 0.080   38.4s
+  seed 1 update 130  EVALUATION  16.81%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 131  train  13.24%  reward +0.7209  anchor 0.00  std 0.079   39.8s
+  seed 1 update 132  train  12.75%  reward +0.7290  anchor 0.00  std 0.079   38.0s
+  seed 1 update 133  train  13.72%  reward +0.7108  anchor 0.00  std 0.079   38.4s
+  seed 1 update 134  train  13.41%  reward +0.7159  anchor 0.00  std 0.079   37.8s
+  seed 1 update 135  train  13.00%  reward +0.7242  anchor 0.00  std 0.079   37.8s
+  seed 1 update 136  train  13.35%  reward +0.7188  anchor 0.00  std 0.079   39.2s
+  seed 1 update 137  train  13.89%  reward +0.7075  anchor 0.00  std 0.078   38.1s
+  seed 1 update 138  train  12.37%  reward +0.7382  anchor 0.00  std 0.078   37.6s
+  seed 1 update 139  train  12.55%  reward +0.7325  anchor 0.00  std 0.078   38.9s
+  seed 1 update 140  train  14.04%  reward +0.7047  anchor 0.00  std 0.078   38.1s
+  seed 1 update 140  EVALUATION  17.08%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 141  train  13.74%  reward +0.7101  anchor 0.00  std 0.077   39.4s
+  seed 1 update 142  train  13.06%  reward +0.7240  anchor 0.00  std 0.077   38.1s
+  seed 1 update 143  train  13.03%  reward +0.7240  anchor 0.00  std 0.077   38.9s
+  seed 1 update 144  train  13.19%  reward +0.7200  anchor 0.00  std 0.077   37.9s
+  seed 1 update 145  train  13.01%  reward +0.7250  anchor 0.00  std 0.077   38.2s
+  seed 1 update 146  train  13.09%  reward +0.7214  anchor 0.00  std 0.077   37.9s
+  seed 1 update 147  train  13.52%  reward +0.7137  anchor 0.00  std 0.077   38.6s
+  seed 1 update 148  train  13.28%  reward +0.7196  anchor 0.00  std 0.077   38.4s
+  seed 1 update 149  train  13.23%  reward +0.7209  anchor 0.00  std 0.076   39.0s
+  seed 1 update 150  train  13.79%  reward +0.7102  anchor 0.00  std 0.076   38.3s
+  seed 1 update 150  EVALUATION  17.01%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 151  train  13.31%  reward +0.7191  anchor 0.00  std 0.077   38.8s
+  seed 1 update 152  train  11.87%  reward +0.7475  anchor 0.00  std 0.076   38.3s
+  seed 1 update 153  train  11.74%  reward +0.7489  anchor 0.00  std 0.076   38.1s
+  seed 1 update 154  train  12.13%  reward +0.7430  anchor 0.00  std 0.076   38.8s
+  seed 1 update 155  train  13.26%  reward +0.7199  anchor 0.00  std 0.076   38.3s
+  seed 1 update 156  train  12.85%  reward +0.7252  anchor 0.00  std 0.076   37.9s
+  seed 1 update 157  train  12.33%  reward +0.7398  anchor 0.00  std 0.076   39.3s
+  seed 1 update 158  train  12.35%  reward +0.7386  anchor 0.00  std 0.076   38.2s
+  seed 1 update 159  train  13.52%  reward +0.7151  anchor 0.00  std 0.075   37.8s
+  seed 1 update 160  train  13.22%  reward +0.7197  anchor 0.00  std 0.075   39.0s
+  seed 1 update 160  EVALUATION  16.95%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 161  train  13.04%  reward +0.7245  anchor 0.00  std 0.075   38.3s
+  seed 1 update 162  train  13.77%  reward +0.7094  anchor 0.00  std 0.075   38.4s
+  seed 1 update 163  train  12.10%  reward +0.7414  anchor 0.00  std 0.075   38.2s
+  seed 1 update 164  train  12.13%  reward +0.7425  anchor 0.00  std 0.075   39.3s
+  seed 1 update 165  train  13.71%  reward +0.7106  anchor 0.00  std 0.075   38.0s
+  seed 1 update 166  train  13.23%  reward +0.7224  anchor 0.00  std 0.075   38.7s
+  seed 1 update 167  train  13.87%  reward +0.7089  anchor 0.00  std 0.074   37.4s
+  seed 1 update 168  train  13.14%  reward +0.7222  anchor 0.00  std 0.074   38.1s
+  seed 1 update 169  train  13.56%  reward +0.7140  anchor 0.00  std 0.074   37.7s
+  seed 1 update 170  train  13.17%  reward +0.7221  anchor 0.00  std 0.074   38.5s
+  seed 1 update 170  EVALUATION  17.44%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 171  train  13.00%  reward +0.7236  anchor 0.00  std 0.074   38.7s
+  seed 1 update 172  train  14.02%  reward +0.7071  anchor 0.00  std 0.074   38.8s
+  seed 1 update 173  train  13.83%  reward +0.7078  anchor 0.00  std 0.074   38.5s
+  seed 1 update 174  train  14.18%  reward +0.7012  anchor 0.00  std 0.074   38.2s
+  seed 1 update 175  train  13.69%  reward +0.7127  anchor 0.00  std 0.074   39.0s
+  seed 1 update 176  train  13.58%  reward +0.7131  anchor 0.00  std 0.074   37.9s
+  seed 1 update 177  train  13.65%  reward +0.7114  anchor 0.00  std 0.074   38.4s
+  seed 1 update 178  train  13.08%  reward +0.7220  anchor 0.00  std 0.074   37.8s
+  seed 1 update 179  train  13.19%  reward +0.7224  anchor 0.00  std 0.074   39.0s
+  seed 1 update 180  train  12.90%  reward +0.7257  anchor 0.00  std 0.073   39.0s
+  seed 1 update 180  EVALUATION  16.98%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 181  train  14.54%  reward +0.6940  anchor 0.00  std 0.073   38.5s
+  seed 1 update 182  train  12.41%  reward +0.7384  anchor 0.00  std 0.073   37.5s
+  seed 1 update 183  train  12.61%  reward +0.7325  anchor 0.00  std 0.073   38.3s
+  seed 1 update 184  train  12.95%  reward +0.7237  anchor 0.00  std 0.073   38.0s
+  seed 1 update 185  train  12.76%  reward +0.7318  anchor 0.00  std 0.073   37.9s
+  seed 1 update 186  train  13.06%  reward +0.7226  anchor 0.00  std 0.072   37.3s
+  seed 1 update 187  train  12.91%  reward +0.7273  anchor 0.00  std 0.072   38.1s
+  seed 1 update 188  train  13.49%  reward +0.7168  anchor 0.00  std 0.073   39.2s
+  seed 1 update 189  train  13.57%  reward +0.7146  anchor 0.00  std 0.072   37.4s
+  seed 1 update 190  train  12.85%  reward +0.7279  anchor 0.00  std 0.072   38.1s
+  seed 1 update 190  EVALUATION  17.46%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 191  train  12.94%  reward +0.7247  anchor 0.00  std 0.072   38.4s
+  seed 1 update 192  train  13.69%  reward +0.7105  anchor 0.00  std 0.071   38.2s
+  seed 1 update 193  train  13.31%  reward +0.7191  anchor 0.00  std 0.071   37.8s
+  seed 1 update 194  train  12.33%  reward +0.7393  anchor 0.00  std 0.071   38.6s
+  seed 1 update 195  train  12.99%  reward +0.7245  anchor 0.00  std 0.071   38.4s
+  seed 1 update 196  train  13.59%  reward +0.7120  anchor 0.00  std 0.070   37.9s
+  seed 1 update 197  train  13.23%  reward +0.7213  anchor 0.00  std 0.070   38.3s
+  seed 1 update 198  train  13.37%  reward +0.7157  anchor 0.00  std 0.070   37.3s
+  seed 1 update 199  train  12.84%  reward +0.7282  anchor 0.00  std 0.070   38.6s
+  seed 1 update 200  train  12.93%  reward +0.7284  anchor 0.00  std 0.070   38.1s
+  seed 1 update 200  EVALUATION  17.13%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 201  train  13.09%  reward +0.7237  anchor 0.00  std 0.070   38.2s
+  seed 1 update 202  train  13.47%  reward +0.7145  anchor 0.00  std 0.070   37.8s
+  seed 1 update 203  train  13.33%  reward +0.7202  anchor 0.00  std 0.070   37.9s
+  seed 1 update 204  train  13.21%  reward +0.7207  anchor 0.00  std 0.070   37.7s
+  seed 1 update 205  train  12.56%  reward +0.7343  anchor 0.00  std 0.070   37.9s
+  seed 1 update 206  train  13.34%  reward +0.7173  anchor 0.00  std 0.069   37.4s
+  seed 1 update 207  train  13.86%  reward +0.7087  anchor 0.00  std 0.069   37.4s
+  seed 1 update 208  train  12.29%  reward +0.7397  anchor 0.00  std 0.069   38.2s
+  seed 1 update 209  train  12.96%  reward +0.7260  anchor 0.00  std 0.069   37.8s
+  seed 1 update 210  train  12.84%  reward +0.7269  anchor 0.00  std 0.069   37.6s
+  seed 1 update 210  EVALUATION  17.14%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 211  train  13.35%  reward +0.7193  anchor 0.00  std 0.069   38.3s
+  seed 1 update 212  train  12.23%  reward +0.7399  anchor 0.00  std 0.069   37.6s
+  seed 1 update 213  train  12.58%  reward +0.7324  anchor 0.00  std 0.069   37.4s
+  seed 1 update 214  train  13.55%  reward +0.7139  anchor 0.00  std 0.069   37.3s
+  seed 1 update 215  train  12.49%  reward +0.7365  anchor 0.00  std 0.068   37.6s
+  seed 1 update 216  train  11.39%  reward +0.7560  anchor 0.00  std 0.068   38.3s
+  seed 1 update 217  train  13.19%  reward +0.7227  anchor 0.00  std 0.068   37.8s
+  seed 1 update 218  train  13.10%  reward +0.7238  anchor 0.00  std 0.068   38.3s
+  seed 1 update 219  train  12.47%  reward +0.7372  anchor 0.00  std 0.068   37.9s
+  seed 1 update 220  train  13.44%  reward +0.7169  anchor 0.00  std 0.068   37.9s
+  seed 1 update 220  EVALUATION  16.80%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 221  train  12.87%  reward +0.7272  anchor 0.00  std 0.068   38.3s
+  seed 1 update 222  train  12.69%  reward +0.7308  anchor 0.00  std 0.068   38.1s
+  seed 1 update 223  train  11.69%  reward +0.7522  anchor 0.00  std 0.068   37.5s
+  seed 1 update 224  train  13.76%  reward +0.7116  anchor 0.00  std 0.068   37.6s
+  seed 1 update 225  train  12.85%  reward +0.7285  anchor 0.00  std 0.068   37.8s
+  seed 1 update 226  train  13.12%  reward +0.7222  anchor 0.00  std 0.068   38.3s
+  seed 1 update 227  train  12.40%  reward +0.7352  anchor 0.00  std 0.068   38.4s
+  seed 1 update 228  train  12.98%  reward +0.7247  anchor 0.00  std 0.068   38.1s
+  seed 1 update 229  train  12.11%  reward +0.7425  anchor 0.00  std 0.068   38.5s
+  seed 1 update 230  train  13.79%  reward +0.7090  anchor 0.00  std 0.067   37.9s
+  seed 1 update 230  EVALUATION  16.78%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 231  train  13.07%  reward +0.7229  anchor 0.00  std 0.067   38.5s
+  seed 1 update 232  train  13.42%  reward +0.7170  anchor 0.00  std 0.067   37.7s
+  seed 1 update 233  train  13.14%  reward +0.7203  anchor 0.00  std 0.067   37.8s
+  seed 1 update 234  train  13.11%  reward +0.7230  anchor 0.00  std 0.067   37.9s
+  seed 1 update 235  train  12.91%  reward +0.7261  anchor 0.00  std 0.067   38.2s
+  seed 1 update 236  train  13.24%  reward +0.7192  anchor 0.00  std 0.067   37.8s
+  seed 1 update 237  train  12.41%  reward +0.7389  anchor 0.00  std 0.067   37.9s
+  seed 1 update 238  train  13.25%  reward +0.7198  anchor 0.00  std 0.067   38.2s
+  seed 1 update 239  train  12.08%  reward +0.7451  anchor 0.00  std 0.067   38.0s
+  seed 1 update 240  train  12.41%  reward +0.7378  anchor 0.00  std 0.066   38.4s
+  seed 1 update 240  EVALUATION  16.61%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 241  train  13.20%  reward +0.7215  anchor 0.00  std 0.066   38.2s
+  seed 1 update 242  train  13.86%  reward +0.7087  anchor 0.00  std 0.066   36.9s
+  seed 1 update 243  train  12.42%  reward +0.7365  anchor 0.00  std 0.066   37.7s
+  seed 1 update 244  train  11.93%  reward +0.7449  anchor 0.00  std 0.066   38.6s
+  seed 1 update 245  train  13.17%  reward +0.7214  anchor 0.00  std 0.066   36.8s
+  seed 1 update 246  train  13.44%  reward +0.7161  anchor 0.00  std 0.066   38.1s
+  seed 1 update 247  train  12.56%  reward +0.7310  anchor 0.00  std 0.066   37.3s
+  seed 1 update 248  train  13.48%  reward +0.7143  anchor 0.00  std 0.066   37.3s
+  seed 1 update 249  train  13.35%  reward +0.7172  anchor 0.00  std 0.066   38.2s
+  seed 1 update 250  train  12.13%  reward +0.7409  anchor 0.00  std 0.066   38.0s
+  seed 1 update 250  EVALUATION  16.78%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 251  train  13.23%  reward +0.7205  anchor 0.00  std 0.066   38.3s
+  seed 1 update 252  train  13.38%  reward +0.7173  anchor 0.00  std 0.066   37.8s
+  seed 1 update 253  train  13.33%  reward +0.7168  anchor 0.00  std 0.066   37.8s
+  seed 1 update 254  train  13.02%  reward +0.7259  anchor 0.00  std 0.065   38.7s
+  seed 1 update 255  train  12.21%  reward +0.7403  anchor 0.00  std 0.065   37.6s
+  seed 1 update 256  train  13.53%  reward +0.7148  anchor 0.00  std 0.065   37.8s
+  seed 1 update 257  train  13.08%  reward +0.7233  anchor 0.00  std 0.065   37.3s
+  seed 1 update 258  train  12.52%  reward +0.7340  anchor 0.00  std 0.065   38.1s
+  seed 1 update 259  train  12.36%  reward +0.7371  anchor 0.00  std 0.065   38.0s
+  seed 1 update 260  train  13.08%  reward +0.7226  anchor 0.00  std 0.065   37.9s
+  seed 1 update 260  EVALUATION  16.82%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 261  train  13.06%  reward +0.7219  anchor 0.00  std 0.065   38.0s
+  seed 1 update 262  train  12.55%  reward +0.7344  anchor 0.00  std 0.065   38.0s
+  seed 1 update 263  train  12.61%  reward +0.7337  anchor 0.00  std 0.065   37.6s
+  seed 1 update 264  train  14.11%  reward +0.7030  anchor 0.00  std 0.065   37.6s
+  seed 1 update 265  train  13.08%  reward +0.7225  anchor 0.00  std 0.065   37.4s
+  seed 1 update 266  train  12.04%  reward +0.7419  anchor 0.00  std 0.065   37.4s
+  seed 1 update 267  train  13.44%  reward +0.7154  anchor 0.00  std 0.065   37.6s
+  seed 1 update 268  train  13.09%  reward +0.7228  anchor 0.00  std 0.065   37.4s
+  seed 1 update 269  train  12.67%  reward +0.7315  anchor 0.00  std 0.065   38.5s
+  seed 1 update 270  train  13.89%  reward +0.7091  anchor 0.00  std 0.065   38.5s
+  seed 1 update 270  EVALUATION  17.28%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 271  train  12.27%  reward +0.7402  anchor 0.00  std 0.065   38.7s
+  seed 1 update 272  train  12.86%  reward +0.7288  anchor 0.00  std 0.065   37.6s
+  seed 1 update 273  train  12.90%  reward +0.7259  anchor 0.00  std 0.065   39.8s
+  seed 1 update 274  train  12.60%  reward +0.7324  anchor 0.00  std 0.065   40.4s
+  seed 1 update 275  train  12.46%  reward +0.7365  anchor 0.00  std 0.065   39.4s
+  seed 1 update 276  train  13.12%  reward +0.7225  anchor 0.00  std 0.065   43.8s
+  seed 1 update 277  train  13.20%  reward +0.7212  anchor 0.00  std 0.065   42.8s
+  seed 1 update 278  train  12.64%  reward +0.7314  anchor 0.00  std 0.064   46.4s
+  seed 1 update 279  train  13.16%  reward +0.7212  anchor 0.00  std 0.064   47.3s
+  seed 1 update 280  train  13.00%  reward +0.7267  anchor 0.00  std 0.064   47.4s
+  seed 1 update 280  EVALUATION  16.99%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 281  train  13.31%  reward +0.7187  anchor 0.00  std 0.064   39.8s
+  seed 1 update 282  train  12.78%  reward +0.7294  anchor 0.00  std 0.064   44.8s
+  seed 1 update 283  train  12.78%  reward +0.7302  anchor 0.00  std 0.064   39.4s
+  seed 1 update 284  train  12.80%  reward +0.7285  anchor 0.00  std 0.064   39.7s
+  seed 1 update 285  train  12.44%  reward +0.7355  anchor 0.00  std 0.064   40.8s
+  seed 1 update 286  train  11.89%  reward +0.7497  anchor 0.00  std 0.064   46.6s
+  seed 1 update 287  train  13.36%  reward +0.7177  anchor 0.00  std 0.064   40.5s
+  seed 1 update 288  train  13.10%  reward +0.7225  anchor 0.00  std 0.064   47.2s
+  seed 1 update 289  train  12.42%  reward +0.7367  anchor 0.00  std 0.064   40.8s
+  seed 1 update 290  train  12.81%  reward +0.7268  anchor 0.00  std 0.064   39.9s
+  seed 1 update 290  EVALUATION  17.00%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 291  train  11.82%  reward +0.7469  anchor 0.00  std 0.064   40.1s
+  seed 1 update 292  train  12.71%  reward +0.7278  anchor 0.00  std 0.064   52.5s
+  seed 1 update 293  train  12.83%  reward +0.7283  anchor 0.00  std 0.064   40.8s
+  seed 1 update 294  train  12.19%  reward +0.7414  anchor 0.00  std 0.063   48.3s
+  seed 1 update 295  train  12.83%  reward +0.7282  anchor 0.00  std 0.063   39.6s
+  seed 1 update 296  train  12.82%  reward +0.7274  anchor 0.00  std 0.063   39.1s
+  seed 1 update 297  train  12.86%  reward +0.7280  anchor 0.00  std 0.063   39.5s
+  seed 1 update 298  train  12.83%  reward +0.7272  anchor 0.00  std 0.063   40.9s
+  seed 1 update 299  train  12.64%  reward +0.7329  anchor 0.00  std 0.063   44.0s
+  seed 1 update 300  train  11.85%  reward +0.7483  anchor 0.00  std 0.063   40.1s
+  seed 1 update 300  EVALUATION  17.43%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 301  train  12.74%  reward +0.7277  anchor 0.00  std 0.063   43.9s
+  seed 1 update 302  train  12.96%  reward +0.7268  anchor 0.00  std 0.063   53.3s
+  seed 1 update 303  train  13.21%  reward +0.7214  anchor 0.00  std 0.063   47.5s
+  seed 1 update 304  train  13.95%  reward +0.7054  anchor 0.00  std 0.063   51.4s
+  seed 1 update 305  train  12.74%  reward +0.7301  anchor 0.00  std 0.063   49.2s
+  seed 1 update 306  train  13.27%  reward +0.7193  anchor 0.00  std 0.063   60.4s
+  seed 1 update 307  train  13.16%  reward +0.7233  anchor 0.00  std 0.063   62.4s
+  seed 1 update 308  train  12.46%  reward +0.7357  anchor 0.00  std 0.063   53.7s
+  seed 1 update 309  train  12.82%  reward +0.7285  anchor 0.00  std 0.063   50.9s
+  seed 1 update 310  train  12.24%  reward +0.7400  anchor 0.00  std 0.063   60.2s
+  seed 1 update 310  EVALUATION  17.44%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 311  train  13.79%  reward +0.7080  anchor 0.00  std 0.063   59.3s
+  seed 1 update 312  train  13.44%  reward +0.7152  anchor 0.00  std 0.062   51.1s
+  seed 1 update 313  train  12.82%  reward +0.7287  anchor 0.00  std 0.062   51.6s
+  seed 1 update 314  train  11.77%  reward +0.7492  anchor 0.00  std 0.062   49.0s
+  seed 1 update 315  train  12.88%  reward +0.7262  anchor 0.00  std 0.062   51.0s
+  seed 1 update 316  train  13.26%  reward +0.7203  anchor 0.00  std 0.062   49.8s
+  seed 1 update 317  train  12.99%  reward +0.7250  anchor 0.00  std 0.062   49.6s
+  seed 1 update 318  train  13.00%  reward +0.7238  anchor 0.00  std 0.062   56.8s
+  seed 1 update 319  train  13.19%  reward +0.7208  anchor 0.00  std 0.062   60.6s
+  seed 1 update 320  train  13.25%  reward +0.7209  anchor 0.00  std 0.062   54.6s
+  seed 1 update 320  EVALUATION  16.80%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 321  train  12.73%  reward +0.7302  anchor 0.00  std 0.062   52.2s
+  seed 1 update 322  train  12.29%  reward +0.7406  anchor 0.00  std 0.061   54.6s
+  seed 1 update 323  train  12.80%  reward +0.7278  anchor 0.00  std 0.061   51.3s
+  seed 1 update 324  train  13.11%  reward +0.7235  anchor 0.00  std 0.061   52.0s
+  seed 1 update 325  train  13.17%  reward +0.7209  anchor 0.00  std 0.061   51.1s
+  seed 1 update 326  train  12.92%  reward +0.7265  anchor 0.00  std 0.061   50.9s
+  seed 1 update 327  train  13.25%  reward +0.7206  anchor 0.00  std 0.061   50.8s
+  seed 1 update 328  train  11.86%  reward +0.7471  anchor 0.00  std 0.061   51.5s
+  seed 1 update 329  train  13.08%  reward +0.7242  anchor 0.00  std 0.061   52.3s
+  seed 1 update 330  train  12.79%  reward +0.7287  anchor 0.00  std 0.061   54.2s
+  seed 1 update 330  EVALUATION  17.22%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 331  train  13.15%  reward +0.7207  anchor 0.00  std 0.061   55.2s
+  seed 1 update 332  train  12.60%  reward +0.7310  anchor 0.00  std 0.061   55.0s
+  seed 1 update 333  train  13.35%  reward +0.7193  anchor 0.00  std 0.060   50.3s
+  seed 1 update 334  train  13.38%  reward +0.7165  anchor 0.00  std 0.060   50.0s
+  seed 1 update 335  train  11.96%  reward +0.7459  anchor 0.00  std 0.060   52.4s
+  seed 1 update 336  train  13.44%  reward +0.7164  anchor 0.00  std 0.060   53.3s
+  seed 1 update 337  train  13.01%  reward +0.7247  anchor 0.00  std 0.060   51.5s
+  seed 1 update 338  train  13.31%  reward +0.7179  anchor 0.00  std 0.060   49.5s
+  seed 1 update 339  train  12.31%  reward +0.7386  anchor 0.00  std 0.060   48.3s
+  seed 1 update 340  train  13.16%  reward +0.7229  anchor 0.00  std 0.060   52.4s
+  seed 1 update 340  EVALUATION  17.73%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 341  train  13.59%  reward +0.7137  anchor 0.00  std 0.059   52.3s
+  seed 1 update 342  train  14.01%  reward +0.7032  anchor 0.00  std 0.059   48.6s
+  seed 1 update 343  train  12.74%  reward +0.7281  anchor 0.00  std 0.059   54.0s
+  seed 1 update 344  train  13.53%  reward +0.7154  anchor 0.00  std 0.059   52.7s
+  seed 1 update 345  train  12.32%  reward +0.7386  anchor 0.00  std 0.059   48.4s
+  seed 1 update 346  train  13.47%  reward +0.7166  anchor 0.00  std 0.059   55.8s
+  seed 1 update 347  train  13.93%  reward +0.7079  anchor 0.00  std 0.059   48.9s
+  seed 1 update 348  train  13.03%  reward +0.7230  anchor 0.00  std 0.059   52.6s
+  seed 1 update 349  train  13.60%  reward +0.7120  anchor 0.00  std 0.059   50.7s
+  seed 1 update 350  train  12.34%  reward +0.7381  anchor 0.00  std 0.059   53.2s
+  seed 1 update 350  EVALUATION  17.93%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 351  train  13.67%  reward +0.7102  anchor 0.00  std 0.059   53.1s
+  seed 1 update 352  train  13.35%  reward +0.7196  anchor 0.00  std 0.059   55.6s
+  seed 1 update 353  train  13.21%  reward +0.7212  anchor 0.00  std 0.058   52.2s
+  seed 1 update 354  train  14.11%  reward +0.7027  anchor 0.00  std 0.059   53.5s
+  seed 1 update 355  train  12.86%  reward +0.7282  anchor 0.00  std 0.058   59.0s
+  seed 1 update 356  train  13.37%  reward +0.7176  anchor 0.00  std 0.058   56.4s
+  seed 1 update 357  train  12.96%  reward +0.7260  anchor 0.00  std 0.058   51.2s
+  seed 1 update 358  train  14.52%  reward +0.6926  anchor 0.00  std 0.058   49.0s
+  seed 1 update 359  train  12.58%  reward +0.7327  anchor 0.00  std 0.058   46.5s
+  seed 1 update 360  train  13.71%  reward +0.7116  anchor 0.00  std 0.058   49.3s
+  seed 1 update 360  EVALUATION  18.26%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 361  train  14.46%  reward +0.6957  anchor 0.00  std 0.058   48.6s
+  seed 1 update 362  train  12.64%  reward +0.7314  anchor 0.00  std 0.058   51.4s
+  seed 1 update 363  train  13.77%  reward +0.7075  anchor 0.00  std 0.058   55.0s
+  seed 1 update 364  train  13.24%  reward +0.7207  anchor 0.00  std 0.058   50.3s
+  seed 1 update 365  train  12.37%  reward +0.7364  anchor 0.00  std 0.058   50.1s
+  seed 1 update 366  train  13.88%  reward +0.7075  anchor 0.00  std 0.058   46.7s
+  seed 1 update 367  train  13.73%  reward +0.7092  anchor 0.00  std 0.057   49.0s
+  seed 1 update 368  train  13.69%  reward +0.7117  anchor 0.00  std 0.057   48.0s
+  seed 1 update 369  train  14.27%  reward +0.7010  anchor 0.00  std 0.057   45.6s
+  seed 1 update 370  train  13.40%  reward +0.7178  anchor 0.00  std 0.057   48.5s
+  seed 1 update 370  EVALUATION  17.85%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 371  train  13.03%  reward +0.7247  anchor 0.00  std 0.057   58.7s
+  seed 1 update 372  train  12.82%  reward +0.7292  anchor 0.00  std 0.057   60.3s
+  seed 1 update 373  train  13.62%  reward +0.7127  anchor 0.00  std 0.057   71.6s
+  seed 1 update 374  train  13.89%  reward +0.7081  anchor 0.00  std 0.057  119.0s
+  seed 1 update 375  train  13.94%  reward +0.7068  anchor 0.00  std 0.057   93.9s
+  seed 1 update 376  train  14.15%  reward +0.7012  anchor 0.00  std 0.057   82.6s
+  seed 1 update 377  train  13.92%  reward +0.7061  anchor 0.00  std 0.057   85.5s
+  seed 1 update 378  train  14.02%  reward +0.7023  anchor 0.00  std 0.057   85.6s
+  seed 1 update 379  train  13.47%  reward +0.7137  anchor 0.00  std 0.057   87.3s
+  seed 1 update 380  train  13.06%  reward +0.7224  anchor 0.00  std 0.057   86.1s
+  seed 1 update 380  EVALUATION  17.92%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 381  train  12.77%  reward +0.7301  anchor 0.00  std 0.057   92.2s
+  seed 1 update 382  train  12.91%  reward +0.7270  anchor 0.00  std 0.057   83.4s
+  seed 1 update 383  train  13.50%  reward +0.7152  anchor 0.00  std 0.056   84.7s
+  seed 1 update 384  train  12.40%  reward +0.7357  anchor 0.00  std 0.057   85.1s
+  seed 1 update 385  train  12.98%  reward +0.7268  anchor 0.00  std 0.056   84.6s
+  seed 1 update 386  train  13.76%  reward +0.7103  anchor 0.00  std 0.056   87.6s
+  seed 1 update 387  train  13.35%  reward +0.7167  anchor 0.00  std 0.056   83.8s
+  seed 1 update 388  train  13.62%  reward +0.7124  anchor 0.00  std 0.056   83.5s
+  seed 1 update 389  train  12.88%  reward +0.7258  anchor 0.00  std 0.056   87.1s
+  seed 1 update 390  train  14.20%  reward +0.7015  anchor 0.00  std 0.056   78.3s
+  seed 1 update 390  EVALUATION  17.81%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 391  train  13.81%  reward +0.7086  anchor 0.00  std 0.056   48.4s
+  seed 1 update 392  train  13.70%  reward +0.7107  anchor 0.00  std 0.056   48.0s
+  seed 1 update 393  train  14.07%  reward +0.7034  anchor 0.00  std 0.056   46.1s
+  seed 1 update 394  train  13.85%  reward +0.7083  anchor 0.00  std 0.056   49.8s
+  seed 1 update 395  train  14.29%  reward +0.7003  anchor 0.00  std 0.056   44.8s
+  seed 1 update 396  train  14.06%  reward +0.7037  anchor 0.00  std 0.056   45.3s
+  seed 1 update 397  train  12.93%  reward +0.7261  anchor 0.00  std 0.055   46.9s
+  seed 1 update 398  train  13.22%  reward +0.7198  anchor 0.00  std 0.055   48.8s
+  seed 1 update 399  train  14.20%  reward +0.7007  anchor 0.00  std 0.055   45.6s
+  seed 1 update 400  train  14.18%  reward +0.7014  anchor 0.00  std 0.055   48.0s
+  seed 1 update 400  EVALUATION  18.04%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1: early stop — 16 checks without a 0.0 point gain
+  s3_to_s5 S4: 400 updates, best 16.61% at update 240
+  loaded S4's best weights back
+
+=== s3_to_s5 S5: D = 650 m, std reset to 0.1, patience 16, min 100, cap 600 ===
+  seed 1 update   1  train  17.79%  reward +0.6284  anchor 0.00  std 0.100   47.5s
+  seed 1 update   2  train  16.11%  reward +0.6614  anchor 0.00  std 0.100   45.9s
+  seed 1 update   3  train  18.06%  reward +0.6235  anchor 0.00  std 0.100   49.6s
+  seed 1 update   4  train  17.43%  reward +0.6365  anchor 0.00  std 0.100   44.7s
+  seed 1 update   5  train  17.60%  reward +0.6323  anchor 0.00  std 0.099   45.7s
+  seed 1 update   6  train  16.65%  reward +0.6513  anchor 0.00  std 0.099   47.2s
+  seed 1 update   7  train  17.67%  reward +0.6321  anchor 0.00  std 0.099   45.1s
+  seed 1 update   8  train  15.65%  reward +0.6700  anchor 0.00  std 0.098   55.4s
+  seed 1 update   9  train  16.11%  reward +0.6630  anchor 0.00  std 0.098   46.5s
+  seed 1 update  10  train  15.98%  reward +0.6623  anchor 0.00  std 0.098   44.5s
+  seed 1 update  10  EVALUATION  21.26%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  11  train  17.56%  reward +0.6338  anchor 0.00  std 0.098   45.2s
+  seed 1 update  12  train  15.14%  reward +0.6813  anchor 0.00  std 0.098   46.2s
+  seed 1 update  13  train  16.62%  reward +0.6528  anchor 0.00  std 0.097   46.5s
+  seed 1 update  14  train  17.32%  reward +0.6382  anchor 0.00  std 0.097   44.1s
+  seed 1 update  15  train  16.55%  reward +0.6531  anchor 0.00  std 0.097   42.8s
+  seed 1 update  16  train  17.52%  reward +0.6332  anchor 0.00  std 0.097   44.9s
+  seed 1 update  17  train  16.33%  reward +0.6555  anchor 0.00  std 0.096   43.4s
+  seed 1 update  18  train  16.84%  reward +0.6473  anchor 0.00  std 0.096   47.6s
+  seed 1 update  19  train  15.95%  reward +0.6645  anchor 0.00  std 0.096   44.2s
+  seed 1 update  20  train  15.40%  reward +0.6778  anchor 0.00  std 0.096   44.8s
+  seed 1 update  20  EVALUATION  20.50%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  21  train  16.09%  reward +0.6634  anchor 0.00  std 0.096   45.1s
+  seed 1 update  22  train  16.22%  reward +0.6587  anchor 0.00  std 0.095   48.7s
+  seed 1 update  23  train  15.37%  reward +0.6760  anchor 0.00  std 0.095   42.4s
+  seed 1 update  24  train  16.26%  reward +0.6603  anchor 0.00  std 0.095   47.1s
+  seed 1 update  25  train  16.70%  reward +0.6515  anchor 0.00  std 0.095   52.0s
+  seed 1 update  26  train  16.65%  reward +0.6499  anchor 0.00  std 0.095   58.1s
+  seed 1 update  27  train  16.46%  reward +0.6554  anchor 0.00  std 0.094   48.1s
+  seed 1 update  28  train  16.29%  reward +0.6579  anchor 0.00  std 0.094   45.2s
+  seed 1 update  29  train  16.18%  reward +0.6637  anchor 0.00  std 0.094   44.7s
+  seed 1 update  30  train  16.81%  reward +0.6495  anchor 0.00  std 0.093   44.1s
+  seed 1 update  30  EVALUATION  20.55%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  31  train  16.96%  reward +0.6441  anchor 0.00  std 0.093   43.6s
+  seed 1 update  32  train  15.90%  reward +0.6665  anchor 0.00  std 0.093   46.0s
+  seed 1 update  33  train  16.98%  reward +0.6474  anchor 0.00  std 0.093   44.6s
+  seed 1 update  34  train  15.77%  reward +0.6691  anchor 0.00  std 0.093   44.1s
+  seed 1 update  35  train  15.90%  reward +0.6666  anchor 0.00  std 0.093   44.9s
+  seed 1 update  36  train  16.16%  reward +0.6608  anchor 0.00  std 0.092   43.4s
+  seed 1 update  37  train  16.12%  reward +0.6612  anchor 0.00  std 0.092   44.1s
+  seed 1 update  38  train  15.64%  reward +0.6708  anchor 0.00  std 0.091   46.6s
+  seed 1 update  39  train  16.39%  reward +0.6581  anchor 0.00  std 0.091   44.3s
+  seed 1 update  40  train  16.64%  reward +0.6508  anchor 0.00  std 0.091   43.5s
+  seed 1 update  40  EVALUATION  20.69%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  41  train  16.63%  reward +0.6516  anchor 0.00  std 0.091   42.6s
+  seed 1 update  42  train  15.98%  reward +0.6647  anchor 0.00  std 0.090   46.2s
+  seed 1 update  43  train  17.30%  reward +0.6390  anchor 0.00  std 0.090   45.1s
+  seed 1 update  44  train  16.82%  reward +0.6489  anchor 0.00  std 0.090   43.3s
+  seed 1 update  45  train  17.63%  reward +0.6321  anchor 0.00  std 0.090   42.6s
+  seed 1 update  46  train  15.79%  reward +0.6690  anchor 0.00  std 0.090   46.2s
+  seed 1 update  47  train  16.01%  reward +0.6640  anchor 0.00  std 0.090   46.0s
+  seed 1 update  48  train  16.60%  reward +0.6537  anchor 0.00  std 0.090   45.6s
+  seed 1 update  49  train  16.68%  reward +0.6513  anchor 0.00  std 0.089   54.3s
+  seed 1 update  50  train  15.99%  reward +0.6665  anchor 0.00  std 0.089   62.0s
+  seed 1 update  50  EVALUATION  20.34%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  51  train  15.65%  reward +0.6722  anchor 0.00  std 0.089   52.0s
+  seed 1 update  52  train  17.11%  reward +0.6426  anchor 0.00  std 0.089   54.4s
+  seed 1 update  53  train  16.80%  reward +0.6506  anchor 0.00  std 0.089   51.1s
+  seed 1 update  54  train  16.77%  reward +0.6493  anchor 0.00  std 0.089   64.4s
+  seed 1 update  55  train  17.58%  reward +0.6336  anchor 0.00  std 0.088   61.9s
+  seed 1 update  56  train  16.39%  reward +0.6559  anchor 0.00  std 0.088   62.6s
+  seed 1 update  57  train  15.19%  reward +0.6795  anchor 0.00  std 0.088   51.4s
+  seed 1 update  58  train  17.20%  reward +0.6425  anchor 0.00  std 0.087   50.3s
+  seed 1 update  59  train  17.38%  reward +0.6368  anchor 0.00  std 0.087   54.7s
+  seed 1 update  60  train  16.31%  reward +0.6600  anchor 0.00  std 0.087   53.8s
+  seed 1 update  60  EVALUATION  20.83%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  61  train  16.08%  reward +0.6633  anchor 0.00  std 0.087   53.7s
+  seed 1 update  62  train  16.91%  reward +0.6489  anchor 0.00  std 0.087   56.9s
+  seed 1 update  63  train  16.24%  reward +0.6587  anchor 0.00  std 0.087   56.6s
+  seed 1 update  64  train  16.85%  reward +0.6493  anchor 0.00  std 0.087   57.5s
+  seed 1 update  65  train  16.34%  reward +0.6577  anchor 0.00  std 0.086   56.7s
+  seed 1 update  66  train  16.15%  reward +0.6595  anchor 0.00  std 0.086   52.6s
+  seed 1 update  67  train  17.52%  reward +0.6322  anchor 0.00  std 0.086   54.6s
+  seed 1 update  68  train  16.25%  reward +0.6613  anchor 0.00  std 0.086   59.8s
+  seed 1 update  69  train  16.47%  reward +0.6563  anchor 0.00  std 0.086   54.1s
+  seed 1 update  70  train  17.17%  reward +0.6430  anchor 0.00  std 0.086   53.4s
+  seed 1 update  70  EVALUATION  20.05%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  71  train  16.79%  reward +0.6502  anchor 0.00  std 0.085   50.7s
+  seed 1 update  72  train  16.76%  reward +0.6498  anchor 0.00  std 0.086   51.7s
+  seed 1 update  73  train  15.31%  reward +0.6786  anchor 0.00  std 0.085   53.1s
+  seed 1 update  74  train  15.93%  reward +0.6653  anchor 0.00  std 0.085   52.8s
+  seed 1 update  75  train  16.16%  reward +0.6609  anchor 0.00  std 0.085   57.7s
+  seed 1 update  76  train  15.81%  reward +0.6695  anchor 0.00  std 0.085   53.8s
+  seed 1 update  77  train  15.48%  reward +0.6739  anchor 0.00  std 0.085   55.5s
+  seed 1 update  78  train  15.51%  reward +0.6751  anchor 0.00  std 0.084   51.3s
+  seed 1 update  79  train  16.27%  reward +0.6592  anchor 0.00  std 0.085   53.0s
+  seed 1 update  80  train  17.23%  reward +0.6423  anchor 0.00  std 0.084   52.2s
+  seed 1 update  80  EVALUATION  19.98%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  81  train  16.27%  reward +0.6601  anchor 0.00  std 0.084   52.9s
+  seed 1 update  82  train  16.26%  reward +0.6609  anchor 0.00  std 0.084   51.5s
+  seed 1 update  83  train  16.62%  reward +0.6524  anchor 0.00  std 0.084   49.9s
+  seed 1 update  84  train  16.46%  reward +0.6532  anchor 0.00  std 0.084   54.0s
+  seed 1 update  85  train  15.74%  reward +0.6716  anchor 0.00  std 0.084   52.8s
+  seed 1 update  86  train  16.89%  reward +0.6473  anchor 0.00  std 0.083   53.3s
+  seed 1 update  87  train  15.73%  reward +0.6705  anchor 0.00  std 0.083   51.3s
+  seed 1 update  88  train  16.05%  reward +0.6637  anchor 0.00  std 0.083   53.1s
+  seed 1 update  89  train  15.10%  reward +0.6839  anchor 0.00  std 0.082   53.5s
+  seed 1 update  90  train  16.13%  reward +0.6623  anchor 0.00  std 0.082   51.0s
+  seed 1 update  90  EVALUATION  20.17%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update  91  train  16.43%  reward +0.6547  anchor 0.00  std 0.082   51.3s
+  seed 1 update  92  train  15.84%  reward +0.6674  anchor 0.00  std 0.082   49.8s
+  seed 1 update  93  train  15.82%  reward +0.6683  anchor 0.00  std 0.082   50.3s
+  seed 1 update  94  train  16.31%  reward +0.6586  anchor 0.00  std 0.081   49.7s
+  seed 1 update  95  train  17.07%  reward +0.6453  anchor 0.00  std 0.082   47.9s
+  seed 1 update  96  train  15.02%  reward +0.6839  anchor 0.00  std 0.082   53.6s
+  seed 1 update  97  train  15.94%  reward +0.6660  anchor 0.00  std 0.081   51.3s
+  seed 1 update  98  train  15.49%  reward +0.6767  anchor 0.00  std 0.081   50.9s
+  seed 1 update  99  train  16.58%  reward +0.6543  anchor 0.00  std 0.081   50.2s
+  seed 1 update 100  train  15.89%  reward +0.6657  anchor 0.00  std 0.081   50.6s
+  seed 1 update 100  EVALUATION  19.87%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 101  train  16.40%  reward +0.6559  anchor 0.00  std 0.080   51.8s
+  seed 1 update 102  train  16.67%  reward +0.6516  anchor 0.00  std 0.080   51.2s
+  seed 1 update 103  train  16.18%  reward +0.6610  anchor 0.00  std 0.080   48.9s
+  seed 1 update 104  train  16.04%  reward +0.6635  anchor 0.00  std 0.080   52.7s
+  seed 1 update 105  train  15.76%  reward +0.6701  anchor 0.00  std 0.079   52.9s
+  seed 1 update 106  train  16.58%  reward +0.6535  anchor 0.00  std 0.079   50.5s
+  seed 1 update 107  train  16.37%  reward +0.6572  anchor 0.00  std 0.079   51.1s
+  seed 1 update 108  train  16.19%  reward +0.6579  anchor 0.00  std 0.079   47.9s
+  seed 1 update 109  train  15.73%  reward +0.6679  anchor 0.00  std 0.079   51.4s
+  seed 1 update 110  train  15.04%  reward +0.6838  anchor 0.00  std 0.078   50.8s
+  seed 1 update 110  EVALUATION  20.33%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 111  train  16.28%  reward +0.6596  anchor 0.00  std 0.078   55.2s
+  seed 1 update 112  train  14.49%  reward +0.6937  anchor 0.00  std 0.078   51.0s
+  seed 1 update 113  train  16.00%  reward +0.6655  anchor 0.00  std 0.078   50.0s
+  seed 1 update 114  train  15.74%  reward +0.6699  anchor 0.00  std 0.078   50.7s
+  seed 1 update 115  train  16.43%  reward +0.6557  anchor 0.00  std 0.078   49.4s
+  seed 1 update 116  train  16.17%  reward +0.6598  anchor 0.00  std 0.078   51.1s
+  seed 1 update 117  train  16.09%  reward +0.6644  anchor 0.00  std 0.078   49.4s
+  seed 1 update 118  train  15.70%  reward +0.6699  anchor 0.00  std 0.078   52.2s
+  seed 1 update 119  train  16.05%  reward +0.6639  anchor 0.00  std 0.078   48.2s
+  seed 1 update 120  train  16.64%  reward +0.6509  anchor 0.00  std 0.078   55.2s
+  seed 1 update 120  EVALUATION  19.69%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 121  train  15.58%  reward +0.6746  anchor 0.00  std 0.078   51.4s
+  seed 1 update 122  train  15.68%  reward +0.6707  anchor 0.00  std 0.077   53.2s
+  seed 1 update 123  train  16.03%  reward +0.6659  anchor 0.00  std 0.077   52.8s
+  seed 1 update 124  train  16.31%  reward +0.6591  anchor 0.00  std 0.077   49.6s
+  seed 1 update 125  train  16.00%  reward +0.6677  anchor 0.00  std 0.077   51.2s
+  seed 1 update 126  train  15.66%  reward +0.6734  anchor 0.00  std 0.077   50.3s
+  seed 1 update 127  train  15.64%  reward +0.6706  anchor 0.00  std 0.076   51.1s
+  seed 1 update 128  train  15.49%  reward +0.6762  anchor 0.00  std 0.076   49.9s
+  seed 1 update 129  train  16.31%  reward +0.6590  anchor 0.00  std 0.076   50.2s
+  seed 1 update 130  train  15.83%  reward +0.6684  anchor 0.00  std 0.076   52.5s
+  seed 1 update 130  EVALUATION  20.30%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 131  train  15.86%  reward +0.6687  anchor 0.00  std 0.076   52.9s
+  seed 1 update 132  train  16.06%  reward +0.6629  anchor 0.00  std 0.076   51.7s
+  seed 1 update 133  train  15.88%  reward +0.6679  anchor 0.00  std 0.075   50.2s
+  seed 1 update 134  train  16.12%  reward +0.6629  anchor 0.00  std 0.075   50.5s
+  seed 1 update 135  train  14.75%  reward +0.6891  anchor 0.00  std 0.075   49.4s
+  seed 1 update 136  train  15.46%  reward +0.6755  anchor 0.00  std 0.075   50.6s
+  seed 1 update 137  train  15.41%  reward +0.6772  anchor 0.00  std 0.075   50.9s
+  seed 1 update 138  train  15.15%  reward +0.6837  anchor 0.00  std 0.075   53.7s
+  seed 1 update 139  train  15.98%  reward +0.6640  anchor 0.00  std 0.075   52.8s
+  seed 1 update 140  train  14.84%  reward +0.6870  anchor 0.00  std 0.075   53.8s
+  seed 1 update 140  EVALUATION  20.34%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 141  train  16.48%  reward +0.6536  anchor 0.00  std 0.074   50.2s
+  seed 1 update 142  train  16.78%  reward +0.6492  anchor 0.00  std 0.075   46.3s
+  seed 1 update 143  train  16.55%  reward +0.6544  anchor 0.00  std 0.074   52.9s
+  seed 1 update 144  train  15.90%  reward +0.6662  anchor 0.00  std 0.074   53.9s
+  seed 1 update 145  train  15.86%  reward +0.6692  anchor 0.00  std 0.074   49.8s
+  seed 1 update 146  train  14.62%  reward +0.6906  anchor 0.00  std 0.074   52.9s
+  seed 1 update 147  train  16.26%  reward +0.6579  anchor 0.00  std 0.074   53.6s
+  seed 1 update 148  train  16.51%  reward +0.6546  anchor 0.00  std 0.074   50.8s
+  seed 1 update 149  train  15.91%  reward +0.6671  anchor 0.00  std 0.073   47.0s
+  seed 1 update 150  train  15.72%  reward +0.6715  anchor 0.00  std 0.074   52.8s
+  seed 1 update 150  EVALUATION  19.76%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 151  train  16.44%  reward +0.6578  anchor 0.00  std 0.074   50.2s
+  seed 1 update 152  train  15.82%  reward +0.6690  anchor 0.00  std 0.074   52.5s
+  seed 1 update 153  train  15.58%  reward +0.6728  anchor 0.00  std 0.073   49.2s
+  seed 1 update 154  train  15.31%  reward +0.6783  anchor 0.00  std 0.073   55.3s
+  seed 1 update 155  train  15.30%  reward +0.6786  anchor 0.00  std 0.073   53.0s
+  seed 1 update 156  train  16.28%  reward +0.6576  anchor 0.00  std 0.073   49.0s
+  seed 1 update 157  train  15.54%  reward +0.6763  anchor 0.00  std 0.073   52.5s
+  seed 1 update 158  train  15.53%  reward +0.6761  anchor 0.00  std 0.072   53.9s
+  seed 1 update 159  train  16.22%  reward +0.6606  anchor 0.00  std 0.072   53.3s
+  seed 1 update 160  train  16.03%  reward +0.6630  anchor 0.00  std 0.072   50.4s
+  seed 1 update 160  EVALUATION  19.51%  <- best, saved
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 161  train  15.31%  reward +0.6792  anchor 0.00  std 0.072   50.3s
+  seed 1 update 162  train  16.25%  reward +0.6597  anchor 0.00  std 0.072   52.5s
+  seed 1 update 163  train  15.14%  reward +0.6826  anchor 0.00  std 0.072   54.7s
+  seed 1 update 164  train  14.94%  reward +0.6852  anchor 0.00  std 0.072   50.9s
+  seed 1 update 165  train  15.95%  reward +0.6664  anchor 0.00  std 0.071   51.0s
+  seed 1 update 166  train  16.23%  reward +0.6619  anchor 0.00  std 0.071   50.1s
+  seed 1 update 167  train  16.24%  reward +0.6605  anchor 0.00  std 0.071   51.2s
+  seed 1 update 168  train  17.32%  reward +0.6396  anchor 0.00  std 0.071   48.9s
+  seed 1 update 169  train  16.94%  reward +0.6482  anchor 0.00  std 0.071   50.1s
+  seed 1 update 170  train  16.11%  reward +0.6641  anchor 0.00  std 0.071   50.6s
+  seed 1 update 170  EVALUATION  19.63%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 171  train  15.91%  reward +0.6652  anchor 0.00  std 0.071   55.8s
+  seed 1 update 172  train  15.76%  reward +0.6714  anchor 0.00  std 0.070   52.1s
+  seed 1 update 173  train  16.35%  reward +0.6556  anchor 0.00  std 0.070   49.6s
+  seed 1 update 174  train  15.98%  reward +0.6651  anchor 0.00  std 0.070   52.6s
+  seed 1 update 175  train  15.15%  reward +0.6817  anchor 0.00  std 0.070   52.5s
+  seed 1 update 176  train  15.14%  reward +0.6810  anchor 0.00  std 0.070   52.8s
+  seed 1 update 177  train  14.97%  reward +0.6845  anchor 0.00  std 0.070   50.3s
+  seed 1 update 178  train  15.90%  reward +0.6653  anchor 0.00  std 0.070   54.1s
+  seed 1 update 179  train  15.11%  reward +0.6838  anchor 0.00  std 0.069   55.3s
+  seed 1 update 180  train  15.46%  reward +0.6742  anchor 0.00  std 0.069   52.2s
+  seed 1 update 180  EVALUATION  19.69%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 181  train  15.92%  reward +0.6658  anchor 0.00  std 0.069   55.4s
+  seed 1 update 182  train  14.69%  reward +0.6929  anchor 0.00  std 0.069   51.2s
+  seed 1 update 183  train  16.39%  reward +0.6575  anchor 0.00  std 0.069   53.0s
+  seed 1 update 184  train  15.12%  reward +0.6804  anchor 0.00  std 0.069   51.3s
+  seed 1 update 185  train  15.84%  reward +0.6692  anchor 0.00  std 0.069   57.3s
+  seed 1 update 186  train  15.86%  reward +0.6678  anchor 0.00  std 0.068   56.9s
+  seed 1 update 187  train  15.25%  reward +0.6798  anchor 0.00  std 0.068   55.4s
+  seed 1 update 188  train  15.79%  reward +0.6714  anchor 0.00  std 0.068   53.8s
+  seed 1 update 189  train  16.52%  reward +0.6553  anchor 0.00  std 0.068   55.5s
+  seed 1 update 190  train  16.88%  reward +0.6475  anchor 0.00  std 0.068   54.6s
+  seed 1 update 190  EVALUATION  20.12%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 191  train  15.11%  reward +0.6816  anchor 0.00  std 0.068   58.4s
+  seed 1 update 192  train  16.80%  reward +0.6486  anchor 0.00  std 0.068   50.0s
+  seed 1 update 193  train  15.54%  reward +0.6741  anchor 0.00  std 0.068   55.0s
+  seed 1 update 194  train  16.93%  reward +0.6467  anchor 0.00  std 0.068   49.5s
+  seed 1 update 195  train  16.08%  reward +0.6625  anchor 0.00  std 0.067   51.8s
+  seed 1 update 196  train  16.71%  reward +0.6493  anchor 0.00  std 0.067   49.6s
+  seed 1 update 197  train  16.72%  reward +0.6510  anchor 0.00  std 0.067   49.5s
+  seed 1 update 198  train  15.82%  reward +0.6654  anchor 0.00  std 0.067   51.5s
+  seed 1 update 199  train  15.22%  reward +0.6816  anchor 0.00  std 0.067   47.7s
+  seed 1 update 200  train  14.86%  reward +0.6899  anchor 0.00  std 0.067   51.8s
+  seed 1 update 200  EVALUATION  20.24%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 201  train  16.40%  reward +0.6586  anchor 0.00  std 0.066   49.5s
+  seed 1 update 202  train  15.00%  reward +0.6846  anchor 0.00  std 0.066   49.8s
+  seed 1 update 203  train  16.13%  reward +0.6628  anchor 0.00  std 0.066   55.3s
+  seed 1 update 204  train  15.56%  reward +0.6749  anchor 0.00  std 0.066   57.4s
+  seed 1 update 205  train  15.58%  reward +0.6747  anchor 0.00  std 0.066   55.9s
+  seed 1 update 206  train  16.56%  reward +0.6521  anchor 0.00  std 0.066   54.9s
+  seed 1 update 207  train  16.31%  reward +0.6598  anchor 0.00  std 0.066   53.3s
+  seed 1 update 208  train  15.94%  reward +0.6667  anchor 0.00  std 0.066   52.9s
+  seed 1 update 209  train  15.66%  reward +0.6725  anchor 0.00  std 0.065   52.4s
+  seed 1 update 210  train  15.97%  reward +0.6653  anchor 0.00  std 0.065   60.9s
+  seed 1 update 210  EVALUATION  20.26%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 211  train  16.05%  reward +0.6646  anchor 0.00  std 0.065   50.5s
+  seed 1 update 212  train  15.78%  reward +0.6707  anchor 0.00  std 0.065   55.0s
+  seed 1 update 213  train  16.20%  reward +0.6611  anchor 0.00  std 0.065   50.7s
+  seed 1 update 214  train  17.18%  reward +0.6408  anchor 0.00  std 0.065   50.7s
+  seed 1 update 215  train  16.93%  reward +0.6476  anchor 0.00  std 0.065   51.0s
+  seed 1 update 216  train  15.95%  reward +0.6651  anchor 0.00  std 0.065   54.1s
+  seed 1 update 217  train  16.17%  reward +0.6615  anchor 0.00  std 0.065   51.6s
+  seed 1 update 218  train  15.85%  reward +0.6674  anchor 0.00  std 0.065   51.9s
+  seed 1 update 219  train  14.41%  reward +0.6978  anchor 0.00  std 0.065   52.8s
+  seed 1 update 220  train  16.18%  reward +0.6616  anchor 0.00  std 0.065   52.1s
+  seed 1 update 220  EVALUATION  20.36%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 221  train  15.85%  reward +0.6666  anchor 0.00  std 0.065   52.3s
+  seed 1 update 222  train  16.50%  reward +0.6556  anchor 0.00  std 0.065   50.8s
+  seed 1 update 223  train  14.99%  reward +0.6863  anchor 0.00  std 0.065   51.8s
+  seed 1 update 224  train  16.98%  reward +0.6465  anchor 0.00  std 0.064   50.0s
+  seed 1 update 225  train  16.63%  reward +0.6528  anchor 0.00  std 0.064   48.6s
+  seed 1 update 226  train  17.08%  reward +0.6453  anchor 0.00  std 0.064   51.4s
+  seed 1 update 227  train  16.86%  reward +0.6470  anchor 0.00  std 0.064   50.6s
+  seed 1 update 228  train  16.48%  reward +0.6539  anchor 0.00  std 0.064   49.6s
+  seed 1 update 229  train  16.13%  reward +0.6626  anchor 0.00  std 0.064   50.7s
+  seed 1 update 230  train  16.91%  reward +0.6474  anchor 0.00  std 0.064   48.6s
+  seed 1 update 230  EVALUATION  20.73%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 231  train  16.47%  reward +0.6551  anchor 0.00  std 0.064   50.0s
+  seed 1 update 232  train  16.05%  reward +0.6641  anchor 0.00  std 0.063   47.1s
+  seed 1 update 233  train  16.53%  reward +0.6536  anchor 0.00  std 0.063   49.6s
+  seed 1 update 234  train  16.14%  reward +0.6626  anchor 0.00  std 0.063   49.4s
+  seed 1 update 235  train  17.85%  reward +0.6282  anchor 0.00  std 0.063   46.9s
+  seed 1 update 236  train  16.56%  reward +0.6538  anchor 0.00  std 0.063   51.0s
+  seed 1 update 237  train  16.40%  reward +0.6604  anchor 0.00  std 0.063   51.9s
+  seed 1 update 238  train  16.53%  reward +0.6552  anchor 0.00  std 0.063   53.0s
+  seed 1 update 239  train  16.64%  reward +0.6547  anchor 0.00  std 0.063   52.0s
+  seed 1 update 240  train  15.44%  reward +0.6775  anchor 0.00  std 0.063   50.7s
+  seed 1 update 240  EVALUATION  19.95%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 241  train  15.25%  reward +0.6808  anchor 0.00  std 0.062   50.5s
+  seed 1 update 242  train  18.21%  reward +0.6212  anchor 0.00  std 0.063   48.8s
+  seed 1 update 243  train  16.18%  reward +0.6610  anchor 0.00  std 0.062   47.6s
+  seed 1 update 244  train  16.37%  reward +0.6568  anchor 0.00  std 0.062   49.5s
+  seed 1 update 245  train  15.68%  reward +0.6693  anchor 0.00  std 0.062   52.1s
+  seed 1 update 246  train  16.46%  reward +0.6555  anchor 0.00  std 0.062   52.5s
+  seed 1 update 247  train  15.21%  reward +0.6799  anchor 0.00  std 0.062   50.8s
+  seed 1 update 248  train  16.50%  reward +0.6549  anchor 0.00  std 0.062   49.4s
+  seed 1 update 249  train  16.20%  reward +0.6595  anchor 0.00  std 0.062   49.0s
+  seed 1 update 250  train  16.15%  reward +0.6609  anchor 0.00  std 0.062   48.9s
+  seed 1 update 250  EVALUATION  20.80%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 251  train  17.15%  reward +0.6430  anchor 0.00  std 0.062   49.3s
+  seed 1 update 252  train  16.58%  reward +0.6538  anchor 0.00  std 0.062   49.1s
+  seed 1 update 253  train  15.59%  reward +0.6708  anchor 0.00  std 0.062   47.7s
+  seed 1 update 254  train  16.66%  reward +0.6525  anchor 0.00  std 0.062   50.3s
+  seed 1 update 255  train  15.23%  reward +0.6796  anchor 0.00  std 0.061   48.8s
+  seed 1 update 256  train  16.58%  reward +0.6543  anchor 0.00  std 0.061   47.6s
+  seed 1 update 257  train  16.06%  reward +0.6638  anchor 0.00  std 0.061   49.4s
+  seed 1 update 258  train  16.38%  reward +0.6578  anchor 0.00  std 0.061   48.5s
+  seed 1 update 259  train  15.37%  reward +0.6778  anchor 0.00  std 0.061   49.0s
+  seed 1 update 260  train  15.59%  reward +0.6737  anchor 0.00  std 0.061   48.9s
+  seed 1 update 260  EVALUATION  20.52%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 261  train  17.96%  reward +0.6247  anchor 0.00  std 0.061   49.8s
+  seed 1 update 262  train  16.54%  reward +0.6551  anchor 0.00  std 0.061   46.9s
+  seed 1 update 263  train  16.05%  reward +0.6635  anchor 0.00  std 0.061   49.6s
+  seed 1 update 264  train  16.33%  reward +0.6587  anchor 0.00  std 0.060   47.7s
+  seed 1 update 265  train  17.28%  reward +0.6375  anchor 0.00  std 0.060   49.2s
+  seed 1 update 266  train  16.64%  reward +0.6502  anchor 0.00  std 0.060   47.0s
+  seed 1 update 267  train  15.44%  reward +0.6756  anchor 0.00  std 0.060   51.4s
+  seed 1 update 268  train  16.12%  reward +0.6617  anchor 0.00  std 0.060   48.6s
+  seed 1 update 269  train  15.59%  reward +0.6721  anchor 0.00  std 0.060   48.4s
+  seed 1 update 270  train  15.58%  reward +0.6735  anchor 0.00  std 0.060   48.6s
+  seed 1 update 270  EVALUATION  20.45%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 271  train  16.03%  reward +0.6651  anchor 0.00  std 0.060   49.9s
+  seed 1 update 272  train  15.45%  reward +0.6780  anchor 0.00  std 0.060   48.9s
+  seed 1 update 273  train  15.58%  reward +0.6730  anchor 0.00  std 0.060   51.4s
+  seed 1 update 274  train  15.40%  reward +0.6762  anchor 0.00  std 0.060   48.2s
+  seed 1 update 275  train  16.59%  reward +0.6522  anchor 0.00  std 0.060   49.7s
+  seed 1 update 276  train  16.48%  reward +0.6560  anchor 0.00  std 0.060   47.7s
+  seed 1 update 277  train  16.36%  reward +0.6598  anchor 0.00  std 0.060   49.5s
+  seed 1 update 278  train  16.11%  reward +0.6629  anchor 0.00  std 0.060   47.2s
+  seed 1 update 279  train  16.27%  reward +0.6613  anchor 0.00  std 0.060   48.7s
+  seed 1 update 280  train  17.02%  reward +0.6455  anchor 0.00  std 0.060   50.5s
+  seed 1 update 280  EVALUATION  20.84%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 281  train  15.82%  reward +0.6687  anchor 0.00  std 0.059   47.9s
+  seed 1 update 282  train  15.29%  reward +0.6777  anchor 0.00  std 0.059   51.6s
+  seed 1 update 283  train  16.07%  reward +0.6659  anchor 0.00  std 0.059   50.2s
+  seed 1 update 284  train  16.40%  reward +0.6565  anchor 0.00  std 0.059   49.2s
+  seed 1 update 285  train  15.46%  reward +0.6745  anchor 0.00  std 0.059   49.4s
+  seed 1 update 286  train  15.18%  reward +0.6837  anchor 0.00  std 0.059   49.0s
+  seed 1 update 287  train  15.87%  reward +0.6662  anchor 0.00  std 0.059   51.0s
+  seed 1 update 288  train  16.42%  reward +0.6558  anchor 0.00  std 0.059   47.2s
+  seed 1 update 289  train  15.78%  reward +0.6677  anchor 0.00  std 0.059   50.0s
+  seed 1 update 290  train  16.37%  reward +0.6569  anchor 0.00  std 0.059   48.1s
+  seed 1 update 290  EVALUATION  19.64%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 291  train  14.82%  reward +0.6875  anchor 0.00  std 0.059   50.0s
+  seed 1 update 292  train  15.35%  reward +0.6762  anchor 0.00  std 0.059   48.8s
+  seed 1 update 293  train  16.10%  reward +0.6633  anchor 0.00  std 0.058   49.2s
+  seed 1 update 294  train  16.01%  reward +0.6649  anchor 0.00  std 0.058   48.9s
+  seed 1 update 295  train  16.80%  reward +0.6497  anchor 0.00  std 0.058   49.1s
+  seed 1 update 296  train  15.73%  reward +0.6693  anchor 0.00  std 0.058   48.9s
+  seed 1 update 297  train  15.96%  reward +0.6662  anchor 0.00  std 0.057   50.3s
+  seed 1 update 298  train  14.86%  reward +0.6879  anchor 0.00  std 0.057   48.2s
+  seed 1 update 299  train  14.98%  reward +0.6860  anchor 0.00  std 0.057   49.0s
+  seed 1 update 300  train  15.29%  reward +0.6802  anchor 0.00  std 0.057   47.7s
+  seed 1 update 300  EVALUATION  20.27%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 301  train  16.02%  reward +0.6627  anchor 0.00  std 0.057   51.1s
+  seed 1 update 302  train  17.57%  reward +0.6355  anchor 0.00  std 0.057   47.1s
+  seed 1 update 303  train  15.95%  reward +0.6667  anchor 0.00  std 0.057   47.9s
+  seed 1 update 304  train  17.49%  reward +0.6337  anchor 0.00  std 0.057   48.1s
+  seed 1 update 305  train  15.42%  reward +0.6774  anchor 0.00  std 0.057   50.6s
+  seed 1 update 306  train  16.57%  reward +0.6536  anchor 0.00  std 0.057   49.8s
+  seed 1 update 307  train  16.73%  reward +0.6514  anchor 0.00  std 0.057   47.6s
+  seed 1 update 308  train  15.82%  reward +0.6695  anchor 0.00  std 0.057   49.3s
+  seed 1 update 309  train  16.50%  reward +0.6551  anchor 0.00  std 0.057   48.9s
+  seed 1 update 310  train  17.10%  reward +0.6436  anchor 0.00  std 0.057   49.0s
+  seed 1 update 310  EVALUATION  20.55%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1 update 311  train  16.73%  reward +0.6505  anchor 0.00  std 0.057   47.8s
+  seed 1 update 312  train  15.98%  reward +0.6638  anchor 0.00  std 0.057   49.3s
+  seed 1 update 313  train  15.46%  reward +0.6763  anchor 0.00  std 0.057   47.2s
+  seed 1 update 314  train  15.89%  reward +0.6675  anchor 0.00  std 0.056   51.7s
+  seed 1 update 315  train  15.71%  reward +0.6698  anchor 0.00  std 0.056   49.8s
+  seed 1 update 316  train  15.39%  reward +0.6768  anchor 0.00  std 0.056   48.0s
+  seed 1 update 317  train  15.99%  reward +0.6651  anchor 0.00  std 0.056   53.5s
+  seed 1 update 318  train  16.19%  reward +0.6609  anchor 0.00  std 0.056   49.6s
+  seed 1 update 319  train  16.64%  reward +0.6524  anchor 0.00  std 0.056   50.5s
+  seed 1 update 320  train  15.88%  reward +0.6683  anchor 0.00  std 0.056   50.5s
+  seed 1 update 320  EVALUATION  20.43%
+  wrote out/2c_curriculum_s3_to_s5_curve.csv
+  seed 1: early stop — 16 checks without a 0.0 point gain
+  s3_to_s5 S5: 320 updates, best 19.51% at update 160
+  loaded S5's best weights back
+  s3_to_s5: 1290 updates in all, final weights are S5's best
+
+  total 19.77 h
