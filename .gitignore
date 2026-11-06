@@ -53,6 +53,10 @@ Thumbs.db
 !rl_sim/out/2c_*.csv
 # The curriculum records its settings and seeds as JSON beside its CSVs.
 !rl_sim/out/2c_*.json
+# The edge-case tables and pictures are committed; the per-step recordings
+# they are drawn from are regenerable and stay out.
+!rl_sim/out/2c_edge/
+rl_sim/out/2c_edge/rec/
 
 # The Phase-2c networks themselves. out/models/ is ignored wholesale above,
 # so each level has to be let through before the files inside can be: the
