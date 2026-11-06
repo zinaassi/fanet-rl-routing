@@ -1,0 +1,74 @@
+placement seed 900, run seeds (9900, 9901, 9902, 9903, 9904)
+Running 120 runs: 8 scenarios x 3 policies x 5 seeds ...
+  views agreed in 120 of 120 runs
+  wrote out/2c_edge/edge_runs.csv
+  wrote out/2c_edge/edge_summary.csv
+  wrote out/2c_edge/edge_geometry.csv
+  wrote out/2c_edge/edge_s6_midpoint.csv
+
+  Mean over run seeds (9900, 9901, 9902, 9903, 9904), % of packets created
+  sc   policy  total  channel queue_fu no_route dead_end      ttl hop_limi link_bro stale_li  C flown  minCC worstCC clip%
+   1    hover  88.67     1.02     0.00    85.87     0.00     0.00     0.00     0.00     1.78       0m      -       -     0
+   1 midpoint  17.82    16.71     0.00     0.00     0.00     0.00     0.00     0.00     1.11     323m      -       -     0
+   1   direct  88.27     1.02     0.00    84.80     0.00     0.00     0.00     0.00     2.44    1912m      -       -     0
+
+   2    hover  87.73     1.02     0.00    83.47     0.00     0.00     0.00     0.00     3.24       0m  103.9   103.9   100
+   2 midpoint  27.96    26.18     0.00     0.00     0.00     0.00     0.00     0.00     1.78     389m   23.0    23.0   100
+   2   direct  87.91     0.89     0.00    84.04     0.00     0.00     0.00     0.00     2.98    2593m   23.0    23.0   100
+
+   3    hover  88.53     0.87     0.00    85.71     0.00     0.00     0.00     0.00     1.96       0m  120.0   120.0     0
+   3 midpoint  81.64     2.60     0.00    76.62     0.00     0.00     0.00     0.00     2.42     556m   23.0    23.0     0
+   3   direct  87.51     1.33     0.00    83.62     0.00     0.00     0.00     0.00     2.56    2583m   23.0    23.0     0
+
+   4    hover   0.76     0.76     0.00     0.00     0.00     0.00     0.00     0.00     0.00       0m  103.9   103.9     0
+   4 midpoint   0.76     0.76     0.00     0.00     0.00     0.00     0.00     0.00     0.00     165m   23.0    23.0     0
+   4   direct   0.76     0.76     0.00     0.00     0.00     0.00     0.00     0.00     0.00    2505m   23.0    23.0     0
+
+   5    hover  51.42     1.38     0.00    47.69     0.00     0.00     0.00     0.00     2.36       0m  120.0   120.0     0
+   5 midpoint   8.76     6.76     0.00     0.00     0.00     0.00     0.00     0.00     2.00     834m   23.0    23.0     0
+   5   direct  49.73     1.69     0.00    44.80     0.00     0.00     0.00     0.00     3.24    2521m   23.0    23.0     0
+
+   6    hover  88.67     1.02     0.00    85.87     0.00     0.00     0.00     0.00     1.78       0m      -       -   100
+   6 midpoint  25.20    23.38     0.00     0.58     0.13     0.00     0.00     0.00     1.11     335m      -       -   100
+   6   direct  88.27     1.02     0.00    84.80     0.00     0.00     0.00     0.00     2.44    2092m      -       -   100
+
+   7    hover  20.84    11.51     4.41     0.00     0.00     0.00     0.00     0.12     4.80       0m   29.2    29.2    50
+   7 midpoint  25.76     9.87    10.36     0.00     0.00     0.00     0.00     0.00     5.53    1332m   23.0    23.0    50
+   7   direct  18.90    10.40     2.51     0.00     0.00     0.00     0.00     0.04     5.95    2157m   23.0    23.0    50
+
+   8    hover  87.38     1.60     0.00    82.71     0.00     0.00     0.00     0.00     3.07       0m   52.1    52.1     0
+   8 midpoint  33.33    30.84     0.00     0.00     0.00     0.00     0.00     0.00     2.49     345m   23.0    23.0     0
+   8   direct  88.09     1.11     0.00    82.58     0.00     0.00     0.00     0.00     4.40    1752m   23.0    23.0     0
+
+  Geometry, mean over seeds: C distance from the GS-M segment (m)
+  s1    hover  t=30: 60   t=60: 60   t=95: 60
+  s1 midpoint  t=30: 0   t=60: 0   t=95: 0
+  s1   direct  t=30: 34   t=60: 13   t=95: 21
+  s2    hover  t=30: 60/60/30   t=60: 60/60/30   t=95: 60/60/30
+  s2 midpoint  t=30: 9/5/13   t=60: 7/13/7   t=95: 7/13/7
+  s2   direct  t=30: 22/12/34   t=60: 11/26/19   t=95: 29/28/24
+  s5    hover  t=30: 60/60   t=60: 60/60   t=95: 60/60
+  s5 midpoint  t=30: 8/8   t=60: 10/9   t=95: 18/16
+  s5   direct  t=30: 17/22   t=60: 19/14   t=95: 21/17
+  s6    hover  t=30: 60   t=60: 60   t=95: 60
+  s6 midpoint  t=30: 0   t=60: 0   t=95: 0
+  s6   direct  t=30: 17   t=60: 26   t=95: 13
+
+  Routes on seed 9901 (path; hop lengths in m)
+  s1    hover  t=30: no delivered packet []   t=60: no delivered packet []   t=95: no delivered packet []
+  s1 midpoint  t=30: 0-1-GS [310 290]   t=60: 0-1-GS [310 290]   t=95: 0-1-GS [310 290]
+  s1   direct  t=30: no delivered packet []   t=60: no delivered packet []   t=95: no delivered packet []
+  s2    hover  t=30: no delivered packet []   t=60: no delivered packet []   t=95: no delivered packet []
+  s2 midpoint  t=30: 0-2-GS [342 281]   t=60: 0-2-GS [329 293]   t=95: 0-2-GS [329 293]
+  s2   direct  t=30: no delivered packet []   t=60: no delivered packet []   t=95: no delivered packet []
+  s5    hover  t=30: no delivered packet []   t=60: 0-GS [344.0]   t=95: 0-GS [40.0]
+  s5 midpoint  t=30: 0-2-GS [299 302]   t=60: 0-2-GS [163 197]   t=95: 0-GS [40.0]
+  s5   direct  t=30: no delivered packet []   t=60: 0-1-GS [334 27]   t=95: 0-GS [40.0]
+  s6    hover  t=30: no delivered packet []   t=60: no delivered packet []   t=95: no delivered packet []
+  s6 midpoint  t=30: 0-1-GS [320 302]   t=60: 0-1-GS [320 302]   t=95: 0-1-GS [320 302]
+  s6   direct  t=30: no delivered packet []   t=60: no delivered packet []   t=95: no delivered packet []
+
+  Scenario 6: C distance from the exact GS-M midpoint (m), mean over seeds
+     hover   0s    63  10s   134  20s   228  30s   317  40s   317  60s   317  80s   317  99s   317   | 40-99 s mean 317, max 317
+  midpoint   0s    63  10s    23  20s    24  30s    13  40s     8  60s     8  80s     8  99s     8   | 40-99 s mean 8, max 9
+    direct   0s    63  10s   116  20s   217  30s   307  40s   287  60s   301  80s   297  99s   311   | 40-99 s mean 300, max 332
