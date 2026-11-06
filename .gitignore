@@ -56,6 +56,7 @@ Thumbs.db
 # The edge-case tables and pictures are committed; the per-step recordings
 # they are drawn from are regenerable and stay out.
 !rl_sim/out/2c_edge/
+!rl_sim/out/2c_edge/*.gif
 rl_sim/out/2c_edge/rec/
 
 # The Phase-2c networks themselves. out/models/ is ignored wholesale above,
