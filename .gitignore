@@ -58,6 +58,15 @@ Thumbs.db
 !rl_sim/out/2c_edge/
 !rl_sim/out/2c_edge/*.gif
 rl_sim/out/2c_edge/rec/
+# Phase 2c round 1: checkpoints stay out except their README; the edge-case
+# tables of each round-1 actor are committed, their recordings are not.
+!rl_sim/out/checkpoints/
+rl_sim/out/checkpoints/*
+!rl_sim/out/checkpoints/2c_round1/
+rl_sim/out/checkpoints/2c_round1/*
+!rl_sim/out/checkpoints/2c_round1/README.txt
+!rl_sim/out/2c_edge_r1_*/
+rl_sim/out/2c_edge_r1_*/rec/
 
 # The Phase-2c networks themselves. out/models/ is ignored wholesale above,
 # so each level has to be let through before the files inside can be: the

@@ -543,13 +543,19 @@ def main() -> None:
     parser.add_argument("--out-dir", type=str, default="out")
     parser.add_argument("--workers", type=int,
                         default=min(20, os.cpu_count() or 1))
+    parser.add_argument("--model", type=str, default=None,
+                        help="actor to run as 'direct'; default is the "
+                             "direct model under --out-dir")
+    parser.add_argument("--out", type=str, default=None,
+                        help="output folder; default <out-dir>/2c_edge")
     args = parser.parse_args()
 
-    edge_dir = os.path.join(args.out_dir, "2c_edge")
+    edge_dir = args.out or os.path.join(args.out_dir, "2c_edge")
     rec_dir = os.path.join(edge_dir, "rec")
     os.makedirs(rec_dir, exist_ok=True)
-    state = torch.load(os.path.join(args.out_dir, DIRECT_MODEL),
-                       weights_only=True)
+    model = args.model or os.path.join(args.out_dir, DIRECT_MODEL)
+    print(f"actor: {model}")
+    state = torch.load(model, weights_only=True)
 
     print(f"placement seed {PLACEMENT_SEED}, run seeds {RUN_SEEDS}")
     jobs = [(scenario, policy, seed, state if policy == "direct" else None,
@@ -568,7 +574,9 @@ def main() -> None:
     if agreed != len(rows):
         raise RuntimeError("the ACK views disagreed with the simulator")
 
-    note = (f"phase 2c edge cases, frozen direct actor, placement seed "
+    actor_text = ("frozen direct actor" if args.model is None else
+                  f"frozen actor {os.path.basename(model)} (as 'direct')")
+    note = (f"phase 2c edge cases, {actor_text}, placement seed "
             f"{PLACEMENT_SEED}, fleet set per scenario (not 18M+7C), flights "
             f"along the 45-degree diagonal, greedy routing, AVOID on, "
             f"NO training")
