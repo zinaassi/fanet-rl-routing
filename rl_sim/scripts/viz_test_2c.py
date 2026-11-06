@@ -40,7 +40,7 @@ from fanet_sim.envs.c_scripted import MidpointAgent
 from fanet_sim.envs.fanet_env import FANETEnv
 from scripts.edge_cases_2c import DIRECT_MODEL, _record_step
 from scripts.evaluate_2c_m4_test import run_seed_for
-from scripts.plot_edge_cases_2c import (FPS, FRAME_EVERY, colourbar,
+from scripts.plot_edge_cases_2c import (FRAME_EVERY,
                                         draw_step, legend_handles,
                                         setup_axis)
 from scripts.stamp import settings_stamp
@@ -52,6 +52,23 @@ DISTANCE_M: float = 650.0
 POLICIES: Tuple[str, ...] = ("direct", "midpoint")
 SNAPSHOT_TIMES_S = (0.0, 30.0, 60.0, 95.0)
 MATCH_TOLERANCE: float = 1e-9
+
+#: Half the edge-case GIFs' speed: one 0.5 s frame every 0.1 s, so 5x slower
+#: than real time.
+GIF_FPS: int = 10
+
+
+def without_links(rec: Dict[str, Any]) -> Dict[str, Any]:
+    """Return the recording with its links emptied, for drawing.
+
+    With the full fleet every link drawn turns the picture into a mesh that
+    hides the drones, so the pictures show positions and trails only.
+    """
+    empty_link = np.zeros((0, 4))
+    empty_gs = np.zeros((0, 3))
+    return {**rec,
+            "links_at": [empty_link] * len(rec["links_at"]),
+            "gs_at": [empty_gs] * len(rec["gs_at"])}
 
 
 def pick_layouts(test_csv: str) -> List[Tuple[int, float, str]]:
@@ -140,7 +157,6 @@ def gif(rec: Dict[str, Any], title: str, path: str) -> None:
     ax.set_title(title, fontsize=8)
     ax.legend(handles=legend_handles(), loc="lower right", fontsize=5.5,
               framealpha=0.8)
-    colourbar(fig, ax)
     fig.text(0.5, 0.005, settings_stamp(extra="test episode"), ha="center",
              fontsize=3.5, color="#666666", wrap=True)
     artists: Dict[str, Any] = {}
@@ -152,7 +168,7 @@ def gif(rec: Dict[str, Any], title: str, path: str) -> None:
     anim = animation.FuncAnimation(
         fig, update, frames=range(0, len(rec["pos"]), FRAME_EVERY),
         blit=False)
-    anim.save(path, writer=animation.PillowWriter(fps=FPS), dpi=80)
+    anim.save(path, writer=animation.PillowWriter(fps=GIF_FPS), dpi=80)
     plt.close(fig)
 
 
@@ -168,7 +184,6 @@ def snapshots(recs: Dict[str, Dict[str, Any]], title: str, path: str) -> None:
     fig.suptitle(title + "; top midpoint, bottom direct actor", fontsize=10)
     fig.legend(handles=legend_handles(), loc="lower center", ncol=5,
                fontsize=7, frameon=False, bbox_to_anchor=(0.5, 0.03))
-    colourbar(fig, axes)
     fig.text(0.5, 0.005, settings_stamp(extra="test episode"), ha="center",
              fontsize=4.5, color="#666666", wrap=True)
     fig.savefig(path, dpi=130)
@@ -246,7 +261,7 @@ def main() -> None:
                   + " ".join(f"{float(row[c]):9.2f}" for c in CAUSES)
                   + f"   {float(row['c_distance_flown_mean']):5.0f} m")
 
-        recs = {p: results[p]["rec"] for p in POLICIES}
+        recs = {p: without_links(results[p]["rec"]) for p in POLICIES}
         title = f"Test layout {layout}, D = 650 m, run seed " \
                 f"{results['direct']['run_seed']}"
         for policy in POLICIES:
