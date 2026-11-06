@@ -1,0 +1,22 @@
+
+Layout 432: closest to the median 16.85% of 50 layouts (tied with [446]; lower layout number taken); test-run direct loss 16.9012%
+  direct loss reproduced: 16.9012%
+  wrote out/2c_viz_test/L432_loss.csv
+     policy  total   channel queue_ful  no_route  dead_end       ttl hop_limit link_brok stale_lin   C flown
+     direct  16.90      7.35      2.43      1.06      0.00      0.00      0.00      0.00      6.06    2117 m
+   midpoint  23.78      6.37      3.62      7.01      0.00      0.00      0.00      0.23      6.54    2520 m
+  wrote out/2c_viz_test/L432_direct.gif
+  wrote out/2c_viz_test/L432_midpoint.gif
+  wrote out/2c_viz_test/L432_snapshots.png
+  wrote out/2c_viz_test/L432_c_distance.png
+
+Layout 413: highest direct loss; test-run direct loss 23.6667%
+  direct loss reproduced: 23.6667%
+  wrote out/2c_viz_test/L413_loss.csv
+     policy  total   channel queue_ful  no_route  dead_end       ttl hop_limit link_brok stale_lin   C flown
+     direct  23.67      9.52      8.06      0.00      0.00      0.00      0.00      0.00      6.09    2396 m
+   midpoint  29.89      9.06     15.78      0.00      0.00      0.00      0.00      0.00      5.05    2498 m
+  wrote out/2c_viz_test/L413_direct.gif
+  wrote out/2c_viz_test/L413_midpoint.gif
+  wrote out/2c_viz_test/L413_snapshots.png
+  wrote out/2c_viz_test/L413_c_distance.png
