@@ -1,0 +1,99 @@
+Round 1 settings:
+  reward                       (delivered - lost)/created - C_FLIGHT_COST*(metres/speed)    [c_interface.flight_reward]
+  C_FLIGHT_COST                0.01                                                         [config.py]
+  C_DRONE_SPEED                30.0                                                         [config.py]
+  largest flight cost in 1 s   0.01                                                         [C_FLIGHT_COST * (speed * 1 s) / speed]
+  runs (w, v)                  {'control': (0.0, 0.0), 'spacing_med': (0.01, 0.0), 'spacing_small': (0.005, 0.0), 'spacing_large': (0.02, 0.0)} [this file]
+  spacing radius m             100.0                                                        [spec]
+  fairness window s            5.0                                                          [spec (off here)]
+  start actor                  models/2c/c_actor_curriculum_direct.pt                       [spec]
+  start critic                 models/2c/c_critic_curriculum_direct.pt                      [spec; fresh normaliser + optimisers]
+  CONTINUE_STD                 0.1                                                          [config.py]
+  critic-only warm-up          10                                                           [train_c_ppo.py]
+  PPO seed                     2                                                            [approved]
+  updates per run              400                                                          [spec, no early stop]
+  episodes per update          40                                                           [train_c_ppo_m4.py]
+  clip / epochs / lr           (0.1, 5, 0.0003)                                             [train_c_ppo.py]
+  grad clip / minibatch        (0.5, 1024)                                                  [train_c_ppo.py]
+  gamma / lambda               (0.97, 0.95)                                                 [train_c_ppo.py]
+  evaluate every               10                                                           [train_c_ppo.py]
+  keep threshold               0.0                                                          [train_c_ppo_curriculum.py]
+  mission                      near_gs D=650.0, AVOID, hello 1 s, 200 ms, greedy            [train_c_ppo._world]
+  fleet                        18 M + 7 C                                                   [config.py]
+  validation                   301-330, run seed 9100 + (layout - 301)                      [train_c_ppo_curriculum.validation_run_seed]
+  checkpoint every / keep      (25, 2)                                                      [spec]
+
+=== resume test: control, 30 straight vs 25 + resume, scratch /tmp/r1_resume_gi0327f0 ===
+  control update   1  train  16.58%  reward +0.6499  spacing +0.00000  std 0.100   47.8s
+  control update   2  train  16.80%  reward +0.6484  spacing +0.00000  std 0.100   43.8s
+  control update   3  train  16.64%  reward +0.6512  spacing +0.00000  std 0.100   40.8s
+  control update   4  train  16.03%  reward +0.6612  spacing +0.00000  std 0.100   40.5s
+  control update   5  train  16.47%  reward +0.6541  spacing +0.00000  std 0.100   42.1s
+  control update   6  train  16.45%  reward +0.6546  spacing +0.00000  std 0.100   40.8s
+  control update   7  train  16.71%  reward +0.6511  spacing +0.00000  std 0.100   40.7s
+  control update   8  train  15.97%  reward +0.6643  spacing +0.00000  std 0.100   40.4s
+  control update   9  train  16.53%  reward +0.6529  spacing +0.00000  std 0.100   40.7s
+  control update  10  train  16.74%  reward +0.6485  spacing +0.00000  std 0.100   40.3s
+  control update  10  EVALUATION  16.69%  <- best, saved
+  control update  11  train  16.95%  reward +0.6464  spacing +0.00000  std 0.100   42.2s
+  control update  12  train  16.49%  reward +0.6549  spacing +0.00000  std 0.100   42.7s
+  control update  13  train  16.15%  reward +0.6594  spacing +0.00000  std 0.100   42.5s
+  control update  14  train  16.71%  reward +0.6512  spacing +0.00000  std 0.100   42.1s
+  control update  15  train  17.10%  reward +0.6393  spacing +0.00000  std 0.100   42.1s
+  control update  16  train  17.37%  reward +0.6348  spacing +0.00000  std 0.100   41.5s
+  control update  17  train  16.15%  reward +0.6598  spacing +0.00000  std 0.100   42.0s
+  control update  18  train  17.45%  reward +0.6340  spacing +0.00000  std 0.100   42.5s
+  control update  19  train  16.11%  reward +0.6620  spacing +0.00000  std 0.099   42.9s
+  control update  20  train  16.93%  reward +0.6436  spacing +0.00000  std 0.099   42.3s
+  control update  20  EVALUATION  16.79%
+  control update  21  train  16.84%  reward +0.6477  spacing +0.00000  std 0.099   42.6s
+  control update  22  train  16.80%  reward +0.6468  spacing +0.00000  std 0.098   43.3s
+  control update  23  train  16.11%  reward +0.6618  spacing +0.00000  std 0.098   43.4s
+  control update  24  train  17.05%  reward +0.6442  spacing +0.00000  std 0.098   42.2s
+  control update  25  train  16.42%  reward +0.6541  spacing +0.00000  std 0.098   42.8s
+  checkpoint /tmp/r1_resume_gi0327f0/a/ckpt_0025.pt
+  control update  26  train  16.91%  reward +0.6466  spacing +0.00000  std 0.098   42.8s
+  control update  27  train  16.08%  reward +0.6613  spacing +0.00000  std 0.098   44.5s
+  control update  28  train  16.21%  reward +0.6597  spacing +0.00000  std 0.098   41.9s
+  control update  29  train  17.17%  reward +0.6415  spacing +0.00000  std 0.097   42.7s
+  control update  30  train  16.26%  reward +0.6609  spacing +0.00000  std 0.097   41.3s
+  control update  30  EVALUATION  17.49%
+  control update   1  train  16.58%  reward +0.6499  spacing +0.00000  std 0.100   40.0s
+  control update   2  train  16.80%  reward +0.6484  spacing +0.00000  std 0.100   40.8s
+  control update   3  train  16.64%  reward +0.6512  spacing +0.00000  std 0.100   40.3s
+  control update   4  train  16.03%  reward +0.6612  spacing +0.00000  std 0.100   40.0s
+  control update   5  train  16.47%  reward +0.6541  spacing +0.00000  std 0.100   40.9s
+  control update   6  train  16.45%  reward +0.6546  spacing +0.00000  std 0.100   42.8s
+  control update   7  train  16.71%  reward +0.6511  spacing +0.00000  std 0.100   40.5s
+  control update   8  train  15.97%  reward +0.6643  spacing +0.00000  std 0.100   40.7s
+  control update   9  train  16.53%  reward +0.6529  spacing +0.00000  std 0.100   40.4s
+  control update  10  train  16.74%  reward +0.6485  spacing +0.00000  std 0.100   40.2s
+  control update  10  EVALUATION  16.69%  <- best, saved
+  control update  11  train  16.95%  reward +0.6464  spacing +0.00000  std 0.100   42.2s
+  control update  12  train  16.49%  reward +0.6549  spacing +0.00000  std 0.100   42.0s
+  control update  13  train  16.15%  reward +0.6594  spacing +0.00000  std 0.100   41.8s
+  control update  14  train  16.71%  reward +0.6512  spacing +0.00000  std 0.100   41.8s
+  control update  15  train  17.10%  reward +0.6393  spacing +0.00000  std 0.100   44.5s
+  control update  16  train  17.37%  reward +0.6348  spacing +0.00000  std 0.100   46.2s
+  control update  17  train  16.15%  reward +0.6598  spacing +0.00000  std 0.100   45.1s
+  control update  18  train  17.45%  reward +0.6340  spacing +0.00000  std 0.100   45.7s
+  control update  19  train  16.11%  reward +0.6620  spacing +0.00000  std 0.099   44.7s
+  control update  20  train  16.93%  reward +0.6436  spacing +0.00000  std 0.099   44.1s
+  control update  20  EVALUATION  16.79%
+  control update  21  train  16.84%  reward +0.6477  spacing +0.00000  std 0.099   42.3s
+  control update  22  train  16.80%  reward +0.6468  spacing +0.00000  std 0.098   45.7s
+  control update  23  train  16.11%  reward +0.6618  spacing +0.00000  std 0.098   45.4s
+  control update  24  train  17.05%  reward +0.6442  spacing +0.00000  std 0.098   46.2s
+  control update  25  train  16.42%  reward +0.6541  spacing +0.00000  std 0.098   47.3s
+  checkpoint /tmp/r1_resume_gi0327f0/b/ckpt_0025.pt
+  resumed from update 25
+  control update  26  train  16.91%  reward +0.6466  spacing +0.00000  std 0.098   45.3s
+  control update  27  train  16.08%  reward +0.6613  spacing +0.00000  std 0.098   46.9s
+  control update  28  train  16.21%  reward +0.6597  spacing +0.00000  std 0.098   44.9s
+  control update  29  train  17.17%  reward +0.6415  spacing +0.00000  std 0.097   49.2s
+  control update  30  train  16.26%  reward +0.6609  spacing +0.00000  std 0.097   45.3s
+  control update  30  EVALUATION  17.49%
+  validation losses straight [16.688477, 16.7893, 17.492593]
+  validation losses resumed  [16.688477, 16.7893, 17.492593]
+  update 30 train loss 16.264198 vs 16.264198
+  RESUME TEST PASSED: every update's losses, the validation losses and every actor and critic weight match exactly
