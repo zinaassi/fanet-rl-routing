@@ -1,0 +1,10 @@
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  window=[50,950) of 1000  |  commit=860e9fe  |  phase 2c round 1 test, near_gs D = 650, 18M+7C; 401-450 already seen, 501-550 fresh
+set,policy,against,layouts,mean_diff,ci95_low,ci95_high,wins,ties
+seen_401_450,spacing_large,control,50,-0.2723456790123457,-0.6864344691842438,0.1417431111595524,26,0
+seen_401_450,spacing_large,direct,50,-1.1074074074074076,-1.530943360070804,-0.6838714547440112,38,1
+seen_401_450,spacing_large,midpoint,50,-9.086172839506172,-10.293666490942675,-7.87867918806967,50,0
+seen_401_450,spacing_large,hover,50,-11.428148148148148,-12.93733622690205,-9.918960069394247,50,0
+fresh_501_550,spacing_large,control,50,-0.7439506172839504,-1.2827383252139661,-0.20516290935393455,32,0
+fresh_501_550,spacing_large,direct,50,-1.1239506172839502,-1.628472344509951,-0.6194288900579494,36,0
+fresh_501_550,spacing_large,midpoint,50,-9.674074074074074,-10.851821357773417,-8.49632679037473,50,0
+fresh_501_550,spacing_large,hover,50,-12.035308641975307,-13.182711187169978,-10.887906096780636,50,0

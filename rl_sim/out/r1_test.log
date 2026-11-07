@@ -1,0 +1,37 @@
+Checking the fresh set ...
+  fresh_501_550 overlaps none of: phase 1b / 2c test 1-50, training 101-300, validation 301-330, test 401-450 401-450, edge cases 900-900
+Models:
+  spacing_large: out/models/2c/c_actor_r1_spacing_large.pt
+        control: out/models/2c/c_actor_r1_control.pt
+         direct: out/models/2c/c_actor_curriculum_direct.pt
+Running 500 episodes on 20 workers ...
+  views agreed in 500 of 500 runs
+  401-450 rerun matches the saved test: 150 runs (direct, midpoint, hover), largest gap 0.0e+00
+  wrote out/2c_r1_test.csv
+  wrote out/2c_r1_test_paired.csv
+
+  seen_401_450: mean % of packets created (from the saved file)
+         policy  total          ci95   channel queue_ful  no_route  dead_end       ttl hop_limit link_brok stale_lin   C flown
+  spacing_large  15.40 [14.74, 16.07]      8.15      2.52      0.14      0.05      0.00      0.00      0.01      4.54    2622 m
+        control  15.68 [14.99, 16.36]      7.98      2.96      0.22      0.01      0.00      0.00      0.01      4.51    2297 m
+         direct  16.51 [15.78, 17.24]      8.42      2.94      0.40      0.01      0.00      0.00      0.01      4.73    2258 m
+       midpoint  24.49 [23.00, 25.98]      8.61      8.32      2.22      0.23      0.00      0.00      0.12      5.00    2083 m
+          hover  26.83 [25.03, 28.63]     12.14      4.45      4.64      0.31      0.00      0.00      0.16      5.14       0 m
+
+  fresh_501_550: mean % of packets created (from the saved file)
+         policy  total          ci95   channel queue_ful  no_route  dead_end       ttl hop_limit link_brok stale_lin   C flown
+  spacing_large  16.24 [15.71, 16.77]      8.12      3.21      0.17      0.04      0.00      0.00      0.00      4.69    2667 m
+        control  16.98 [16.22, 17.74]      8.11      3.54      0.41      0.03      0.00      0.00      0.01      4.87    2329 m
+         direct  17.36 [16.66, 18.06]      8.31      3.34      0.69      0.05      0.00      0.00      0.01      4.97    2287 m
+       midpoint  25.91 [24.55, 27.27]      8.28      9.23      2.72      0.40      0.00      0.00      0.13      5.14    2087 m
+          hover  28.27 [26.93, 29.62]     12.00      4.38      5.91      0.59      0.00      0.00      0.14      5.26       0 m
+
+  spacing_large minus each policy, paired (from the saved file)
+    seen_401_450 vs  control:  -0.27 [ -0.69,  +0.14]  lower on 26/50
+    seen_401_450 vs   direct:  -1.11 [ -1.53,  -0.68]  lower on 38/50
+    seen_401_450 vs midpoint:  -9.09 [-10.29,  -7.88]  lower on 50/50
+    seen_401_450 vs    hover: -11.43 [-12.94,  -9.92]  lower on 50/50
+   fresh_501_550 vs  control:  -0.74 [ -1.28,  -0.21]  lower on 32/50
+   fresh_501_550 vs   direct:  -1.12 [ -1.63,  -0.62]  lower on 36/50
+   fresh_501_550 vs midpoint:  -9.67 [-10.85,  -8.50]  lower on 50/50
+   fresh_501_550 vs    hover: -12.04 [-13.18, -10.89]  lower on 50/50
