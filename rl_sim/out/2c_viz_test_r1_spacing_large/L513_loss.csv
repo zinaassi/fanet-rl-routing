@@ -1,0 +1,5 @@
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  window=[50,950) of 1000  |  commit=f8c4d23  |  phase 2c test layout 513, near_gs D = 650, 18M+7C, pictures only
+policy,run_seed,total_loss,channel,queue_full,no_route,dead_end,ttl,hop_limit,link_broken,stale_link,c_distance_flown_mean,views_agree
+direct,9512,23.40740740740741,10.345679012345679,6.320987654320988,1.4074074074074074,0.0,0.0,0.0,0.0,5.333333333333334,2455.285714285714,True
+spacing_large,9512,20.641975308641975,9.320987654320987,3.7037037037037033,2.5925925925925926,0.0,0.0,0.0,0.0,5.0246913580246915,2678.571428571429,True
+midpoint,9512,30.765432098765434,10.123456790123457,14.839506172839506,0.49382716049382713,0.0,0.0,0.0,0.0,5.3086419753086425,2285.1428571428573,True

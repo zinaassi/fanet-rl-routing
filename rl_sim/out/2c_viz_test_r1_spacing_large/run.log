@@ -1,0 +1,31 @@
+actor spacing_large: out/models/2c/c_actor_r1_spacing_large.pt
+
+Layout 504: closest to the median 16.09% of 50 layouts (tied with [523]; lower layout number taken); test-run loss 16.0494%
+  direct loss reproduced: 18.2346%
+  spacing_large loss reproduced: 16.0494%
+  midpoint loss reproduced: 25.1852%
+  wrote out/2c_viz_test_r1_spacing_large/L504_loss.csv
+         policy  total   channel queue_ful  no_route  dead_end       ttl hop_limit link_brok stale_lin   C flown
+         direct  18.23      9.44      2.40      1.06      0.00      0.00      0.00      0.00      5.33    2128 m
+  spacing_large  16.05      8.16      2.26      0.00      0.00      0.00      0.00      0.00      5.63    2608 m
+       midpoint  25.19      7.05      7.33      5.74      0.00      0.00      0.00      0.11      4.95    2322 m
+  wrote out/2c_viz_test_r1_spacing_large/L504_direct.gif
+  wrote out/2c_viz_test_r1_spacing_large/L504_spacing_large.gif
+  wrote out/2c_viz_test_r1_spacing_large/L504_midpoint.gif
+  wrote out/2c_viz_test_r1_spacing_large/L504_snapshots.png
+  wrote out/2c_viz_test_r1_spacing_large/L504_c_distance.png
+
+Layout 513: highest spacing_large loss; test-run loss 20.6420%
+  direct loss reproduced: 23.4074%
+  spacing_large loss reproduced: 20.6420%
+  midpoint loss reproduced: 30.7654%
+  wrote out/2c_viz_test_r1_spacing_large/L513_loss.csv
+         policy  total   channel queue_ful  no_route  dead_end       ttl hop_limit link_brok stale_lin   C flown
+         direct  23.41     10.35      6.32      1.41      0.00      0.00      0.00      0.00      5.33    2455 m
+  spacing_large  20.64      9.32      3.70      2.59      0.00      0.00      0.00      0.00      5.02    2679 m
+       midpoint  30.77     10.12     14.84      0.49      0.00      0.00      0.00      0.00      5.31    2285 m
+  wrote out/2c_viz_test_r1_spacing_large/L513_direct.gif
+  wrote out/2c_viz_test_r1_spacing_large/L513_spacing_large.gif
+  wrote out/2c_viz_test_r1_spacing_large/L513_midpoint.gif
+  wrote out/2c_viz_test_r1_spacing_large/L513_snapshots.png
+  wrote out/2c_viz_test_r1_spacing_large/L513_c_distance.png
