@@ -1728,3 +1728,634 @@ Running 120 runs: 8 scenarios x 3 policies x 5 seeds ...
   spacing_small update 328  train  16.32%  reward +0.6544  spacing -0.00230  std 0.064   39.7s
   spacing_small update 329  train  15.75%  reward +0.6669  spacing -0.00210  std 0.064   45.5s
   spacing_small update 330  train  15.70%  reward +0.6657  spacing -0.00225  std 0.064   47.9s
+  spacing_small update 330  EVALUATION  16.25%
+  wrote out/2c_r1_curve_spacing_small.csv
+  wrote out/2c_r1_log_spacing_small.csv
+  spacing_small update 331  train  15.18%  reward +0.6762  spacing -0.00227  std 0.064   47.6s
+  spacing_small update 332  train  15.73%  reward +0.6656  spacing -0.00221  std 0.064   68.1s
+  spacing_small update 333  train  15.97%  reward +0.6628  spacing -0.00231  std 0.064   60.2s
+  spacing_small update 334  train  15.09%  reward +0.6815  spacing -0.00218  std 0.064   64.5s
+  spacing_small update 335  train  15.25%  reward +0.6751  spacing -0.00204  std 0.064   63.3s
+  spacing_small update 336  train  15.85%  reward +0.6645  spacing -0.00211  std 0.064   57.1s
+  spacing_small update 337  train  15.32%  reward +0.6751  spacing -0.00215  std 0.064   46.6s
+  spacing_small update 338  train  15.37%  reward +0.6733  spacing -0.00232  std 0.064   58.3s
+  spacing_small update 339  train  14.88%  reward +0.6840  spacing -0.00215  std 0.064   60.2s
+  spacing_small update 340  train  16.06%  reward +0.6609  spacing -0.00205  std 0.064   53.9s
+  spacing_small update 340  EVALUATION  16.25%
+  wrote out/2c_r1_curve_spacing_small.csv
+  wrote out/2c_r1_log_spacing_small.csv
+  spacing_small update 341  train  15.50%  reward +0.6685  spacing -0.00214  std 0.064   60.5s
+  spacing_small update 342  train  15.52%  reward +0.6724  spacing -0.00211  std 0.064   56.4s
+  spacing_small update 343  train  15.37%  reward +0.6717  spacing -0.00186  std 0.064   58.4s
+  spacing_small update 344  train  15.97%  reward +0.6624  spacing -0.00197  std 0.063   57.7s
+  spacing_small update 345  train  15.28%  reward +0.6772  spacing -0.00206  std 0.063   57.3s
+  spacing_small update 346  train  15.61%  reward +0.6689  spacing -0.00222  std 0.063   57.7s
+  spacing_small update 347  train  16.00%  reward +0.6618  spacing -0.00198  std 0.063   57.2s
+  spacing_small update 348  train  15.62%  reward +0.6671  spacing -0.00203  std 0.063   58.1s
+  spacing_small update 349  train  15.60%  reward +0.6699  spacing -0.00206  std 0.064   57.5s
+  spacing_small update 350  train  15.82%  reward +0.6621  spacing -0.00196  std 0.064   56.6s
+  spacing_small update 350  EVALUATION  16.60%
+  wrote out/2c_r1_curve_spacing_small.csv
+  wrote out/2c_r1_log_spacing_small.csv
+  checkpoint out/checkpoints/2c_round1/spacing_small/ckpt_0350.pt
+  spacing_small update 351  train  15.21%  reward +0.6754  spacing -0.00217  std 0.063   56.9s
+  spacing_small update 352  train  15.49%  reward +0.6701  spacing -0.00209  std 0.063   54.1s
+  spacing_small update 353  train  15.86%  reward +0.6627  spacing -0.00197  std 0.063   44.4s
+  spacing_small update 354  train  15.25%  reward +0.6759  spacing -0.00210  std 0.063   45.0s
+  spacing_small update 355  train  16.02%  reward +0.6612  spacing -0.00203  std 0.063   58.6s
+  spacing_small update 356  train  16.10%  reward +0.6612  spacing -0.00186  std 0.063   57.9s
+  spacing_small update 357  train  15.65%  reward +0.6675  spacing -0.00213  std 0.063   56.5s
+  spacing_small update 358  train  15.76%  reward +0.6661  spacing -0.00207  std 0.063   55.2s
+  spacing_small update 359  train  15.95%  reward +0.6632  spacing -0.00193  std 0.063   57.1s
+  spacing_small update 360  train  15.43%  reward +0.6704  spacing -0.00197  std 0.063   53.8s
+  spacing_small update 360  EVALUATION  16.19%
+  wrote out/2c_r1_curve_spacing_small.csv
+  wrote out/2c_r1_log_spacing_small.csv
+  spacing_small update 361  train  15.83%  reward +0.6616  spacing -0.00202  std 0.063   53.1s
+  spacing_small update 362  train  15.67%  reward +0.6691  spacing -0.00216  std 0.063   56.8s
+  spacing_small update 363  train  16.23%  reward +0.6558  spacing -0.00200  std 0.063   55.3s
+  spacing_small update 364  train  15.09%  reward +0.6777  spacing -0.00193  std 0.062   54.9s
+  spacing_small update 365  train  15.12%  reward +0.6784  spacing -0.00211  std 0.062   55.6s
+  spacing_small update 366  train  15.19%  reward +0.6778  spacing -0.00206  std 0.062   53.7s
+  spacing_small update 367  train  15.31%  reward +0.6761  spacing -0.00193  std 0.062   54.5s
+  spacing_small update 368  train  16.48%  reward +0.6501  spacing -0.00187  std 0.062   54.9s
+  spacing_small update 369  train  15.72%  reward +0.6684  spacing -0.00198  std 0.062   55.5s
+  spacing_small update 370  train  15.33%  reward +0.6752  spacing -0.00199  std 0.062   54.8s
+  spacing_small update 370  EVALUATION  16.78%
+  wrote out/2c_r1_curve_spacing_small.csv
+  wrote out/2c_r1_log_spacing_small.csv
+  spacing_small update 371  train  15.65%  reward +0.6667  spacing -0.00209  std 0.062   54.5s
+  spacing_small update 372  train  16.11%  reward +0.6604  spacing -0.00183  std 0.062   53.8s
+  spacing_small update 373  train  15.57%  reward +0.6687  spacing -0.00200  std 0.062   54.9s
+  spacing_small update 374  train  15.18%  reward +0.6753  spacing -0.00198  std 0.062   54.5s
+  spacing_small update 375  train  15.44%  reward +0.6732  spacing -0.00182  std 0.062   53.0s
+  checkpoint out/checkpoints/2c_round1/spacing_small/ckpt_0375.pt
+  spacing_small update 376  train  15.36%  reward +0.6733  spacing -0.00192  std 0.062   52.6s
+  spacing_small update 377  train  15.18%  reward +0.6795  spacing -0.00205  std 0.062   53.4s
+  spacing_small update 378  train  15.29%  reward +0.6750  spacing -0.00209  std 0.062   55.5s
+  spacing_small update 379  train  15.47%  reward +0.6698  spacing -0.00231  std 0.062   54.4s
+  spacing_small update 380  train  15.82%  reward +0.6670  spacing -0.00212  std 0.062   53.7s
+  spacing_small update 380  EVALUATION  16.54%
+  wrote out/2c_r1_curve_spacing_small.csv
+  wrote out/2c_r1_log_spacing_small.csv
+  spacing_small update 381  train  15.88%  reward +0.6625  spacing -0.00221  std 0.062   56.8s
+  spacing_small update 382  train  15.52%  reward +0.6719  spacing -0.00218  std 0.061   55.0s
+  spacing_small update 383  train  15.37%  reward +0.6718  spacing -0.00210  std 0.061   54.5s
+  spacing_small update 384  train  15.30%  reward +0.6734  spacing -0.00197  std 0.061   53.3s
+  spacing_small update 385  train  15.63%  reward +0.6683  spacing -0.00194  std 0.061   53.9s
+  spacing_small update 386  train  15.39%  reward +0.6743  spacing -0.00193  std 0.061   54.0s
+  spacing_small update 387  train  15.52%  reward +0.6699  spacing -0.00214  std 0.061   54.4s
+  spacing_small update 388  train  14.94%  reward +0.6829  spacing -0.00200  std 0.061   52.8s
+  spacing_small update 389  train  15.46%  reward +0.6703  spacing -0.00204  std 0.061   53.9s
+  spacing_small update 390  train  15.80%  reward +0.6660  spacing -0.00212  std 0.061   54.5s
+  spacing_small update 390  EVALUATION  15.96%  <- best, saved
+  wrote out/2c_r1_curve_spacing_small.csv
+  wrote out/2c_r1_log_spacing_small.csv
+  spacing_small update 391  train  15.27%  reward +0.6748  spacing -0.00200  std 0.061   54.9s
+  spacing_small update 392  train  15.03%  reward +0.6813  spacing -0.00202  std 0.061   53.2s
+  spacing_small update 393  train  15.50%  reward +0.6702  spacing -0.00221  std 0.061   53.5s
+  spacing_small update 394  train  16.14%  reward +0.6585  spacing -0.00198  std 0.061   54.3s
+  spacing_small update 395  train  15.22%  reward +0.6739  spacing -0.00190  std 0.061   54.5s
+  spacing_small update 396  train  15.74%  reward +0.6664  spacing -0.00216  std 0.061   55.6s
+  spacing_small update 397  train  15.94%  reward +0.6648  spacing -0.00201  std 0.061   55.4s
+  spacing_small update 398  train  15.20%  reward +0.6770  spacing -0.00191  std 0.061   53.6s
+  spacing_small update 399  train  15.68%  reward +0.6674  spacing -0.00211  std 0.061   54.8s
+  spacing_small update 400  train  15.63%  reward +0.6691  spacing -0.00206  std 0.061   52.4s
+  spacing_small update 400  EVALUATION  16.21%
+  wrote out/2c_r1_curve_spacing_small.csv
+  wrote out/2c_r1_log_spacing_small.csv
+  checkpoint out/checkpoints/2c_round1/spacing_small/ckpt_0400.pt
+  spacing_small: 400 updates, best 15.96% at update 390, 5.09 h
+  wrote out/2c_r1_curve_spacing_small.csv
+  wrote out/2c_r1_log_spacing_small.csv
+  spacing_small: best actor re-validated at 15.9576% (curve best 15.9576%)
+  wrote out/2c_r1_validation.csv
+  /home/abed/miniconda3/bin/python /home/abed/fanet-rl-routing/rl_sim/scripts/edge_cases_2c.py --out-dir out --workers 20 --model out/models/2c/c_actor_r1_spacing_small.pt --out out/2c_edge_r1_spacing_small
+actor: out/models/2c/c_actor_r1_spacing_small.pt
+placement seed 900, run seeds (9900, 9901, 9902, 9903, 9904)
+Running 120 runs: 8 scenarios x 3 policies x 5 seeds ...
+  views agreed in 120 of 120 runs
+  wrote out/2c_edge_r1_spacing_small/edge_runs.csv
+  wrote out/2c_edge_r1_spacing_small/edge_summary.csv
+  wrote out/2c_edge_r1_spacing_small/edge_geometry.csv
+  wrote out/2c_edge_r1_spacing_small/edge_s6_midpoint.csv
+
+  Mean over run seeds (9900, 9901, 9902, 9903, 9904), % of packets created
+  sc   policy  total  channel queue_fu no_route dead_end      ttl hop_limi link_bro stale_li  C flown  minCC worstCC clip%
+   1    hover  88.67     1.02     0.00    85.87     0.00     0.00     0.00     0.00     1.78       0m      -       -     0
+   1 midpoint  17.82    16.71     0.00     0.00     0.00     0.00     0.00     0.00     1.11     323m      -       -     0
+   1   direct  88.53     1.02     0.00    85.47     0.00     0.00     0.00     0.00     2.04    2686m      -       -     0
+
+   2    hover  87.73     1.02     0.00    83.47     0.00     0.00     0.00     0.00     3.24       0m  103.9   103.9   100
+   2 midpoint  27.96    26.18     0.00     0.00     0.00     0.00     0.00     0.00     1.78     389m   23.0    23.0   100
+   2   direct  86.00     1.64     0.00    80.98     0.00     0.00     0.00     0.00     3.38    2778m   23.0    23.0   100
+
+   3    hover  88.53     0.87     0.00    85.71     0.00     0.00     0.00     0.00     1.96       0m  120.0   120.0     0
+   3 midpoint  81.64     2.60     0.00    76.62     0.00     0.00     0.00     0.00     2.42     556m   23.0    23.0     0
+   3   direct  87.98     1.02     0.00    84.47     0.00     0.00     0.00     0.00     2.49    2785m   23.0    23.0     0
+
+   4    hover   0.76     0.76     0.00     0.00     0.00     0.00     0.00     0.00     0.00       0m  103.9   103.9     0
+   4 midpoint   0.76     0.76     0.00     0.00     0.00     0.00     0.00     0.00     0.00     165m   23.0    23.0     0
+   4   direct   0.76     0.76     0.00     0.00     0.00     0.00     0.00     0.00     0.00    2759m   23.0    23.0     0
+
+   5    hover  51.42     1.38     0.00    47.69     0.00     0.00     0.00     0.00     2.36       0m  120.0   120.0     0
+   5 midpoint   8.76     6.76     0.00     0.00     0.00     0.00     0.00     0.00     2.00     834m   23.0    23.0     0
+   5   direct  50.31     1.69     0.00    45.64     0.00     0.00     0.00     0.00     2.98    2660m   23.0    23.0     0
+
+   6    hover  88.67     1.02     0.00    85.87     0.00     0.00     0.00     0.00     1.78       0m      -       -   100
+   6 midpoint  25.20    23.38     0.00     0.58     0.13     0.00     0.00     0.00     1.11     335m      -       -   100
+   6   direct  88.44     1.02     0.00    85.07     0.00     0.00     0.00     0.00     2.36    2821m      -       -   100
+
+   7    hover  20.84    11.51     4.41     0.00     0.00     0.00     0.00     0.12     4.80       0m   29.2    29.2    50
+   7 midpoint  25.76     9.87    10.36     0.00     0.00     0.00     0.00     0.00     5.53    1332m   23.0    23.0    50
+   7   direct  18.71    10.39     1.91     0.00     0.00     0.00     0.00     0.00     6.41    2471m   23.0    23.0    50
+
+   8    hover  87.38     1.60     0.00    82.71     0.00     0.00     0.00     0.00     3.07       0m   52.1    52.1     0
+   8 midpoint  33.33    30.84     0.00     0.00     0.00     0.00     0.00     0.00     2.49     345m   23.0    23.0     0
+   8   direct  44.04    16.22     0.00    21.51     0.00     0.00     0.00     0.00     6.31    2584m   23.0    23.0     0
+
+  Geometry, mean over seeds: C distance from the GS-M segment (m)
+  s1    hover  t=30: 60   t=60: 60   t=95: 60
+  s1 midpoint  t=30: 0   t=60: 0   t=95: 0
+  s1   direct  t=30: 26   t=60: 15   t=95: 29
+  s2    hover  t=30: 60/60/30   t=60: 60/60/30   t=95: 60/60/30
+  s2 midpoint  t=30: 9/5/13   t=60: 7/13/7   t=95: 7/13/7
+  s2   direct  t=30: 11/33/27   t=60: 19/19/17   t=95: 22/28/20
+  s5    hover  t=30: 60/60   t=60: 60/60   t=95: 60/60
+  s5 midpoint  t=30: 8/8   t=60: 10/9   t=95: 18/16
+  s5   direct  t=30: 18/10   t=60: 26/31   t=95: 16/22
+  s6    hover  t=30: 60   t=60: 60   t=95: 60
+  s6 midpoint  t=30: 0   t=60: 0   t=95: 0
+  s6   direct  t=30: 23   t=60: 26   t=95: 26
+
+  Routes on seed 9901 (path; hop lengths in m)
+  s1    hover  t=30: no delivered packet []   t=60: no delivered packet []   t=95: no delivered packet []
+  s1 midpoint  t=30: 0-1-GS [310 290]   t=60: 0-1-GS [310 290]   t=95: 0-1-GS [310 290]
+  s1   direct  t=30: no delivered packet []   t=60: no delivered packet []   t=95: no delivered packet []
+  s2    hover  t=30: no delivered packet []   t=60: no delivered packet []   t=95: no delivered packet []
+  s2 midpoint  t=30: 0-2-GS [342 281]   t=60: 0-2-GS [329 293]   t=95: 0-2-GS [329 293]
+  s2   direct  t=30: no delivered packet []   t=60: no delivered packet []   t=95: no delivered packet []
+  s5    hover  t=30: no delivered packet []   t=60: 0-GS [344.0]   t=95: 0-GS [40.0]
+  s5 midpoint  t=30: 0-2-GS [299 302]   t=60: 0-2-GS [163 197]   t=95: 0-GS [40.0]
+  s5   direct  t=30: no delivered packet []   t=60: 0-1-GS [342 27]   t=95: 0-GS [40.0]
+  s6    hover  t=30: no delivered packet []   t=60: no delivered packet []   t=95: no delivered packet []
+  s6 midpoint  t=30: 0-1-GS [320 302]   t=60: 0-1-GS [320 302]   t=95: 0-1-GS [320 302]
+  s6   direct  t=30: no delivered packet []   t=60: no delivered packet []   t=95: no delivered packet []
+
+  Scenario 6: C distance from the exact GS-M midpoint (m), mean over seeds
+     hover   0s    63  10s   134  20s   228  30s   317  40s   317  60s   317  80s   317  99s   317   | 40-99 s mean 317, max 317
+  midpoint   0s    63  10s    23  20s    24  30s    13  40s     8  60s     8  80s     8  99s     8   | 40-99 s mean 8, max 9
+    direct   0s    63  10s   122  20s   218  30s   294  40s   317  60s   318  80s   319  99s   303   | 40-99 s mean 307, max 340
+  wrote out/2c_r1_summary.csv
+  wrote out/2c_r1_paired.csv
+  wrote out/2c_r1_edge.csv
+
+  Round 1 summary (from out/2c_r1_summary.csv)
+             run      w best@  total  channel queue_fu no_route dead_end      ttl hop_limi link_bro stale_li  C flown  minCC worstCC
+         control  0.000   150  15.92     7.71     2.79     0.56     0.00     0.00     0.00     0.00     4.85    2342m   22.6    21.1
+     spacing_med  0.010   370  15.81     7.61     2.99     0.42     0.00     0.00     0.00     0.00     4.79    2604m   22.6    21.1
+   spacing_small  0.005   390  15.96     7.96     2.50     0.52     0.03     0.00     0.00     0.00     4.95    2558m   22.6    21.1
+
+  Paired against control, 30 layouts, points of total loss
+     spacing_med   -0.11  [-0.58, +0.36]  lower on 18/30
+   spacing_small   +0.04  [-0.41, +0.48]  lower on 14/30
+
+  Edge cases, best actor, total loss % (mean of 5 seeds)
+             run     s1     s2     s3     s4     s5     s6     s7     s8
+         control  88.67  88.04  88.27   0.76  49.96  88.67  17.21  87.11
+     spacing_med  88.13  79.91  84.91   0.76  43.69  88.00  17.52  46.40
+   spacing_small  88.53  86.00  87.98   0.76  50.31  88.44  18.71  44.04
+
+=== spacing_large: w = 0.02, v = 0.0, fresh from the direct model ===
+  spacing_large update   1  train  16.58%  reward +0.6323  spacing -0.01766  std 0.100   56.4s
+  spacing_large update   2  train  16.80%  reward +0.6301  spacing -0.01829  std 0.100   53.1s
+  spacing_large update   3  train  16.64%  reward +0.6329  spacing -0.01827  std 0.100   54.6s
+  spacing_large update   4  train  16.03%  reward +0.6432  spacing -0.01797  std 0.100   52.8s
+  spacing_large update   5  train  16.47%  reward +0.6359  spacing -0.01826  std 0.100   54.1s
+  spacing_large update   6  train  16.45%  reward +0.6372  spacing -0.01733  std 0.100   55.9s
+  spacing_large update   7  train  16.71%  reward +0.6323  spacing -0.01880  std 0.100   52.1s
+  spacing_large update   8  train  15.97%  reward +0.6464  spacing -0.01795  std 0.100   54.1s
+  spacing_large update   9  train  16.53%  reward +0.6351  spacing -0.01773  std 0.100   53.9s
+  spacing_large update  10  train  16.74%  reward +0.6309  spacing -0.01755  std 0.100   54.4s
+  spacing_large update  10  EVALUATION  16.69%  <- best, saved
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update  11  train  16.95%  reward +0.6293  spacing -0.01705  std 0.100   54.5s
+  spacing_large update  12  train  16.39%  reward +0.6390  spacing -0.01772  std 0.100   54.8s
+  spacing_large update  13  train  15.93%  reward +0.6463  spacing -0.01756  std 0.100   55.0s
+  spacing_large update  14  train  16.80%  reward +0.6324  spacing -0.01806  std 0.100   56.0s
+  spacing_large update  15  train  17.09%  reward +0.6236  spacing -0.01667  std 0.100   56.1s
+  spacing_large update  16  train  16.84%  reward +0.6291  spacing -0.01663  std 0.099   54.3s
+  spacing_large update  17  train  16.07%  reward +0.6435  spacing -0.01736  std 0.099   55.0s
+  spacing_large update  18  train  17.07%  reward +0.6266  spacing -0.01546  std 0.099   53.8s
+  spacing_large update  19  train  15.77%  reward +0.6518  spacing -0.01709  std 0.099   57.1s
+  spacing_large update  20  train  16.49%  reward +0.6374  spacing -0.01543  std 0.099   53.9s
+  spacing_large update  20  EVALUATION  16.83%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update  21  train  16.63%  reward +0.6350  spacing -0.01556  std 0.098   54.3s
+  spacing_large update  22  train  16.97%  reward +0.6279  spacing -0.01597  std 0.099   57.2s
+  spacing_large update  23  train  16.20%  reward +0.6450  spacing -0.01517  std 0.099   53.9s
+  spacing_large update  24  train  16.93%  reward +0.6319  spacing -0.01501  std 0.098   53.8s
+  spacing_large update  25  train  16.45%  reward +0.6394  spacing -0.01571  std 0.098   54.2s
+  checkpoint out/checkpoints/2c_round1/spacing_large/ckpt_0025.pt
+  spacing_large update  26  train  16.52%  reward +0.6368  spacing -0.01553  std 0.098   56.3s
+  spacing_large update  27  train  16.28%  reward +0.6407  spacing -0.01632  std 0.098   54.0s
+  spacing_large update  28  train  16.31%  reward +0.6437  spacing -0.01502  std 0.098   56.1s
+  spacing_large update  29  train  17.05%  reward +0.6260  spacing -0.01504  std 0.098   54.0s
+  spacing_large update  30  train  16.24%  reward +0.6459  spacing -0.01534  std 0.098   56.2s
+  spacing_large update  30  EVALUATION  16.86%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update  31  train  16.56%  reward +0.6393  spacing -0.01453  std 0.098   53.9s
+  spacing_large update  32  train  16.04%  reward +0.6482  spacing -0.01481  std 0.098   57.3s
+  spacing_large update  33  train  16.26%  reward +0.6446  spacing -0.01359  std 0.098   54.0s
+  spacing_large update  34  train  16.78%  reward +0.6328  spacing -0.01411  std 0.098   54.7s
+  spacing_large update  35  train  15.74%  reward +0.6538  spacing -0.01443  std 0.098   54.0s
+  spacing_large update  36  train  15.96%  reward +0.6511  spacing -0.01371  std 0.097   68.2s
+  spacing_large update  37  train  16.50%  reward +0.6404  spacing -0.01365  std 0.097   73.5s
+  spacing_large update  38  train  16.40%  reward +0.6440  spacing -0.01238  std 0.097   64.2s
+  spacing_large update  39  train  16.18%  reward +0.6456  spacing -0.01336  std 0.097   60.0s
+  spacing_large update  40  train  16.18%  reward +0.6448  spacing -0.01372  std 0.097   64.9s
+  spacing_large update  40  EVALUATION  16.83%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update  41  train  16.74%  reward +0.6364  spacing -0.01243  std 0.097   59.7s
+  spacing_large update  42  train  16.80%  reward +0.6358  spacing -0.01235  std 0.097   58.5s
+  spacing_large update  43  train  16.72%  reward +0.6378  spacing -0.01172  std 0.097   58.8s
+  spacing_large update  44  train  16.46%  reward +0.6429  spacing -0.01318  std 0.097   59.5s
+  spacing_large update  45  train  16.59%  reward +0.6403  spacing -0.01216  std 0.097   57.3s
+  spacing_large update  46  train  16.20%  reward +0.6453  spacing -0.01240  std 0.097   57.4s
+  spacing_large update  47  train  16.28%  reward +0.6453  spacing -0.01121  std 0.097   56.1s
+  spacing_large update  48  train  17.41%  reward +0.6226  spacing -0.01184  std 0.097   58.0s
+  spacing_large update  49  train  16.22%  reward +0.6483  spacing -0.01126  std 0.097   55.4s
+  spacing_large update  50  train  16.59%  reward +0.6381  spacing -0.01141  std 0.097   56.9s
+  spacing_large update  50  EVALUATION  16.25%  <- best, saved
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  checkpoint out/checkpoints/2c_round1/spacing_large/ckpt_0050.pt
+  spacing_large update  51  train  16.62%  reward +0.6384  spacing -0.01115  std 0.096   55.6s
+  spacing_large update  52  train  16.81%  reward +0.6357  spacing -0.01091  std 0.096   61.9s
+  spacing_large update  53  train  16.93%  reward +0.6343  spacing -0.01111  std 0.096   56.8s
+  spacing_large update  54  train  16.36%  reward +0.6454  spacing -0.00991  std 0.096   59.6s
+  spacing_large update  55  train  16.74%  reward +0.6390  spacing -0.00982  std 0.096   57.1s
+  spacing_large update  56  train  16.28%  reward +0.6458  spacing -0.00955  std 0.095   56.1s
+  spacing_large update  57  train  16.52%  reward +0.6419  spacing -0.01014  std 0.095   55.9s
+  spacing_large update  58  train  16.51%  reward +0.6416  spacing -0.00999  std 0.095   58.1s
+  spacing_large update  59  train  16.51%  reward +0.6429  spacing -0.00935  std 0.095   56.3s
+  spacing_large update  60  train  16.28%  reward +0.6491  spacing -0.00882  std 0.095   58.4s
+  spacing_large update  60  EVALUATION  16.82%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update  61  train  17.04%  reward +0.6330  spacing -0.00935  std 0.094   55.6s
+  spacing_large update  62  train  16.50%  reward +0.6437  spacing -0.01030  std 0.094   54.3s
+  spacing_large update  63  train  16.43%  reward +0.6467  spacing -0.00924  std 0.094   56.6s
+  spacing_large update  64  train  16.45%  reward +0.6447  spacing -0.00941  std 0.094   53.7s
+  spacing_large update  65  train  16.12%  reward +0.6511  spacing -0.00899  std 0.094   57.6s
+  spacing_large update  66  train  16.47%  reward +0.6430  spacing -0.00914  std 0.094   55.6s
+  spacing_large update  67  train  16.59%  reward +0.6421  spacing -0.00870  std 0.094   53.7s
+  spacing_large update  68  train  16.75%  reward +0.6402  spacing -0.00833  std 0.094   56.1s
+  spacing_large update  69  train  15.61%  reward +0.6628  spacing -0.00860  std 0.094   55.4s
+  spacing_large update  70  train  15.89%  reward +0.6575  spacing -0.00837  std 0.094   57.9s
+  spacing_large update  70  EVALUATION  16.96%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update  71  train  15.53%  reward +0.6650  spacing -0.00822  std 0.094   55.4s
+  spacing_large update  72  train  17.13%  reward +0.6309  spacing -0.00844  std 0.093   56.6s
+  spacing_large update  73  train  15.56%  reward +0.6628  spacing -0.00864  std 0.093   49.8s
+  spacing_large update  74  train  16.82%  reward +0.6387  spacing -0.00787  std 0.093   53.2s
+  spacing_large update  75  train  16.41%  reward +0.6444  spacing -0.00791  std 0.093   54.6s
+  checkpoint out/checkpoints/2c_round1/spacing_large/ckpt_0075.pt
+  spacing_large update  76  train  16.52%  reward +0.6444  spacing -0.00859  std 0.092   57.5s
+  spacing_large update  77  train  16.32%  reward +0.6480  spacing -0.00879  std 0.093   56.0s
+  spacing_large update  78  train  16.35%  reward +0.6454  spacing -0.00809  std 0.092   60.5s
+  spacing_large update  79  train  16.32%  reward +0.6482  spacing -0.00841  std 0.092   57.1s
+  spacing_large update  80  train  16.01%  reward +0.6556  spacing -0.00814  std 0.092   56.9s
+  spacing_large update  80  EVALUATION  16.65%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update  81  train  16.08%  reward +0.6542  spacing -0.00872  std 0.091   60.5s
+  spacing_large update  82  train  17.00%  reward +0.6356  spacing -0.00760  std 0.091   56.3s
+  spacing_large update  83  train  16.33%  reward +0.6484  spacing -0.00772  std 0.091   56.1s
+  spacing_large update  84  train  17.10%  reward +0.6352  spacing -0.00717  std 0.091   56.4s
+  spacing_large update  85  train  16.33%  reward +0.6478  spacing -0.00767  std 0.090   54.8s
+  spacing_large update  86  train  16.53%  reward +0.6467  spacing -0.00722  std 0.090   55.9s
+  spacing_large update  87  train  16.44%  reward +0.6446  spacing -0.00708  std 0.091   55.4s
+  spacing_large update  88  train  16.51%  reward +0.6450  spacing -0.00757  std 0.090   57.9s
+  spacing_large update  89  train  15.10%  reward +0.6732  spacing -0.00704  std 0.090   58.2s
+  spacing_large update  90  train  16.71%  reward +0.6416  spacing -0.00749  std 0.090   55.9s
+  spacing_large update  90  EVALUATION  16.42%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update  91  train  16.39%  reward +0.6479  spacing -0.00672  std 0.090   57.2s
+  spacing_large update  92  train  16.68%  reward +0.6441  spacing -0.00687  std 0.089   55.4s
+  spacing_large update  93  train  15.89%  reward +0.6564  spacing -0.00704  std 0.089   56.2s
+  spacing_large update  94  train  16.81%  reward +0.6410  spacing -0.00629  std 0.089   55.4s
+  spacing_large update  95  train  16.56%  reward +0.6460  spacing -0.00719  std 0.089   53.6s
+  spacing_large update  96  train  16.17%  reward +0.6546  spacing -0.00703  std 0.089   56.3s
+  spacing_large update  97  train  15.85%  reward +0.6598  spacing -0.00713  std 0.088   54.8s
+  spacing_large update  98  train  15.96%  reward +0.6573  spacing -0.00693  std 0.088   54.4s
+  spacing_large update  99  train  16.71%  reward +0.6433  spacing -0.00713  std 0.088   58.3s
+  spacing_large update 100  train  15.19%  reward +0.6717  spacing -0.00728  std 0.088   59.6s
+  spacing_large update 100  EVALUATION  16.75%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  checkpoint out/checkpoints/2c_round1/spacing_large/ckpt_0100.pt
+  spacing_large update 101  train  16.20%  reward +0.6529  spacing -0.00717  std 0.088   56.0s
+  spacing_large update 102  train  16.04%  reward +0.6545  spacing -0.00758  std 0.087   54.7s
+  spacing_large update 103  train  16.04%  reward +0.6564  spacing -0.00735  std 0.087   55.1s
+  spacing_large update 104  train  16.03%  reward +0.6546  spacing -0.00722  std 0.087   55.9s
+  spacing_large update 105  train  15.33%  reward +0.6700  spacing -0.00695  std 0.087   55.8s
+  spacing_large update 106  train  15.88%  reward +0.6585  spacing -0.00626  std 0.087   53.7s
+  spacing_large update 107  train  15.80%  reward +0.6605  spacing -0.00678  std 0.087   54.9s
+  spacing_large update 108  train  16.27%  reward +0.6502  spacing -0.00661  std 0.087   53.8s
+  spacing_large update 109  train  16.59%  reward +0.6436  spacing -0.00678  std 0.086   53.9s
+  spacing_large update 110  train  16.21%  reward +0.6531  spacing -0.00678  std 0.086   56.5s
+  spacing_large update 110  EVALUATION  16.66%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 111  train  16.63%  reward +0.6449  spacing -0.00660  std 0.086   52.6s
+  spacing_large update 112  train  15.91%  reward +0.6586  spacing -0.00641  std 0.086   56.3s
+  spacing_large update 113  train  16.68%  reward +0.6425  spacing -0.00633  std 0.086   55.1s
+  spacing_large update 114  train  16.84%  reward +0.6401  spacing -0.00638  std 0.086   53.7s
+  spacing_large update 115  train  15.80%  reward +0.6605  spacing -0.00676  std 0.086   57.0s
+  spacing_large update 116  train  16.15%  reward +0.6525  spacing -0.00643  std 0.086   56.3s
+  spacing_large update 117  train  16.13%  reward +0.6546  spacing -0.00658  std 0.085   53.9s
+  spacing_large update 118  train  16.18%  reward +0.6527  spacing -0.00680  std 0.085   56.8s
+  spacing_large update 119  train  16.20%  reward +0.6545  spacing -0.00570  std 0.085   55.8s
+  spacing_large update 120  train  16.06%  reward +0.6549  spacing -0.00654  std 0.085   59.3s
+  spacing_large update 120  EVALUATION  16.64%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 121  train  16.38%  reward +0.6483  spacing -0.00600  std 0.084   55.5s
+  spacing_large update 122  train  16.41%  reward +0.6501  spacing -0.00577  std 0.084   58.3s
+  spacing_large update 123  train  15.97%  reward +0.6555  spacing -0.00596  std 0.084   55.2s
+  spacing_large update 124  train  16.12%  reward +0.6557  spacing -0.00626  std 0.084   58.0s
+  spacing_large update 125  train  16.50%  reward +0.6453  spacing -0.00702  std 0.084   57.5s
+  checkpoint out/checkpoints/2c_round1/spacing_large/ckpt_0125.pt
+  spacing_large update 126  train  16.38%  reward +0.6502  spacing -0.00633  std 0.084   55.0s
+  spacing_large update 127  train  16.71%  reward +0.6424  spacing -0.00597  std 0.084   55.8s
+  spacing_large update 128  train  16.15%  reward +0.6542  spacing -0.00541  std 0.083   58.3s
+  spacing_large update 129  train  16.01%  reward +0.6557  spacing -0.00592  std 0.083   54.6s
+  spacing_large update 130  train  16.17%  reward +0.6514  spacing -0.00578  std 0.083   54.9s
+  spacing_large update 130  EVALUATION  16.75%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 131  train  16.75%  reward +0.6437  spacing -0.00579  std 0.083   56.0s
+  spacing_large update 132  train  16.28%  reward +0.6521  spacing -0.00553  std 0.083   53.8s
+  spacing_large update 133  train  16.60%  reward +0.6444  spacing -0.00540  std 0.083   52.4s
+  spacing_large update 134  train  15.93%  reward +0.6593  spacing -0.00528  std 0.083   55.5s
+  spacing_large update 135  train  15.39%  reward +0.6688  spacing -0.00576  std 0.083   53.7s
+  spacing_large update 136  train  16.35%  reward +0.6502  spacing -0.00556  std 0.083   58.4s
+  spacing_large update 137  train  16.37%  reward +0.6502  spacing -0.00553  std 0.082   55.0s
+  spacing_large update 138  train  15.98%  reward +0.6564  spacing -0.00585  std 0.082   56.9s
+  spacing_large update 139  train  16.22%  reward +0.6528  spacing -0.00572  std 0.082   58.0s
+  spacing_large update 140  train  16.10%  reward +0.6555  spacing -0.00535  std 0.082   54.3s
+  spacing_large update 140  EVALUATION  16.46%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 141  train  15.75%  reward +0.6625  spacing -0.00575  std 0.082   53.3s
+  spacing_large update 142  train  16.27%  reward +0.6520  spacing -0.00586  std 0.081   55.9s
+  spacing_large update 143  train  16.17%  reward +0.6535  spacing -0.00576  std 0.081   55.0s
+  spacing_large update 144  train  15.88%  reward +0.6606  spacing -0.00514  std 0.081   55.0s
+  spacing_large update 145  train  16.62%  reward +0.6430  spacing -0.00568  std 0.081   51.6s
+  spacing_large update 146  train  16.45%  reward +0.6475  spacing -0.00577  std 0.080   55.2s
+  spacing_large update 147  train  16.51%  reward +0.6473  spacing -0.00525  std 0.081   53.3s
+  spacing_large update 148  train  16.46%  reward +0.6487  spacing -0.00499  std 0.080   57.6s
+  spacing_large update 149  train  15.83%  reward +0.6617  spacing -0.00529  std 0.080   55.2s
+  spacing_large update 150  train  16.06%  reward +0.6562  spacing -0.00568  std 0.080   56.1s
+  spacing_large update 150  EVALUATION  16.83%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  checkpoint out/checkpoints/2c_round1/spacing_large/ckpt_0150.pt
+  spacing_large update 151  train  16.19%  reward +0.6533  spacing -0.00501  std 0.080   56.7s
+  spacing_large update 152  train  16.44%  reward +0.6483  spacing -0.00540  std 0.080   55.4s
+  spacing_large update 153  train  16.23%  reward +0.6525  spacing -0.00553  std 0.080   55.1s
+  spacing_large update 154  train  15.65%  reward +0.6635  spacing -0.00555  std 0.080   59.7s
+  spacing_large update 155  train  16.40%  reward +0.6485  spacing -0.00494  std 0.080   55.3s
+  spacing_large update 156  train  15.86%  reward +0.6604  spacing -0.00530  std 0.080   56.6s
+  spacing_large update 157  train  16.38%  reward +0.6509  spacing -0.00513  std 0.080   57.1s
+  spacing_large update 158  train  16.70%  reward +0.6420  spacing -0.00552  std 0.079   53.8s
+  spacing_large update 159  train  16.56%  reward +0.6455  spacing -0.00546  std 0.079   55.4s
+  spacing_large update 160  train  16.31%  reward +0.6533  spacing -0.00515  std 0.079   55.2s
+  spacing_large update 160  EVALUATION  16.78%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 161  train  15.76%  reward +0.6606  spacing -0.00557  std 0.079   58.7s
+  spacing_large update 162  train  16.00%  reward +0.6578  spacing -0.00506  std 0.079   56.7s
+  spacing_large update 163  train  14.97%  reward +0.6771  spacing -0.00545  std 0.079   56.5s
+  spacing_large update 164  train  16.25%  reward +0.6527  spacing -0.00515  std 0.079   56.8s
+  spacing_large update 165  train  15.47%  reward +0.6686  spacing -0.00492  std 0.079   56.1s
+  spacing_large update 166  train  16.50%  reward +0.6475  spacing -0.00544  std 0.079   55.7s
+  spacing_large update 167  train  15.52%  reward +0.6656  spacing -0.00503  std 0.078   54.6s
+  spacing_large update 168  train  15.67%  reward +0.6641  spacing -0.00510  std 0.078   52.5s
+  spacing_large update 169  train  15.56%  reward +0.6662  spacing -0.00552  std 0.078   54.3s
+  spacing_large update 170  train  15.80%  reward +0.6620  spacing -0.00497  std 0.078   55.0s
+  spacing_large update 170  EVALUATION  16.41%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 171  train  16.07%  reward +0.6566  spacing -0.00461  std 0.078   53.7s
+  spacing_large update 172  train  15.25%  reward +0.6726  spacing -0.00526  std 0.078   55.6s
+  spacing_large update 173  train  16.41%  reward +0.6498  spacing -0.00499  std 0.078   54.0s
+  spacing_large update 174  train  16.07%  reward +0.6577  spacing -0.00482  std 0.077   53.9s
+  spacing_large update 175  train  15.44%  reward +0.6706  spacing -0.00492  std 0.077   54.3s
+  checkpoint out/checkpoints/2c_round1/spacing_large/ckpt_0175.pt
+  spacing_large update 176  train  15.65%  reward +0.6641  spacing -0.00489  std 0.077   53.5s
+  spacing_large update 177  train  15.71%  reward +0.6630  spacing -0.00498  std 0.077   56.0s
+  spacing_large update 178  train  15.88%  reward +0.6593  spacing -0.00518  std 0.077   54.0s
+  spacing_large update 179  train  16.07%  reward +0.6566  spacing -0.00495  std 0.077   55.3s
+  spacing_large update 180  train  16.76%  reward +0.6410  spacing -0.00495  std 0.076   54.7s
+  spacing_large update 180  EVALUATION  16.48%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 181  train  15.99%  reward +0.6585  spacing -0.00442  std 0.076   55.9s
+  spacing_large update 182  train  16.17%  reward +0.6557  spacing -0.00532  std 0.076   57.9s
+  spacing_large update 183  train  16.05%  reward +0.6582  spacing -0.00521  std 0.076   55.6s
+  spacing_large update 184  train  15.87%  reward +0.6614  spacing -0.00506  std 0.076   56.3s
+  spacing_large update 185  train  15.35%  reward +0.6712  spacing -0.00520  std 0.076   55.7s
+  spacing_large update 186  train  16.47%  reward +0.6487  spacing -0.00502  std 0.076   54.1s
+  spacing_large update 187  train  16.44%  reward +0.6490  spacing -0.00531  std 0.076   58.9s
+  spacing_large update 188  train  15.99%  reward +0.6585  spacing -0.00516  std 0.075   60.2s
+  spacing_large update 189  train  16.59%  reward +0.6468  spacing -0.00500  std 0.075   61.0s
+  spacing_large update 190  train  15.60%  reward +0.6658  spacing -0.00487  std 0.075   59.5s
+  spacing_large update 190  EVALUATION  16.75%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 191  train  15.75%  reward +0.6618  spacing -0.00534  std 0.075   57.4s
+  spacing_large update 192  train  16.23%  reward +0.6543  spacing -0.00510  std 0.075   54.6s
+  spacing_large update 193  train  15.46%  reward +0.6685  spacing -0.00480  std 0.075   57.3s
+  spacing_large update 194  train  16.18%  reward +0.6526  spacing -0.00483  std 0.075   58.7s
+  spacing_large update 195  train  15.79%  reward +0.6628  spacing -0.00495  std 0.074   57.1s
+  spacing_large update 196  train  16.36%  reward +0.6524  spacing -0.00475  std 0.074   59.0s
+  spacing_large update 197  train  16.14%  reward +0.6539  spacing -0.00485  std 0.074   57.0s
+  spacing_large update 198  train  15.78%  reward +0.6642  spacing -0.00471  std 0.074   54.7s
+  spacing_large update 199  train  15.95%  reward +0.6591  spacing -0.00457  std 0.074   55.8s
+  spacing_large update 200  train  16.15%  reward +0.6532  spacing -0.00442  std 0.074   55.9s
+  spacing_large update 200  EVALUATION  16.10%  <- best, saved
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  checkpoint out/checkpoints/2c_round1/spacing_large/ckpt_0200.pt
+  spacing_large update 201  train  16.16%  reward +0.6542  spacing -0.00498  std 0.073   58.2s
+  spacing_large update 202  train  15.13%  reward +0.6753  spacing -0.00464  std 0.073   55.3s
+  spacing_large update 203  train  16.04%  reward +0.6564  spacing -0.00454  std 0.073   55.9s
+  spacing_large update 204  train  15.65%  reward +0.6641  spacing -0.00458  std 0.073   54.7s
+  spacing_large update 205  train  15.50%  reward +0.6681  spacing -0.00481  std 0.073   56.2s
+  spacing_large update 206  train  16.19%  reward +0.6557  spacing -0.00467  std 0.073   55.6s
+  spacing_large update 207  train  15.78%  reward +0.6627  spacing -0.00462  std 0.073   56.6s
+  spacing_large update 208  train  15.61%  reward +0.6662  spacing -0.00493  std 0.072   59.0s
+  spacing_large update 209  train  16.15%  reward +0.6567  spacing -0.00469  std 0.073   85.9s
+  spacing_large update 210  train  15.53%  reward +0.6672  spacing -0.00484  std 0.072   65.4s
+  spacing_large update 210  EVALUATION  16.30%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 211  train  15.65%  reward +0.6648  spacing -0.00489  std 0.073   58.2s
+  spacing_large update 212  train  15.33%  reward +0.6710  spacing -0.00449  std 0.072   59.9s
+  spacing_large update 213  train  14.91%  reward +0.6801  spacing -0.00499  std 0.072   61.0s
+  spacing_large update 214  train  15.21%  reward +0.6737  spacing -0.00511  std 0.072   59.9s
+  spacing_large update 215  train  16.04%  reward +0.6582  spacing -0.00449  std 0.072   67.3s
+  spacing_large update 216  train  15.45%  reward +0.6693  spacing -0.00456  std 0.072   66.6s
+  spacing_large update 217  train  16.04%  reward +0.6580  spacing -0.00459  std 0.072   57.0s
+  spacing_large update 218  train  15.79%  reward +0.6610  spacing -0.00443  std 0.071   47.1s
+  spacing_large update 219  train  15.62%  reward +0.6670  spacing -0.00494  std 0.071   44.8s
+  spacing_large update 220  train  15.69%  reward +0.6647  spacing -0.00456  std 0.071   49.2s
+  spacing_large update 220  EVALUATION  16.48%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 221  train  15.66%  reward +0.6636  spacing -0.00474  std 0.071   60.1s
+  spacing_large update 222  train  15.84%  reward +0.6601  spacing -0.00480  std 0.071   59.5s
+  spacing_large update 223  train  15.60%  reward +0.6671  spacing -0.00431  std 0.071   61.0s
+  spacing_large update 224  train  15.28%  reward +0.6719  spacing -0.00474  std 0.071   64.3s
+  spacing_large update 225  train  15.25%  reward +0.6726  spacing -0.00465  std 0.071   59.5s
+  checkpoint out/checkpoints/2c_round1/spacing_large/ckpt_0225.pt
+  spacing_large update 226  train  15.26%  reward +0.6727  spacing -0.00483  std 0.071   71.6s
+  spacing_large update 227  train  15.75%  reward +0.6632  spacing -0.00481  std 0.071   72.8s
+  spacing_large update 228  train  15.78%  reward +0.6644  spacing -0.00472  std 0.071   63.1s
+  spacing_large update 229  train  15.78%  reward +0.6621  spacing -0.00476  std 0.071   62.3s
+  spacing_large update 230  train  15.71%  reward +0.6628  spacing -0.00438  std 0.070   60.6s
+  spacing_large update 230  EVALUATION  16.49%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 231  train  15.73%  reward +0.6638  spacing -0.00470  std 0.070   63.6s
+  spacing_large update 232  train  15.77%  reward +0.6612  spacing -0.00438  std 0.070   56.2s
+  spacing_large update 233  train  15.43%  reward +0.6699  spacing -0.00419  std 0.070   60.2s
+  spacing_large update 234  train  15.71%  reward +0.6640  spacing -0.00455  std 0.070   57.5s
+  spacing_large update 235  train  14.94%  reward +0.6798  spacing -0.00448  std 0.070   57.6s
+  spacing_large update 236  train  15.53%  reward +0.6682  spacing -0.00456  std 0.070   57.3s
+  spacing_large update 237  train  15.22%  reward +0.6741  spacing -0.00439  std 0.070   58.0s
+  spacing_large update 238  train  15.90%  reward +0.6602  spacing -0.00440  std 0.069   59.8s
+  spacing_large update 239  train  15.40%  reward +0.6719  spacing -0.00417  std 0.069   55.4s
+  spacing_large update 240  train  14.37%  reward +0.6917  spacing -0.00424  std 0.069   59.4s
+  spacing_large update 240  EVALUATION  16.02%  <- best, saved
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 241  train  16.12%  reward +0.6549  spacing -0.00444  std 0.069   56.4s
+  spacing_large update 242  train  15.59%  reward +0.6660  spacing -0.00488  std 0.068   58.0s
+  spacing_large update 243  train  15.70%  reward +0.6656  spacing -0.00445  std 0.068   57.1s
+  spacing_large update 244  train  15.50%  reward +0.6684  spacing -0.00447  std 0.068   58.6s
+  spacing_large update 245  train  14.76%  reward +0.6829  spacing -0.00437  std 0.068   57.9s
+  spacing_large update 246  train  15.39%  reward +0.6709  spacing -0.00441  std 0.068   57.0s
+  spacing_large update 247  train  15.03%  reward +0.6776  spacing -0.00447  std 0.068   56.7s
+  spacing_large update 248  train  15.66%  reward +0.6659  spacing -0.00435  std 0.068   58.2s
+  spacing_large update 249  train  15.61%  reward +0.6663  spacing -0.00471  std 0.068   57.7s
+  spacing_large update 250  train  15.66%  reward +0.6654  spacing -0.00438  std 0.068   56.7s
+  spacing_large update 250  EVALUATION  16.20%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  checkpoint out/checkpoints/2c_round1/spacing_large/ckpt_0250.pt
+  spacing_large update 251  train  15.51%  reward +0.6678  spacing -0.00469  std 0.068   58.0s
+  spacing_large update 252  train  15.24%  reward +0.6737  spacing -0.00470  std 0.067   57.2s
+  spacing_large update 253  train  16.20%  reward +0.6572  spacing -0.00419  std 0.068   61.4s
+  spacing_large update 254  train  15.09%  reward +0.6764  spacing -0.00450  std 0.067   66.0s
+  spacing_large update 255  train  15.35%  reward +0.6732  spacing -0.00423  std 0.067   62.0s
+  spacing_large update 256  train  15.52%  reward +0.6679  spacing -0.00448  std 0.067   59.9s
+  spacing_large update 257  train  15.77%  reward +0.6628  spacing -0.00495  std 0.067   61.2s
+  spacing_large update 258  train  14.81%  reward +0.6807  spacing -0.00462  std 0.067   60.0s
+  spacing_large update 259  train  15.93%  reward +0.6601  spacing -0.00466  std 0.067   60.1s
+  spacing_large update 260  train  15.34%  reward +0.6713  spacing -0.00414  std 0.067   58.7s
+  spacing_large update 260  EVALUATION  16.18%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 261  train  16.13%  reward +0.6548  spacing -0.00450  std 0.068   59.6s
+  spacing_large update 262  train  15.69%  reward +0.6634  spacing -0.00479  std 0.067   60.4s
+  spacing_large update 263  train  15.97%  reward +0.6577  spacing -0.00449  std 0.067   58.8s
+  spacing_large update 264  train  15.18%  reward +0.6737  spacing -0.00441  std 0.068   58.1s
+  spacing_large update 265  train  15.31%  reward +0.6741  spacing -0.00458  std 0.067   57.6s
+  spacing_large update 266  train  15.32%  reward +0.6732  spacing -0.00445  std 0.067   58.8s
+  spacing_large update 267  train  15.14%  reward +0.6755  spacing -0.00410  std 0.067   59.4s
+  spacing_large update 268  train  14.89%  reward +0.6801  spacing -0.00432  std 0.067   58.7s
+  spacing_large update 269  train  15.60%  reward +0.6654  spacing -0.00424  std 0.067   58.6s
+  spacing_large update 270  train  15.23%  reward +0.6749  spacing -0.00409  std 0.067   56.9s
+  spacing_large update 270  EVALUATION  16.20%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 271  train  15.71%  reward +0.6645  spacing -0.00422  std 0.067   58.3s
+  spacing_large update 272  train  15.90%  reward +0.6602  spacing -0.00459  std 0.067   57.9s
+  spacing_large update 273  train  15.21%  reward +0.6745  spacing -0.00433  std 0.067   55.4s
+  spacing_large update 274  train  15.69%  reward +0.6661  spacing -0.00432  std 0.067   60.2s
+  spacing_large update 275  train  15.37%  reward +0.6708  spacing -0.00432  std 0.067   67.1s
+  checkpoint out/checkpoints/2c_round1/spacing_large/ckpt_0275.pt
+  spacing_large update 276  train  14.81%  reward +0.6819  spacing -0.00410  std 0.067   59.9s
+  spacing_large update 277  train  15.89%  reward +0.6625  spacing -0.00421  std 0.067   59.7s
+  spacing_large update 278  train  15.26%  reward +0.6713  spacing -0.00412  std 0.066   58.1s
+  spacing_large update 279  train  15.13%  reward +0.6763  spacing -0.00413  std 0.066   66.5s
+  spacing_large update 280  train  14.93%  reward +0.6824  spacing -0.00418  std 0.066   85.1s
+  spacing_large update 280  EVALUATION  15.96%  <- best, saved
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 281  train  16.30%  reward +0.6520  spacing -0.00438  std 0.066   88.7s
+  spacing_large update 282  train  15.92%  reward +0.6615  spacing -0.00388  std 0.066   76.9s
+  spacing_large update 283  train  15.07%  reward +0.6785  spacing -0.00414  std 0.066   90.4s
+  spacing_large update 284  train  15.23%  reward +0.6749  spacing -0.00429  std 0.066   79.0s
+  spacing_large update 285  train  16.07%  reward +0.6565  spacing -0.00438  std 0.066   59.1s
+  spacing_large update 286  train  15.74%  reward +0.6619  spacing -0.00432  std 0.066   44.4s
+  spacing_large update 287  train  16.03%  reward +0.6569  spacing -0.00421  std 0.066   46.6s
+  spacing_large update 288  train  15.83%  reward +0.6630  spacing -0.00447  std 0.066   47.1s
+  spacing_large update 289  train  15.81%  reward +0.6653  spacing -0.00428  std 0.066   45.1s
+  spacing_large update 290  train  15.72%  reward +0.6645  spacing -0.00432  std 0.065   45.2s
+  spacing_large update 290  EVALUATION  15.79%  <- best, saved
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 291  train  15.43%  reward +0.6663  spacing -0.00470  std 0.065   50.7s
+  spacing_large update 292  train  15.88%  reward +0.6618  spacing -0.00442  std 0.065   43.8s
+  spacing_large update 293  train  15.32%  reward +0.6700  spacing -0.00414  std 0.065   48.6s
+  spacing_large update 294  train  15.56%  reward +0.6666  spacing -0.00468  std 0.065   49.2s
+  spacing_large update 295  train  15.05%  reward +0.6763  spacing -0.00464  std 0.065   47.0s
+  spacing_large update 296  train  15.44%  reward +0.6692  spacing -0.00400  std 0.065   48.5s
+  spacing_large update 297  train  15.23%  reward +0.6718  spacing -0.00450  std 0.065   45.3s
+  spacing_large update 298  train  15.98%  reward +0.6596  spacing -0.00436  std 0.065   44.8s
+  spacing_large update 299  train  15.84%  reward +0.6594  spacing -0.00447  std 0.065   44.9s
+  spacing_large update 300  train  14.89%  reward +0.6802  spacing -0.00415  std 0.065   45.5s
+  spacing_large update 300  EVALUATION  15.90%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  checkpoint out/checkpoints/2c_round1/spacing_large/ckpt_0300.pt
+  spacing_large update 301  train  15.49%  reward +0.6693  spacing -0.00404  std 0.065   45.4s
+  spacing_large update 302  train  15.58%  reward +0.6690  spacing -0.00434  std 0.065   46.2s
+  spacing_large update 303  train  15.34%  reward +0.6718  spacing -0.00460  std 0.065   45.0s
+  spacing_large update 304  train  15.53%  reward +0.6676  spacing -0.00456  std 0.065   44.9s
+  spacing_large update 305  train  15.41%  reward +0.6691  spacing -0.00424  std 0.065   45.5s
+  spacing_large update 306  train  15.76%  reward +0.6641  spacing -0.00413  std 0.065   45.4s
+  spacing_large update 307  train  15.32%  reward +0.6715  spacing -0.00445  std 0.065   45.9s
+  spacing_large update 308  train  15.68%  reward +0.6643  spacing -0.00449  std 0.065   46.7s
+  spacing_large update 309  train  15.17%  reward +0.6764  spacing -0.00439  std 0.065   45.3s
+  spacing_large update 310  train  15.56%  reward +0.6697  spacing -0.00421  std 0.065   44.6s
+  spacing_large update 310  EVALUATION  16.00%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 311  train  15.80%  reward +0.6618  spacing -0.00426  std 0.065   45.4s
+  spacing_large update 312  train  15.71%  reward +0.6641  spacing -0.00462  std 0.064   46.0s
+  spacing_large update 313  train  15.15%  reward +0.6758  spacing -0.00471  std 0.064   44.8s
+  spacing_large update 314  train  15.71%  reward +0.6639  spacing -0.00477  std 0.064   44.6s
+  spacing_large update 315  train  15.65%  reward +0.6643  spacing -0.00476  std 0.064   44.8s
+  spacing_large update 316  train  15.80%  reward +0.6609  spacing -0.00469  std 0.065   43.9s
+  spacing_large update 317  train  15.25%  reward +0.6749  spacing -0.00464  std 0.065   45.8s
+  spacing_large update 318  train  14.95%  reward +0.6797  spacing -0.00478  std 0.065   46.3s
+  spacing_large update 319  train  14.91%  reward +0.6800  spacing -0.00423  std 0.064   46.9s
+  spacing_large update 320  train  15.42%  reward +0.6721  spacing -0.00409  std 0.064   45.8s
+  spacing_large update 320  EVALUATION  15.93%
+  wrote out/2c_r1_curve_spacing_large.csv
+  wrote out/2c_r1_log_spacing_large.csv
+  spacing_large update 321  train  15.35%  reward +0.6739  spacing -0.00427  std 0.064   45.0s
+  spacing_large update 322  train  14.84%  reward +0.6827  spacing -0.00471  std 0.064   43.6s
+  spacing_large update 323  train  14.90%  reward +0.6789  spacing -0.00407  std 0.064   45.7s
+  spacing_large update 324  train  15.44%  reward +0.6708  spacing -0.00469  std 0.064   48.0s
