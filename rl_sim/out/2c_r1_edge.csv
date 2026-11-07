@@ -1,4 +1,4 @@
-# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  window=[50,950) of 1000  |  commit=72de923  |  phase 2c round 1, edge cases (edge_cases_2c.py) on each run's best actor, mean over run seeds 9900-9904
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  window=[50,950) of 1000  |  commit=c121a39  |  phase 2c round 1, edge cases (edge_cases_2c.py) on each run's best actor, mean over run seeds 9900-9904
 run,scenario,total_loss,c_distance_flown_mean
 control,1,88.66666666666667,2774.4
 control,2,88.04444444444445,2641.5999999999995
@@ -24,3 +24,11 @@ spacing_small,5,50.31111111111111,2659.8
 spacing_small,6,88.44444444444444,2820.6
 spacing_small,7,18.711111111111112,2470.971428571428
 spacing_small,8,44.044444444444444,2584.371428571428
+spacing_large,1,88.66666666666667,2385.0000000000005
+spacing_large,2,82.53333333333333,2610.8000000000006
+spacing_large,3,87.55555555555556,2643.3
+spacing_large,4,0.7555555555555555,2669.4
+spacing_large,5,49.955555555555556,2421.0000000000005
+spacing_large,6,88.66666666666667,2723.4000000000005
+spacing_large,7,17.785185185185185,2670.4285714285716
+spacing_large,8,34.8,2662.5428571428574
