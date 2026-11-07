@@ -1,0 +1,18 @@
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  window=[50,950) of 1000  |  commit=b64fb64  |  phase 2c round 1, edge cases (edge_cases_2c.py) on each run's best actor, mean over run seeds 9900-9904
+run,scenario,total_loss,c_distance_flown_mean
+control,1,88.66666666666667,2774.4
+control,2,88.04444444444445,2641.5999999999995
+control,3,88.26666666666667,2650.5
+control,4,0.7555555555555555,2735.9999999999995
+control,5,49.955555555555556,2580.3
+control,6,88.66666666666667,2844.0
+control,7,17.209876543209877,2222.657142857143
+control,8,87.11111111111111,2095.8857142857146
+spacing_med,1,88.13333333333334,1755.6
+spacing_med,2,79.91111111111111,2776.8
+spacing_med,3,84.91111111111113,2813.3999999999987
+spacing_med,4,0.7555555555555555,2785.3999999999996
+spacing_med,5,43.68888888888889,2654.7
+spacing_med,6,88.0,1737.6000000000004
+spacing_med,7,17.523456790123458,2515.9714285714285
+spacing_med,8,46.4,2651.0571428571425

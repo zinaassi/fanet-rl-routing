@@ -1,0 +1,4 @@
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  window=[50,950) of 1000  |  commit=b64fb64  |  phase 2c round 1, best actor per run on validation 301-330, D = 650, from the saved per-layout file
+run,spacing_w,best_update,curve_best,total_loss,channel,queue_full,no_route,dead_end,ttl,hop_limit,link_broken,stale_link,c_distance_flown_mean,min_c_to_c_m,min_c_to_c_m_worst
+control,0.0,150,15.921810699588477,15.921810699588478,7.710699588477366,2.7942386831275723,0.5617283950617283,0.0,0.0,0.0,0.0020576131687242796,4.853086419753086,2342.1,22.59976732465624,21.073555422811367
+spacing_med,0.01,370,15.811111111111112,15.81111111111111,7.612345679012346,2.9876543209876543,0.42427983539094655,0.0,0.0,0.0,0.001646090534979424,4.785185185185185,2604.114285714286,22.621533222231523,21.073555422811367

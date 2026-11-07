@@ -1,0 +1,3 @@
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  window=[50,950) of 1000  |  commit=b64fb64  |  phase 2c round 1, best actor per run on validation 301-330, D = 650, from the saved per-layout file
+run,against,layouts,mean_diff,ci95_low,ci95_high,wins
+spacing_med,control,30,-0.11069958847736684,-0.5814886967710442,0.3600895198163105,18
