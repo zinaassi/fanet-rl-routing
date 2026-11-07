@@ -67,6 +67,10 @@ rl_sim/out/checkpoints/2c_round1/*
 !rl_sim/out/checkpoints/2c_round1/README.txt
 !rl_sim/out/2c_edge_r1_*/
 rl_sim/out/2c_edge_r1_*/rec/
+!rl_sim/out/2c_edge_r1_*/*.gif
+# Round-1 test episodes, drawn: tables, pictures and GIFs are committed.
+!rl_sim/out/2c_viz_test_r1_*/
+!rl_sim/out/2c_viz_test_r1_*/*.gif
 
 # The Phase-2c networks themselves. out/models/ is ignored wholesale above,
 # so each level has to be let through before the files inside can be: the

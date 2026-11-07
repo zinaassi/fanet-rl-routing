@@ -16,6 +16,11 @@ The episodes: the layout whose direct loss is closest to the test median
 direct loss, both read from the test run's per-layout CSV.
 
 The drawing is plot_edge_cases_2c's, and the recording is edge_cases_2c's.
+
+With --model, --label and --test-set, a second actor is drawn beside direct
+and midpoint: the layouts are picked by THAT actor's loss on the given set of
+a round-1 test CSV (evaluate_r1_test.py), each layout's run seed is read from
+that CSV, and every policy's rerun must match its row there exactly.
 """
 
 from __future__ import annotations
@@ -71,12 +76,18 @@ def without_links(rec: Dict[str, Any]) -> Dict[str, Any]:
             "gs_at": [empty_gs] * len(rec["gs_at"])}
 
 
-def pick_layouts(test_csv: str) -> List[Tuple[int, float, str]]:
-    """Return (layout, direct loss %, why) for the median and worst episodes."""
+def read_test_csv(test_csv: str) -> List[Dict[str, str]]:
     with open(test_csv) as handle:
-        rows = [r for r in csv.DictReader(line for line in handle
-                                          if not line.startswith("#"))
-                if r["policy"] == "direct_final"]
+        return list(csv.DictReader(line for line in handle
+                                   if not line.startswith("#")))
+
+
+def pick_layouts(test_csv: str, policy: str = "direct_final",
+                 test_set: Any = None) -> List[Tuple[int, float, str]]:
+    """Return (layout, loss %, why) for the median and worst episodes of
+    *policy*, on *test_set* when the CSV has a set column."""
+    rows = [r for r in read_test_csv(test_csv) if r["policy"] == policy
+            and (test_set is None or r["set"] == test_set)]
     loss = {int(r["placement_seed"]): float(r["total_loss"]) for r in rows}
     median = statistics.median(loss.values())
     near = min(sorted(loss), key=lambda layout: abs(loss[layout] - median))
@@ -89,15 +100,20 @@ def pick_layouts(test_csv: str) -> List[Tuple[int, float, str]]:
          f"closest to the median {median:.2f}% of {len(loss)} layouts"
          + (f" (tied with {ties[1:]}; lower layout number taken)"
             if len(ties) > 1 else "")),
-        (worst, loss[worst], "highest direct loss"),
+        (worst, loss[worst], "highest "
+         + ("direct" if policy == "direct_final" else policy) + " loss"),
     ]
 
 
-def run(layout: int, policy: str, state: Any) -> Dict[str, Any]:
-    """Run one test episode exactly as the test run did, and record it."""
+def run(layout: int, policy: str, state: Any,
+        run_seed: Any = None) -> Dict[str, Any]:
+    """Run one test episode exactly as the test run did, and record it.
+
+    *state* is the actor's weights; it is ignored for midpoint."""
     import torch
 
-    run_seed = run_seed_for(layout)
+    if run_seed is None:
+        run_seed = run_seed_for(layout)
     torch.set_num_threads(1)
     torch.manual_seed(int(np.random.SeedSequence(
         [run_seed, config.AGENT_STREAM_TAG]).generate_state(1)[0]))
@@ -172,16 +188,21 @@ def gif(rec: Dict[str, Any], title: str, path: str) -> None:
     plt.close(fig)
 
 
-def snapshots(recs: Dict[str, Dict[str, Any]], title: str, path: str) -> None:
-    fig, axes = plt.subplots(2, len(SNAPSHOT_TIMES_S), figsize=(11, 6.2))
-    for row, policy in enumerate(("midpoint", "direct")):
+def snapshots(recs: Dict[str, Dict[str, Any]], title: str, path: str,
+              order: Tuple[str, ...] = ("midpoint", "direct")) -> None:
+    fig, axes = plt.subplots(len(order), len(SNAPSHOT_TIMES_S),
+                             figsize=(11, 3.1 * len(order)))
+    for row, policy in enumerate(order):
         for col, t in enumerate(SNAPSHOT_TIMES_S):
             ax = axes[row, col]
             setup_axis(ax, recs[policy])
             draw_step(ax, recs[policy], int(round(t / config.TIMESTEP)), {})
             if col == 0:
                 ax.set_ylabel(policy, fontsize=10)
-    fig.suptitle(title + "; top midpoint, bottom direct actor", fontsize=10)
+    fig.suptitle(title + "; rows top to bottom: " + ", ".join(order)
+                 if order != ("midpoint", "direct")
+                 else title + "; top midpoint, bottom direct actor",
+                 fontsize=10)
     fig.legend(handles=legend_handles(), loc="lower center", ncol=5,
                fontsize=7, frameon=False, bbox_to_anchor=(0.5, 0.03))
     fig.text(0.5, 0.005, settings_stamp(extra="test episode"), ha="center",
@@ -191,9 +212,10 @@ def snapshots(recs: Dict[str, Dict[str, Any]], title: str, path: str) -> None:
 
 
 def c_distance_plot(recs: Dict[str, Dict[str, Any]], title: str,
-                    path: str) -> None:
-    fig, axes = plt.subplots(1, 2, figsize=(10, 3.6), sharey=True)
-    for ax, policy in zip(axes, POLICIES):
+                    path: str, policies: Tuple[str, ...] = POLICIES) -> None:
+    fig, axes = plt.subplots(1, len(policies),
+                             figsize=(5 * len(policies), 3.6), sharey=True)
+    for ax, policy in zip(axes, policies):
         rec = recs[policy]
         c = [i for i, t in enumerate(rec["types"]) if t == "C"]
         m = [i for i, t in enumerate(rec["types"]) if t == "M"]
@@ -209,7 +231,7 @@ def c_distance_plot(recs: Dict[str, Dict[str, Any]], title: str,
         ax.set_xlabel("time (s)", fontsize=8)
         ax.tick_params(labelsize=7)
     axes[0].set_ylabel("distance from GS (m)", fontsize=8)
-    axes[1].legend(fontsize=6, ncol=2, loc="upper left")
+    axes[-1].legend(fontsize=6, ncol=2, loc="upper left")
     fig.suptitle(title + ": each C-drone's distance from the GS", fontsize=9)
     fig.text(0.5, 0.005, settings_stamp(extra="test episode"), ha="center",
              fontsize=4.0, color="#666666", wrap=True)
@@ -227,21 +249,53 @@ def main() -> None:
     parser.add_argument("--out-dir", type=str, default="out")
     parser.add_argument("--test-csv", type=str, required=True,
                         help="the test run's per-layout CSV")
+    parser.add_argument("--model", type=str, default=None,
+                        help="a second actor to draw beside direct")
+    parser.add_argument("--label", type=str, default=None,
+                        help="its policy name in --test-csv")
+    parser.add_argument("--test-set", type=str, default=None,
+                        help="the set column value to pick layouts from")
+    parser.add_argument("--out", type=str, default=None,
+                        help="output folder (default <out-dir>/2c_viz_test)")
     args = parser.parse_args()
-    out = os.path.join(args.out_dir, "2c_viz_test")
+    out = args.out or os.path.join(args.out_dir, "2c_viz_test")
     os.makedirs(out, exist_ok=True)
-    state = torch.load(os.path.join(args.out_dir, DIRECT_MODEL),
-                       weights_only=True)
+    states = {"direct": torch.load(os.path.join(args.out_dir, DIRECT_MODEL),
+                                   weights_only=True),
+              "midpoint": None}
+    if args.model is not None:
+        if not (args.label and args.test_set):
+            raise SystemExit("STOP: --model needs --label and --test-set")
+        states[args.label] = torch.load(args.model, weights_only=True)
+        policies: Tuple[str, ...] = ("direct", args.label, "midpoint")
+        order: Tuple[str, ...] = ("midpoint", "direct", args.label)
+        picked = pick_layouts(args.test_csv, args.label, args.test_set)
+        saved = {(r["policy"], int(r["placement_seed"])): r
+                 for r in read_test_csv(args.test_csv)
+                 if r["set"] == args.test_set}
+        print(f"actor {args.label}: {args.model}")
+    else:
+        policies, order = POLICIES, ("midpoint", "direct")
+        picked = pick_layouts(args.test_csv)
+        saved = {("direct", layout): {"total_loss": str(loss)}
+                 for layout, loss, _ in picked}
 
-    for layout, expected, why in pick_layouts(args.test_csv):
-        print(f"\nLayout {layout}: {why}; test-run direct loss "
+    for layout, expected, why in picked:
+        print(f"\nLayout {layout}: {why}; test-run loss "
               f"{expected:.4f}%", flush=True)
-        results = {policy: run(layout, policy, state) for policy in POLICIES}
-        got = results["direct"]["total_loss"]
-        if abs(got - expected) > MATCH_TOLERANCE:
-            raise SystemExit(f"STOP: direct loss {got:.6f}% does not match "
-                             f"the test run's {expected:.6f}%")
-        print(f"  direct loss reproduced: {got:.4f}%")
+        run_seed = (int(saved[(args.label, layout)]["run_seed"])
+                    if args.model is not None else None)
+        results = {policy: run(layout, policy, states[policy], run_seed)
+                   for policy in policies}
+        for policy in policies:
+            if (policy, layout) not in saved:
+                continue
+            want = float(saved[(policy, layout)]["total_loss"])
+            got = results[policy]["total_loss"]
+            if abs(got - want) > MATCH_TOLERANCE:
+                raise SystemExit(f"STOP: {policy} loss {got:.6f}% does not "
+                                 f"match the test run's {want:.6f}%")
+            print(f"  {policy} loss reproduced: {got:.4f}%")
         if not all(r["views_agree"] for r in results.values()):
             raise SystemExit("STOP: the ACK views disagreed")
 
@@ -252,27 +306,27 @@ def main() -> None:
                   f"phase 2c test layout {layout}, near_gs D = 650, "
                   f"18M+7C, pictures only")
         with open(loss_path) as handle:
-            saved = list(csv.DictReader(line for line in handle
-                                        if not line.startswith("#")))
-        print(f"  {'policy':>9} {'total':>6} "
+            rows = list(csv.DictReader(line for line in handle
+                                       if not line.startswith("#")))
+        print(f"  {'policy':>13} {'total':>6} "
               + " ".join(f"{c[:9]:>9}" for c in CAUSES) + "   C flown")
-        for row in saved:
-            print(f"  {row['policy']:>9} {float(row['total_loss']):6.2f} "
+        for row in rows:
+            print(f"  {row['policy']:>13} {float(row['total_loss']):6.2f} "
                   + " ".join(f"{float(row[c]):9.2f}" for c in CAUSES)
                   + f"   {float(row['c_distance_flown_mean']):5.0f} m")
 
-        recs = {p: without_links(results[p]["rec"]) for p in POLICIES}
+        recs = {p: without_links(results[p]["rec"]) for p in policies}
         title = f"Test layout {layout}, D = 650 m, run seed " \
                 f"{results['direct']['run_seed']}"
-        for policy in POLICIES:
+        for policy in policies:
             path = os.path.join(out, f"L{layout}_{policy}.gif")
             gif(recs[policy], f"{title}\n{policy}", path)
             print(f"  wrote {path}", flush=True)
         path = os.path.join(out, f"L{layout}_snapshots.png")
-        snapshots(recs, title, path)
+        snapshots(recs, title, path, order)
         print(f"  wrote {path}")
         path = os.path.join(out, f"L{layout}_c_distance.png")
-        c_distance_plot(recs, title, path)
+        c_distance_plot(recs, title, path, policies)
         print(f"  wrote {path}")
 
 

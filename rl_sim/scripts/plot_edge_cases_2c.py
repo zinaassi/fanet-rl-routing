@@ -12,6 +12,10 @@ LINK_MAX_LOSS (50%), the point at which a link stops existing.
 Writes, for seed SEED:
     out/2c_edge/s{n}_direct.gif, out/2c_edge/s{n}_midpoint.gif
     out/2c_edge/s{n}_snapshots.png   t = 0, 30, 60, 95 s, midpoint over direct
+
+With --edge-dir and --label, it draws another actor's recordings instead (the
+"direct" recordings edge_cases_2c.py --model saved for that actor), naming
+the files and titles after the label: s{n}_<label>.gif.
 """
 
 from __future__ import annotations
@@ -140,13 +144,16 @@ def colourbar(fig: plt.Figure, ax: Any) -> None:
     bar.ax.tick_params(labelsize=6)
 
 
-def make_gif(rec_dir: str, edge_dir: str, scenario: int, policy: str) -> str:
+def make_gif(rec_dir: str, edge_dir: str, scenario: int, policy: str,
+             name: str = "") -> str:
+    """Draw one recording; *name* replaces *policy* in the title and file."""
+    name = name or policy
     rec = load(rec_dir, scenario, policy)
     fig, ax = plt.subplots(figsize=(5.6, 5.0))
     setup_axis(ax, rec)
     num_m, num_c, text = SCENARIOS[scenario]
     ax.set_title(f"Scenario {scenario}: {text} ({num_m} M, {num_c} C)\n"
-                 f"{policy}, run seed {SEED}", fontsize=8)
+                 f"{name}, run seed {SEED}", fontsize=8)
     ax.legend(handles=legend_handles(), loc="lower right", fontsize=5.5,
               framealpha=0.8)
     colourbar(fig, ax)
@@ -160,13 +167,14 @@ def make_gif(rec_dir: str, edge_dir: str, scenario: int, policy: str) -> str:
         return []
 
     anim = animation.FuncAnimation(fig, update, frames=frames, blit=False)
-    path = os.path.join(edge_dir, f"s{scenario}_{policy}.gif")
+    path = os.path.join(edge_dir, f"s{scenario}_{name}.gif")
     anim.save(path, writer=animation.PillowWriter(fps=FPS), dpi=80)
     plt.close(fig)
     return path
 
 
-def make_snapshots(rec_dir: str, edge_dir: str, scenario: int) -> str:
+def make_snapshots(rec_dir: str, edge_dir: str, scenario: int,
+                   actor: str = "direct actor") -> str:
     fig, axes = plt.subplots(2, len(SNAPSHOT_TIMES_S), figsize=(11, 6.2))
     for row, policy in enumerate(("midpoint", "direct")):
         rec = load(rec_dir, scenario, policy)
@@ -175,10 +183,11 @@ def make_snapshots(rec_dir: str, edge_dir: str, scenario: int) -> str:
             setup_axis(ax, rec)
             draw_step(ax, rec, int(round(t / config.TIMESTEP)), {})
             if col == 0:
-                ax.set_ylabel(policy, fontsize=10)
+                ax.set_ylabel(policy if policy == "midpoint" else
+                              actor.replace(" actor", ""), fontsize=10)
     num_m, num_c, text = SCENARIOS[scenario]
     fig.suptitle(f"Scenario {scenario}: {text} ({num_m} M, {num_c} C), "
-                 f"run seed {SEED}; top midpoint, bottom direct actor",
+                 f"run seed {SEED}; top midpoint, bottom {actor}",
                  fontsize=10)
     fig.legend(handles=legend_handles(), loc="lower center", ncol=5,
                fontsize=7, frameon=False, bbox_to_anchor=(0.5, 0.03))
@@ -198,14 +207,22 @@ def main() -> None:
     parser.add_argument("--out-dir", type=str, default="out")
     parser.add_argument("--scenarios", type=int, nargs="+",
                         default=list(SCENARIOS))
+    parser.add_argument("--edge-dir", type=str, default=None,
+                        help="folder holding rec/ (default <out-dir>/2c_edge)")
+    parser.add_argument("--label", type=str, default=None,
+                        help="name for the actor's recordings, e.g. "
+                             "spacing_large")
     args = parser.parse_args()
-    edge_dir = os.path.join(args.out_dir, "2c_edge")
+    edge_dir = args.edge_dir or os.path.join(args.out_dir, "2c_edge")
     rec_dir = os.path.join(edge_dir, "rec")
+    actor = f"{args.label} actor" if args.label else "direct actor"
     for scenario in args.scenarios:
-        print(f"  wrote {make_snapshots(rec_dir, edge_dir, scenario)}",
+        print(f"  wrote {make_snapshots(rec_dir, edge_dir, scenario, actor)}",
               flush=True)
         for policy in GIF_POLICIES:
-            print(f"  wrote {make_gif(rec_dir, edge_dir, scenario, policy)}",
+            name = args.label if (args.label and policy == "direct") else ""
+            print(f"  wrote "
+                  f"{make_gif(rec_dir, edge_dir, scenario, policy, name)}",
                   flush=True)
 
 

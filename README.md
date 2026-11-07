@@ -656,6 +656,19 @@ and skips them when no trained model is present; `--with-training` retrains
 first. `evaluate_1b.py` (20 layouts) is kept as a script but is not in that
 plan: the 50-layout evaluation is the official test.
 
+**Layout seeds used so far, all phases.** A test set is only fresh once.
+
+| Seeds | Used for |
+|---|---|
+| 1–50 | Phase 1b test; Phase 2c M3 |
+| 101–300 | training (Phase 1b and Phase 2c) |
+| 301–330 | validation (301–310 in Phase 1b, 301–330 in Phase 2c) |
+| 401–450 | Phase 2c test: M4, the direct-650 actor, the 413/432 pictures, round 1 |
+| 501–550 | Phase 2c round-1 test (`scripts/evaluate_r1_test.py`), the pictures drawn from it |
+| 900 | Phase 2c edge cases |
+
+The next fresh test set must start at **601**.
+
 ### Results
 
 On the 50 held-back TEST layouts, with `rl` the mean of three init seeds.
