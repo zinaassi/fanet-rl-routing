@@ -31,6 +31,20 @@ positions, env.active_links, which drones are in range of the GS, and the
 path of every delivered packet. plot_edge_cases_2c.py draws only from those
 recordings.
 
+Big-fleet scenarios (--bigfleet), 18 M + 7 C, every drone starting at the
+near_gs mission's own draw for this placement seed; staying M-drones hover
+where they start, the flying ones (the lowest-numbered) go at 20 m/s with no
+delay:
+
+    9   1 M to the NE corner (~622 m)
+    10  3 M to the NE, NW and SW corners
+    11  1 M to 300 m only (still in reach of the GS)
+    12  1 M to the NE corner, hovers 20 s, back to its own start point
+    13  9 M toward NE, +-20 deg, 450-622 m
+
+They run hover, midpoint, direct and spacing_large into out/2c_edge_bigfleet/.
+Scenarios 1-8 and their outputs are untouched by them.
+
 Writes:
     out/2c_edge/edge_runs.csv          one row per (scenario, policy, seed)
     out/2c_edge/edge_summary.csv       means over the five seeds
@@ -110,6 +124,28 @@ SCENARIOS: Dict[int, Tuple[int, int, str]] = {
     8: (1, 7, "M to 600 m, 7 C"),
 }
 
+#: Big-fleet scenarios, run only with --bigfleet. Same tuple as SCENARIOS.
+BIGFLEET: Dict[int, Tuple[int, int, str]] = {
+    9: (18, 7, "1 M to the NE corner, 17 M stay"),
+    10: (18, 7, "3 M to the NE, NW, SW corners, 15 M stay"),
+    11: (18, 7, "1 M to 300 m, 17 M stay"),
+    12: (18, 7, "1 M to the NE corner, 20 s, back; 17 M stay"),
+    13: (18, 7, "9 M toward NE +-20 deg 450-622 m, 9 M stay"),
+}
+ALL_SCENARIOS: Dict[int, Tuple[int, int, str]] = {**SCENARIOS, **BIGFLEET}
+BIGFLEET_POLICIES: Tuple[str, ...] = ("hover", "midpoint", "direct",
+                                      "spacing_large")
+BIGFLEET_MODELS: Dict[str, str] = {
+    "direct": DIRECT_MODEL,
+    "spacing_large": os.path.join("models", "2c",
+                                  "c_actor_r1_spacing_large.pt"),
+}
+NW: float = NE + np.pi / 2.0
+S13_SPREAD_RAD: float = np.radians(20.0)
+S13_DISTANCE_M: Tuple[float, float] = (450.0, 622.0)
+#: The scenarios whose flying M-drone returns to its start after hovering.
+RETURNING: Tuple[int, ...] = (5, 12)
+
 #: Scenario -> (direction, distance from the GS) per M-drone; 7 is drawn.
 FLIGHTS: Dict[int, List[Tuple[float, float]]] = {
     1: [(NE, 600.0)],
@@ -119,6 +155,10 @@ FLIGHTS: Dict[int, List[Tuple[float, float]]] = {
     5: [(NE, 600.0)],
     6: [(NE, TO_CORNER_M)],
     8: [(NE, 600.0)],
+    9: [(NE, TO_CORNER_M)],
+    10: [(NE, TO_CORNER_M), (NW, TO_CORNER_M), (SW, TO_CORNER_M)],
+    11: [(NE, 300.0)],
+    12: [(NE, TO_CORNER_M)],
 }
 
 
@@ -158,9 +198,29 @@ def scenario_plan(scenario: int) -> Dict[str, Any]:
         Lists "m_start", "m_end", "m_speed", "m_delay" and "c_start".
     """
     gs = np.asarray(config.GS_POSITION, dtype=np.float64)
-    num_m, num_c, _ = SCENARIOS[scenario]
+    num_m, num_c, _ = ALL_SCENARIOS[scenario]
     plan: Dict[str, Any] = {"m_start": [], "m_end": [], "m_speed": [],
                             "m_delay": [], "c_start": None}
+
+    if scenario in BIGFLEET:
+        # Start points are the near_gs mission's own draw (the caller keeps
+        # them). m_end holds a point for each FLYING drone, measured from the
+        # GS; every other M-drone stays where it starts.
+        if scenario == 13:
+            rng = np.random.default_rng(
+                np.random.SeedSequence([PLACEMENT_SEED, scenario]))
+            flights = [(NE + float(rng.uniform(-S13_SPREAD_RAD,
+                                               S13_SPREAD_RAD)),
+                        float(rng.uniform(*S13_DISTANCE_M)))
+                       for _ in range(9)]
+        else:
+            flights = FLIGHTS[scenario]
+        for angle, distance in flights:
+            plan["m_end"].append(clip_inside(gs + distance * _unit(angle)))
+            plan["m_speed"].append(M_SPEED)
+            plan["m_delay"].append(0.0)
+        plan["flying"] = len(flights)
+        return plan
 
     if scenario == 7:
         # Start points are the near_gs mission's own draw for this placement
@@ -205,6 +265,21 @@ def build_env(scenario: int, run_seed: int) -> FANETEnv:
     plan = scenario_plan(scenario)
     m_drones = [d for d in env.drones if d.drone_type == "M"]
     c_drones = [d for d in env.drones if d.drone_type == "C"]
+
+    if scenario in BIGFLEET:
+        for index, drone in enumerate(m_drones):
+            if index < plan["flying"]:
+                drone.end_point = np.asarray(plan["m_end"][index],
+                                             dtype=np.float64).copy()
+                drone.speed = plan["m_speed"][index]
+            else:
+                drone.end_point = drone.position.copy()
+            drone.start_delay_s = 0.0
+            drone.arrived = bool(np.array_equal(drone.end_point,
+                                                drone.position))
+        env._recompute_links()
+        env._update_active_links()
+        return env
 
     for index, drone in enumerate(m_drones):
         if scenario == 7:
@@ -268,7 +343,7 @@ def run_one(job: Tuple[int, str, int, Any, str]) -> Dict[str, Any]:
     torch.manual_seed(int(np.random.SeedSequence(
         [run_seed, config.AGENT_STREAM_TAG]).generate_state(1)[0]))
 
-    num_m, num_c, _ = SCENARIOS[scenario]
+    num_m, num_c, _ = ALL_SCENARIOS[scenario]
     previous = _world(moving=True, distance=650.0)
     counts = (config.NUM_M_DRONES, config.NUM_C_DRONES)
     config.NUM_M_DRONES, config.NUM_C_DRONES = num_m, num_c
@@ -282,7 +357,7 @@ def run_one(job: Tuple[int, str, int, Any, str]) -> Dict[str, Any]:
         hover_from: Optional[int] = None
         for step in range(1, config.MAX_STEPS + 1):
             env.step()
-            if scenario == 5:
+            if scenario in RETURNING:
                 drone = env.drones[0]
                 if hover_from is None and drone.arrived:
                     hover_from = step
@@ -299,6 +374,9 @@ def run_one(job: Tuple[int, str, int, Any, str]) -> Dict[str, Any]:
         positions = np.array(store["pos"])
         types = np.array([d.drone_type for d in env.drones])
         delivered = [p for p in env.delivered if p.source_id in range(num_m)]
+        flying = (scenario_plan(scenario)["flying"] if scenario in BIGFLEET
+                  else num_m)
+        flies = [i < flying for i in range(num_m)]
 
         path = os.path.join(rec_dir, f"s{scenario}_{policy}_{run_seed}.npz")
         np.savez_compressed(
@@ -314,6 +392,7 @@ def run_one(job: Tuple[int, str, int, Any, str]) -> Dict[str, Any]:
                                for p in delivered], dtype=str),
             m_end=np.array([d.end_point for d in env.drones
                             if d.drone_type == "M"]),
+            m_flies=np.array(flies, dtype=bool),
         )
 
         c_index = [i for i, t in enumerate(types) if t == "C"]
@@ -325,7 +404,11 @@ def run_one(job: Tuple[int, str, int, Any, str]) -> Dict[str, Any]:
             upper = np.triu_indices(len(c_index), k=1)
             min_cc = float(gaps[:, upper[0], upper[1]].min())
 
+        extra: Dict[str, Any] = {}
+        if scenario in BIGFLEET:
+            extra = bigfleet_columns(env, positions, types, flies, truth)
         return {
+            **extra,
             "scenario": scenario,
             "policy": policy,
             "run_seed": run_seed,
@@ -342,6 +425,45 @@ def run_one(job: Tuple[int, str, int, Any, str]) -> Dict[str, Any]:
     finally:
         config.NUM_M_DRONES, config.NUM_C_DRONES = counts
         _restore(previous)
+
+
+def group_loss(env: FANETEnv, sources: Sequence[int]) -> float:
+    """% of the measured packets created by *sources* that never arrived."""
+    from scripts.metrics_1a import measured_packets
+
+    wanted = set(sources)
+    arrived = {id(p) for p in env.delivered}
+    mine = [p for p in measured_packets(env) if p.source_id in wanted]
+    if not mine:
+        return float("nan")
+    return 100.0 * sum(id(p) not in arrived for p in mine) / len(mine)
+
+
+def bigfleet_columns(env: FANETEnv, positions: np.ndarray, types: np.ndarray,
+                     flies: Sequence[bool], truth: Dict[str, Any]
+                     ) -> Dict[str, Any]:
+    """Loss of the flying and the staying M-drones, and the farthest C.
+
+    Stops if the two groups do not add back up to the total loss."""
+    flying = [i for i, f in enumerate(flies) if f]
+    staying = [i for i, f in enumerate(flies) if not f]
+    out = {"loss_flying": group_loss(env, flying),
+           "loss_staying": group_loss(env, staying)}
+    both = group_loss(env, flying + staying)
+    if abs(both - 100.0 * (truth["total_loss"] or 0.0)) > 1e-9:
+        raise RuntimeError(f"group losses {both} do not recombine to the "
+                           f"total {100.0 * truth['total_loss']}")
+    gs = np.asarray(env.gs_position, dtype=np.float64)
+    c = [i for i, t in enumerate(types) if t == "C"]
+    for t in GEOMETRY_TIMES_S:
+        step = int(round(t / config.TIMESTEP))
+        out[f"far_c_{t:.0f}"] = float(
+            np.linalg.norm(positions[step, c] - gs, axis=-1).max())
+    return out
+
+
+BIGFLEET_COLUMNS: Tuple[str, ...] = (
+    "loss_flying", "loss_staying", "far_c_30", "far_c_60", "far_c_95")
 
 
 def point_to_segment(point: np.ndarray, a: np.ndarray, b: np.ndarray) -> float:
@@ -429,16 +551,20 @@ SUMMARY_COLUMNS: Tuple[str, ...] = (
 )
 
 
-def summarise(rows: Sequence[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def summarise(rows: Sequence[Dict[str, Any]],
+              scenarios: Sequence[int] = tuple(SCENARIOS),
+              policies: Sequence[str] = POLICIES,
+              columns: Sequence[str] = SUMMARY_COLUMNS
+              ) -> List[Dict[str, Any]]:
     """Means over the five seeds, per (scenario, policy)."""
     out = []
-    for scenario in SCENARIOS:
-        for policy in POLICIES:
+    for scenario in scenarios:
+        for policy in policies:
             group = [r for r in rows
                      if r["scenario"] == scenario and r["policy"] == policy]
             row: Dict[str, Any] = {"scenario": scenario, "policy": policy,
                                    "seeds": len(group)}
-            for column in SUMMARY_COLUMNS:
+            for column in columns:
                 values = [r[column] for r in group
                           if not np.isnan(r[column])]
                 row[column] = statistics.fmean(values) if values else ""
@@ -548,7 +674,13 @@ def main() -> None:
                              "direct model under --out-dir")
     parser.add_argument("--out", type=str, default=None,
                         help="output folder; default <out-dir>/2c_edge")
+    parser.add_argument("--bigfleet", action="store_true",
+                        help="run scenarios 9-13 into "
+                             "<out-dir>/2c_edge_bigfleet instead")
     args = parser.parse_args()
+    if args.bigfleet:
+        run_bigfleet(args)
+        return
 
     edge_dir = args.out or os.path.join(args.out_dir, "2c_edge")
     rec_dir = os.path.join(edge_dir, "rec")
@@ -601,6 +733,73 @@ def main() -> None:
     print_tables(read_csv(os.path.join(edge_dir, "edge_summary.csv")),
                  read_csv(os.path.join(edge_dir, "edge_geometry.csv")),
                  read_csv(os.path.join(edge_dir, "edge_s6_midpoint.csv")))
+
+
+def print_bigfleet(summary: Sequence[Dict[str, Any]]) -> None:
+    """Print the big-fleet tables, from the rows read back from disk."""
+    print(f"\n  Mean over run seeds {RUN_SEEDS}, % of packets created")
+    print(f"  {'sc':>2} {'policy':>13} {'total':>6} {'flying':>6} "
+          f"{'staying':>7} " + " ".join(f"{c[:8]:>8}" for c in CAUSES))
+    for row in summary:
+        print(f"  {row['scenario']:>2.0f} {row['policy']:>13} "
+              f"{row['total_loss']:6.2f} {row['loss_flying']:6.2f} "
+              f"{row['loss_staying']:7.2f} "
+              + " ".join(f"{row[c]:8.2f}" for c in CAUSES))
+        if row["policy"] == BIGFLEET_POLICIES[-1]:
+            print()
+    print("  Farthest C-drone from the GS (m), C metres flown, closest C pair")
+    print(f"  {'sc':>2} {'policy':>13} {'t=30':>6} {'t=60':>6} {'t=95':>6} "
+          f"{'C flown':>8} {'minCC':>6} {'worstCC':>7}")
+    for row in summary:
+        print(f"  {row['scenario']:>2.0f} {row['policy']:>13} "
+              f"{row['far_c_30']:6.0f} {row['far_c_60']:6.0f} "
+              f"{row['far_c_95']:6.0f} {row['c_distance_flown_mean']:7.0f}m "
+              f"{row['min_c_to_c_m']:6.1f} {row['min_c_to_c_m_worst']:7.1f}")
+        if row["policy"] == BIGFLEET_POLICIES[-1]:
+            print()
+
+
+def run_bigfleet(args: Any) -> None:
+    """Scenarios 9-13, four policies, five seeds, into 2c_edge_bigfleet."""
+    import torch
+
+    edge_dir = args.out or os.path.join(args.out_dir, "2c_edge_bigfleet")
+    rec_dir = os.path.join(edge_dir, "rec")
+    os.makedirs(rec_dir, exist_ok=True)
+    states = {}
+    for policy, path in BIGFLEET_MODELS.items():
+        full = os.path.join(args.out_dir, path)
+        print(f"  {policy:>13}: {full}")
+        states[policy] = torch.load(full, weights_only=True)
+    print(f"placement seed {PLACEMENT_SEED}, run seeds {RUN_SEEDS}")
+    jobs = [(scenario, policy, seed, states.get(policy), rec_dir)
+            for scenario in BIGFLEET for policy in BIGFLEET_POLICIES
+            for seed in RUN_SEEDS]
+    print(f"Running {len(jobs)} runs: {len(BIGFLEET)} scenarios x "
+          f"{len(BIGFLEET_POLICIES)} policies x {len(RUN_SEEDS)} seeds ...",
+          flush=True)
+    context = multiprocessing.get_context("spawn")
+    with ProcessPoolExecutor(max_workers=args.workers,
+                             mp_context=context) as pool:
+        rows = list(pool.map(run_one, jobs))
+    agreed = sum(1 for r in rows if r["views_agree"])
+    print(f"  views agreed in {agreed} of {len(rows)} runs")
+    if agreed != len(rows):
+        raise RuntimeError("the ACK views disagreed with the simulator")
+
+    note = (f"phase 2c big-fleet edge cases 9-13, 18M+7C from the near_gs "
+            f"start draw of placement seed {PLACEMENT_SEED}, staying M hover, "
+            f"flying M 20 m/s no delay, greedy routing, AVOID on, actors "
+            f"direct and spacing_large greedy, NO training")
+    columns = SUMMARY_COLUMNS + BIGFLEET_COLUMNS
+    write_csv(os.path.join(edge_dir, "edge_runs.csv"), rows,
+              ["scenario", "policy", "run_seed", "num_m", "num_c"]
+              + list(columns) + ["views_agree"], note)
+    summary = summarise(rows, tuple(BIGFLEET), BIGFLEET_POLICIES, columns)
+    write_csv(os.path.join(edge_dir, "edge_summary.csv"), summary,
+              ["scenario", "policy", "seeds"] + list(columns)
+              + ["min_c_to_c_m_worst"], note)
+    print_bigfleet(read_csv(os.path.join(edge_dir, "edge_summary.csv")))
 
 
 if __name__ == "__main__":
