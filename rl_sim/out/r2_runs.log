@@ -1188,3 +1188,590 @@ Round 2 settings:
 === C: reward fair, varied True, fresh from the direct model ===
   C update   1  train  13.49%  reward -0.2401  fair -0.2318  varied 21  std 0.100   35.0s
   C update   2  train  13.70%  reward -0.2276  fair -0.2196  varied 16  std 0.100   45.2s
+  C update   3  train  13.58%  reward -0.2496  fair -0.2412  varied 19  std 0.100   38.8s
+  C update   4  train  15.46%  reward -0.3052  fair -0.2968  varied 19  std 0.100   38.4s
+  C update   5  train  14.56%  reward -0.2933  fair -0.2848  varied 23  std 0.100   36.2s
+  C update   6  train  15.57%  reward -0.3283  fair -0.3198  varied 21  std 0.100   42.7s
+  C update   7  train  12.87%  reward -0.2627  fair -0.2543  varied 26  std 0.100   33.9s
+  C update   8  train  13.17%  reward -0.2210  fair -0.2126  varied 19  std 0.100   36.8s
+  C update   9  train  12.85%  reward -0.2204  fair -0.2121  varied 21  std 0.100   38.3s
+  C update  10  train  12.70%  reward -0.1959  fair -0.1876  varied 20  std 0.100   40.4s
+  C update  10  EVALUATION full  16.69%  varied  10.61%  average  13.65%  <- best, saved
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update  11  train  14.67%  reward -0.2493  fair -0.2410  varied 15  std 0.100   43.8s
+  C update  12  train  13.47%  reward -0.2064  fair -0.1981  varied 15  std 0.100   40.2s
+  C update  13  train  13.63%  reward -0.2586  fair -0.2503  varied 21  std 0.100   36.3s
+  C update  14  train  15.99%  reward -0.3323  fair -0.3239  varied 20  std 0.100   33.2s
+  C update  15  train  13.09%  reward -0.2152  fair -0.2067  varied 17  std 0.100   38.7s
+  C update  16  train  14.53%  reward -0.2662  fair -0.2577  varied 20  std 0.100   37.2s
+  C update  17  train  15.34%  reward -0.3043  fair -0.2960  varied 22  std 0.100   35.7s
+  C update  18  train  12.98%  reward -0.2101  fair -0.2018  varied 20  std 0.099   38.6s
+  C update  19  train  13.00%  reward -0.2302  fair -0.2219  varied 18  std 0.099   39.1s
+  C update  20  train  15.31%  reward -0.2757  fair -0.2672  varied 17  std 0.099   36.3s
+  C update  20  EVALUATION full  17.18%  varied  10.17%  average  13.67%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update  21  train  15.46%  reward -0.3274  fair -0.3191  varied 23  std 0.099   40.9s
+  C update  22  train  12.67%  reward -0.2036  fair -0.1952  varied 17  std 0.099   40.6s
+  C update  23  train  14.29%  reward -0.2519  fair -0.2435  varied 15  std 0.099   39.5s
+  C update  24  train  13.59%  reward -0.2186  fair -0.2104  varied 16  std 0.098   41.5s
+  C update  25  train  13.89%  reward -0.2629  fair -0.2545  varied 20  std 0.099   35.1s
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0025.pt
+  C update  26  train  13.25%  reward -0.2193  fair -0.2110  varied 21  std 0.099   40.5s
+  C update  27  train  12.76%  reward -0.2484  fair -0.2400  varied 25  std 0.099   31.8s
+  C update  28  train  12.93%  reward -0.2370  fair -0.2285  varied 25  std 0.099   32.5s
+  C update  29  train  14.52%  reward -0.2611  fair -0.2527  varied 20  std 0.099   36.5s
+  C update  30  train  13.70%  reward -0.2537  fair -0.2453  varied 20  std 0.098   37.2s
+  C update  30  EVALUATION full  17.39%  varied   9.78%  average  13.59%  <- best, saved
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update  31  train  14.26%  reward -0.2249  fair -0.2164  varied 13  std 0.098   45.3s
+  C update  32  train  13.25%  reward -0.2069  fair -0.1986  varied 16  std 0.098   33.5s
+  C update  33  train  11.83%  reward -0.2047  fair -0.1964  varied 23  std 0.097   36.8s
+  C update  34  train  12.89%  reward -0.2010  fair -0.1926  varied 16  std 0.098   39.7s
+  C update  35  train  13.03%  reward -0.2291  fair -0.2207  varied 22  std 0.098   34.9s
+  C update  36  train  13.32%  reward -0.2665  fair -0.2582  varied 25  std 0.098   38.2s
+  C update  37  train  12.27%  reward -0.1933  fair -0.1849  varied 19  std 0.097   32.8s
+  C update  38  train  11.16%  reward -0.1849  fair -0.1768  varied 24  std 0.097   38.4s
+  C update  39  train  13.42%  reward -0.2363  fair -0.2281  varied 20  std 0.097   39.9s
+  C update  40  train  15.04%  reward -0.3061  fair -0.2978  varied 22  std 0.097   36.3s
+  C update  40  EVALUATION full  17.45%  varied  10.43%  average  13.94%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update  41  train  13.53%  reward -0.2204  fair -0.2119  varied 17  std 0.097   37.2s
+  C update  42  train  14.86%  reward -0.3048  fair -0.2964  varied 24  std 0.097   35.0s
+  C update  43  train  16.56%  reward -0.3732  fair -0.3647  varied 21  std 0.098   32.3s
+  C update  44  train  14.27%  reward -0.3001  fair -0.2917  varied 26  std 0.098   32.6s
+  C update  45  train  14.49%  reward -0.3029  fair -0.2945  varied 24  std 0.098   32.7s
+  C update  46  train  12.15%  reward -0.1756  fair -0.1671  varied 17  std 0.098   40.7s
+  C update  47  train  12.70%  reward -0.2172  fair -0.2089  varied 21  std 0.097   38.1s
+  C update  48  train  14.92%  reward -0.3154  fair -0.3068  varied 24  std 0.097   30.3s
+  C update  49  train  15.40%  reward -0.2594  fair -0.2508  varied 14  std 0.097   41.8s
+  C update  50  train  14.13%  reward -0.2542  fair -0.2457  varied 19  std 0.097   34.8s
+  C update  50  EVALUATION full  17.06%  varied   9.73%  average  13.40%  <- best, saved
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0050.pt
+  C update  51  train  15.80%  reward -0.3269  fair -0.3183  varied 17  std 0.097   36.4s
+  C update  52  train  12.70%  reward -0.2011  fair -0.1928  varied 16  std 0.097   42.7s
+  C update  53  train  12.10%  reward -0.1892  fair -0.1808  varied 24  std 0.097   35.5s
+  C update  54  train  13.53%  reward -0.2462  fair -0.2379  varied 22  std 0.097   34.4s
+  C update  55  train  13.15%  reward -0.2129  fair -0.2045  varied 17  std 0.097   39.1s
+  C update  56  train  13.94%  reward -0.2300  fair -0.2216  varied 18  std 0.097   38.6s
+  C update  57  train  16.81%  reward -0.3520  fair -0.3434  varied 21  std 0.097   33.9s
+  C update  58  train  12.68%  reward -0.1974  fair -0.1890  varied 19  std 0.097   38.7s
+  C update  59  train  12.45%  reward -0.2049  fair -0.1963  varied 21  std 0.097   38.0s
+  C update  60  train  14.92%  reward -0.2673  fair -0.2590  varied 17  std 0.097   42.0s
+  C update  60  EVALUATION full  17.63%  varied   9.27%  average  13.45%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update  61  train  13.83%  reward -0.2171  fair -0.2086  varied 18  std 0.097   41.4s
+  C update  62  train  13.38%  reward -0.2163  fair -0.2078  varied 20  std 0.097   34.9s
+  C update  63  train  12.31%  reward -0.2052  fair -0.1971  varied 21  std 0.097   34.9s
+  C update  64  train  13.84%  reward -0.2530  fair -0.2446  varied 22  std 0.096   37.8s
+  C update  65  train  13.69%  reward -0.2242  fair -0.2160  varied 19  std 0.097   38.6s
+  C update  66  train  12.71%  reward -0.2132  fair -0.2049  varied 20  std 0.097   33.9s
+  C update  67  train  15.67%  reward -0.2820  fair -0.2735  varied 17  std 0.097   38.7s
+  C update  68  train  15.83%  reward -0.2953  fair -0.2868  varied 17  std 0.097   35.9s
+  C update  69  train  14.62%  reward -0.2650  fair -0.2565  varied 17  std 0.097   37.1s
+  C update  70  train  14.65%  reward -0.2745  fair -0.2660  varied 20  std 0.096   36.0s
+  C update  70  EVALUATION full  17.91%  varied   9.57%  average  13.74%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update  71  train  12.35%  reward -0.2185  fair -0.2103  varied 25  std 0.096   34.5s
+  C update  72  train  14.54%  reward -0.2835  fair -0.2750  varied 23  std 0.096   34.5s
+  C update  73  train  13.75%  reward -0.2551  fair -0.2465  varied 24  std 0.097   33.4s
+  C update  74  train  14.26%  reward -0.2297  fair -0.2213  varied 17  std 0.097   38.0s
+  C update  75  train  14.04%  reward -0.2244  fair -0.2160  varied 16  std 0.096   43.3s
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0075.pt
+  C update  76  train  13.22%  reward -0.2450  fair -0.2368  varied 22  std 0.096   35.1s
+  C update  77  train  14.83%  reward -0.2481  fair -0.2396  varied 17  std 0.096   42.0s
+  C update  78  train  14.88%  reward -0.2554  fair -0.2469  varied 13  std 0.096   39.5s
+  C update  79  train  12.72%  reward -0.2157  fair -0.2072  varied 20  std 0.096   36.6s
+  C update  80  train  13.51%  reward -0.2281  fair -0.2199  varied 19  std 0.096   38.1s
+  C update  80  EVALUATION full  17.71%  varied   9.70%  average  13.71%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update  81  train  12.30%  reward -0.1943  fair -0.1861  varied 18  std 0.096   40.6s
+  C update  82  train  12.60%  reward -0.2324  fair -0.2239  varied 28  std 0.096   32.8s
+  C update  83  train  12.27%  reward -0.2011  fair -0.1929  varied 18  std 0.096   39.0s
+  C update  84  train  13.48%  reward -0.2294  fair -0.2209  varied 22  std 0.096   36.9s
+  C update  85  train  14.03%  reward -0.2575  fair -0.2491  varied 18  std 0.096   33.6s
+  C update  86  train  11.94%  reward -0.1952  fair -0.1867  varied 21  std 0.095   37.9s
+  C update  87  train  14.47%  reward -0.2992  fair -0.2906  varied 26  std 0.096   28.0s
+  C update  88  train  12.60%  reward -0.2140  fair -0.2058  varied 25  std 0.095   38.8s
+  C update  89  train  13.43%  reward -0.2171  fair -0.2087  varied 14  std 0.096   39.2s
+  C update  90  train  15.05%  reward -0.2847  fair -0.2763  varied 18  std 0.096   43.4s
+  C update  90  EVALUATION full  17.54%  varied   8.66%  average  13.10%  <- best, saved
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update  91  train  15.90%  reward -0.2776  fair -0.2691  varied 14  std 0.096   39.3s
+  C update  92  train  14.63%  reward -0.2787  fair -0.2704  varied 22  std 0.095   39.1s
+  C update  93  train  13.03%  reward -0.2192  fair -0.2109  varied 18  std 0.095   40.1s
+  C update  94  train  13.90%  reward -0.2562  fair -0.2478  varied 23  std 0.095   41.6s
+  C update  95  train  13.74%  reward -0.2094  fair -0.2008  varied 17  std 0.095   38.9s
+  C update  96  train  14.19%  reward -0.2707  fair -0.2621  varied 23  std 0.095   35.1s
+  C update  97  train  15.27%  reward -0.3150  fair -0.3066  varied 22  std 0.095   34.4s
+  C update  98  train  12.69%  reward -0.2066  fair -0.1981  varied 19  std 0.095   36.4s
+  C update  99  train  12.17%  reward -0.1850  fair -0.1767  varied 21  std 0.095   37.9s
+  C update 100  train  15.21%  reward -0.2603  fair -0.2520  varied 18  std 0.095   40.0s
+  C update 100  EVALUATION full  17.52%  varied   8.84%  average  13.18%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0100.pt
+  C update 101  train  13.99%  reward -0.2595  fair -0.2513  varied 20  std 0.095   39.1s
+  C update 102  train  15.99%  reward -0.2952  fair -0.2868  varied 16  std 0.096   42.9s
+  C update 103  train  12.60%  reward -0.2229  fair -0.2144  varied 23  std 0.095   39.1s
+  C update 104  train  12.79%  reward -0.1975  fair -0.1889  varied 18  std 0.095   37.0s
+  C update 105  train  12.57%  reward -0.2279  fair -0.2193  varied 24  std 0.095   32.4s
+  C update 106  train  12.29%  reward -0.1974  fair -0.1892  varied 21  std 0.094   38.7s
+  C update 107  train  14.32%  reward -0.2548  fair -0.2463  varied 20  std 0.094   48.8s
+  C update 108  train  10.90%  reward -0.1822  fair -0.1741  varied 25  std 0.094   42.4s
+  C update 109  train  13.57%  reward -0.2367  fair -0.2282  varied 20  std 0.094   41.2s
+  C update 110  train  16.45%  reward -0.3288  fair -0.3202  varied 17  std 0.094   42.8s
+  C update 110  EVALUATION full  17.99%  varied   9.03%  average  13.51%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 111  train  13.12%  reward -0.2184  fair -0.2098  varied 21  std 0.094   35.2s
+  C update 112  train  12.71%  reward -0.2164  fair -0.2078  varied 23  std 0.095   32.0s
+  C update 113  train  13.39%  reward -0.2394  fair -0.2310  varied 20  std 0.094   30.0s
+  C update 114  train  12.39%  reward -0.1850  fair -0.1766  varied 21  std 0.094   37.1s
+  C update 115  train  12.88%  reward -0.2218  fair -0.2135  varied 23  std 0.094   33.7s
+  C update 116  train  12.87%  reward -0.2110  fair -0.2027  varied 18  std 0.094   36.4s
+  C update 117  train  14.86%  reward -0.2579  fair -0.2494  varied 18  std 0.095   34.8s
+  C update 118  train  14.12%  reward -0.2460  fair -0.2375  varied 20  std 0.095   32.7s
+  C update 119  train  14.77%  reward -0.2638  fair -0.2554  varied 19  std 0.095   35.4s
+  C update 120  train  13.50%  reward -0.2362  fair -0.2276  varied 21  std 0.095   32.6s
+  C update 120  EVALUATION full  18.11%  varied   8.65%  average  13.38%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 121  train  14.38%  reward -0.2824  fair -0.2740  varied 22  std 0.095   34.3s
+  C update 122  train  13.55%  reward -0.2349  fair -0.2263  varied 20  std 0.095   33.4s
+  C update 123  train  14.42%  reward -0.2929  fair -0.2845  varied 22  std 0.095   35.8s
+  C update 124  train  13.79%  reward -0.2264  fair -0.2178  varied 19  std 0.094   33.0s
+  C update 125  train  12.56%  reward -0.2123  fair -0.2038  varied 21  std 0.094   33.3s
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0125.pt
+  C update 126  train  14.16%  reward -0.2208  fair -0.2123  varied 16  std 0.094   37.9s
+  C update 127  train  13.80%  reward -0.2180  fair -0.2094  varied 18  std 0.094   36.2s
+  C update 128  train  13.08%  reward -0.1986  fair -0.1901  varied 18  std 0.094   36.1s
+  C update 129  train  12.27%  reward -0.1825  fair -0.1741  varied 17  std 0.093   42.2s
+  C update 130  train  12.68%  reward -0.1860  fair -0.1778  varied 17  std 0.093   35.8s
+  C update 130  EVALUATION full  17.61%  varied   8.85%  average  13.23%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 131  train  14.32%  reward -0.2387  fair -0.2304  varied 17  std 0.093   38.0s
+  C update 132  train  12.94%  reward -0.2314  fair -0.2230  varied 23  std 0.094   35.6s
+  C update 133  train  12.86%  reward -0.1943  fair -0.1859  varied 19  std 0.094   41.3s
+  C update 134  train  12.52%  reward -0.1976  fair -0.1891  varied 22  std 0.094   35.6s
+  C update 135  train  12.30%  reward -0.2008  fair -0.1923  varied 22  std 0.094   34.1s
+  C update 136  train  11.85%  reward -0.1774  fair -0.1686  varied 24  std 0.093   33.3s
+  C update 137  train  14.23%  reward -0.2303  fair -0.2219  varied 21  std 0.093   36.5s
+  C update 138  train  13.98%  reward -0.2113  fair -0.2030  varied 18  std 0.093   38.1s
+  C update 139  train  11.52%  reward -0.1761  fair -0.1679  varied 23  std 0.093   33.6s
+  C update 140  train  12.21%  reward -0.1810  fair -0.1726  varied 16  std 0.093   38.9s
+  C update 140  EVALUATION full  17.52%  varied   8.05%  average  12.79%  <- best, saved
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 141  train  12.99%  reward -0.2132  fair -0.2049  varied 22  std 0.093   29.9s
+  C update 142  train  12.86%  reward -0.1965  fair -0.1881  varied 17  std 0.092   37.7s
+  C update 143  train  12.78%  reward -0.2025  fair -0.1939  varied 20  std 0.092   34.6s
+  C update 144  train  14.14%  reward -0.2415  fair -0.2328  varied 18  std 0.092   34.8s
+  C update 145  train  11.95%  reward -0.2012  fair -0.1928  varied 21  std 0.093   34.2s
+  C update 146  train  13.26%  reward -0.1996  fair -0.1911  varied 16  std 0.092   33.7s
+  C update 147  train  12.02%  reward -0.1738  fair -0.1655  varied 19  std 0.092   39.0s
+  C update 148  train  14.95%  reward -0.2660  fair -0.2575  varied 17  std 0.092   37.8s
+  C update 149  train  12.05%  reward -0.1904  fair -0.1821  varied 20  std 0.092   33.8s
+  C update 150  train  14.11%  reward -0.2406  fair -0.2321  varied 20  std 0.092   37.0s
+  C update 150  EVALUATION full  18.02%  varied   8.28%  average  13.15%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0150.pt
+  C update 151  train  13.33%  reward -0.2350  fair -0.2264  varied 24  std 0.091   31.1s
+  C update 152  train  11.42%  reward -0.1685  fair -0.1601  varied 25  std 0.091   35.9s
+  C update 153  train  12.02%  reward -0.2164  fair -0.2079  varied 29  std 0.091   31.9s
+  C update 154  train  11.96%  reward -0.1761  fair -0.1675  varied 17  std 0.091   37.5s
+  C update 155  train  10.98%  reward -0.1674  fair -0.1592  varied 21  std 0.091   40.9s
+  C update 156  train  12.83%  reward -0.2212  fair -0.2126  varied 24  std 0.091   35.0s
+  C update 157  train  14.18%  reward -0.2342  fair -0.2256  varied 21  std 0.091   38.6s
+  C update 158  train  12.22%  reward -0.1861  fair -0.1776  varied 19  std 0.091   41.4s
+  C update 159  train  12.54%  reward -0.1749  fair -0.1664  varied 19  std 0.090   43.4s
+  C update 160  train  12.21%  reward -0.1939  fair -0.1855  varied 21  std 0.090   39.9s
+  C update 160  EVALUATION full  17.86%  varied   8.84%  average  13.35%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 161  train  11.63%  reward -0.1552  fair -0.1467  varied 20  std 0.090   45.2s
+  C update 162  train  13.05%  reward -0.1978  fair -0.1894  varied 18  std 0.090   47.1s
+  C update 163  train  11.22%  reward -0.1636  fair -0.1551  varied 19  std 0.090   46.3s
+  C update 164  train  10.97%  reward -0.1585  fair -0.1503  varied 24  std 0.090   37.1s
+  C update 165  train  12.38%  reward -0.1925  fair -0.1840  varied 22  std 0.090   43.9s
+  C update 166  train  15.88%  reward -0.2947  fair -0.2861  varied 20  std 0.091   34.3s
+  C update 167  train  14.74%  reward -0.2211  fair -0.2124  varied 13  std 0.090   38.2s
+  C update 168  train  13.19%  reward -0.2180  fair -0.2094  varied 19  std 0.090   34.0s
+  C update 169  train  13.03%  reward -0.1893  fair -0.1808  varied 16  std 0.090   39.1s
+  C update 170  train  13.12%  reward -0.1890  fair -0.1805  varied 15  std 0.090   33.4s
+  C update 170  EVALUATION full  17.96%  varied   8.40%  average  13.18%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 171  train  11.62%  reward -0.1860  fair -0.1775  varied 23  std 0.090   33.6s
+  C update 172  train  12.03%  reward -0.1984  fair -0.1899  varied 22  std 0.090   35.5s
+  C update 173  train  12.48%  reward -0.2121  fair -0.2036  varied 23  std 0.091   34.8s
+  C update 174  train  15.12%  reward -0.2450  fair -0.2365  varied 17  std 0.091   33.9s
+  C update 175  train  11.46%  reward -0.1612  fair -0.1525  varied 20  std 0.091   32.3s
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0175.pt
+  C update 176  train  11.81%  reward -0.1973  fair -0.1887  varied 23  std 0.091   29.4s
+  C update 177  train  12.12%  reward -0.1979  fair -0.1893  varied 25  std 0.091   34.3s
+  C update 178  train  13.20%  reward -0.2196  fair -0.2111  varied 19  std 0.090   30.7s
+  C update 179  train  12.57%  reward -0.2098  fair -0.2013  varied 19  std 0.090   35.7s
+  C update 180  train  13.28%  reward -0.2290  fair -0.2204  varied 22  std 0.090   32.8s
+  C update 180  EVALUATION full  18.36%  varied   8.61%  average  13.48%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 181  train  11.35%  reward -0.1585  fair -0.1498  varied 23  std 0.090   34.6s
+  C update 182  train  11.88%  reward -0.1834  fair -0.1748  varied 23  std 0.090   29.9s
+  C update 183  train  14.63%  reward -0.2806  fair -0.2720  varied 21  std 0.090   33.1s
+  C update 184  train  12.81%  reward -0.2282  fair -0.2197  varied 20  std 0.090   36.4s
+  C update 185  train  13.34%  reward -0.2349  fair -0.2265  varied 19  std 0.090   34.3s
+  C update 186  train  12.05%  reward -0.1721  fair -0.1635  varied 22  std 0.090   36.9s
+  C update 187  train  12.78%  reward -0.1967  fair -0.1881  varied 17  std 0.090   37.3s
+  C update 188  train  12.95%  reward -0.1875  fair -0.1789  varied 16  std 0.090   41.5s
+  C update 189  train  12.34%  reward -0.1996  fair -0.1910  varied 23  std 0.090   27.9s
+  C update 190  train  15.34%  reward -0.3159  fair -0.3071  varied 23  std 0.090   28.0s
+  C update 190  EVALUATION full  18.30%  varied   8.42%  average  13.36%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 191  train  11.78%  reward -0.1751  fair -0.1665  varied 21  std 0.090   35.8s
+  C update 192  train  11.81%  reward -0.1875  fair -0.1790  varied 24  std 0.089   29.6s
+  C update 193  train  12.04%  reward -0.1692  fair -0.1605  varied 21  std 0.089   33.7s
+  C update 194  train  14.17%  reward -0.2602  fair -0.2517  varied 17  std 0.089   35.7s
+  C update 195  train  11.10%  reward -0.1537  fair -0.1451  varied 21  std 0.089   36.3s
+  C update 196  train  14.95%  reward -0.2331  fair -0.2243  varied 15  std 0.089   37.1s
+  C update 197  train  13.97%  reward -0.2182  fair -0.2096  varied 16  std 0.089   34.5s
+  C update 198  train  11.57%  reward -0.1977  fair -0.1890  varied 27  std 0.088   26.6s
+  C update 199  train  12.96%  reward -0.1994  fair -0.1908  varied 17  std 0.089   34.5s
+  C update 200  train  11.39%  reward -0.1846  fair -0.1760  varied 25  std 0.088   30.1s
+  C update 200  EVALUATION full  18.43%  varied   8.27%  average  13.35%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0200.pt
+  C update 201  train  12.95%  reward -0.2062  fair -0.1974  varied 24  std 0.088   28.0s
+  C update 202  train  12.22%  reward -0.1810  fair -0.1725  varied 19  std 0.088   39.1s
+  C update 203  train  13.94%  reward -0.2271  fair -0.2184  varied 19  std 0.088   31.3s
+  C update 204  train  11.86%  reward -0.1994  fair -0.1907  varied 26  std 0.088   29.2s
+  C update 205  train  14.55%  reward -0.2337  fair -0.2252  varied 15  std 0.088   37.4s
+  C update 206  train  13.02%  reward -0.1852  fair -0.1765  varied 17  std 0.088   36.9s
+  C update 207  train  12.50%  reward -0.1857  fair -0.1772  varied 19  std 0.088   37.1s
+  C update 208  train  13.83%  reward -0.2364  fair -0.2279  varied 21  std 0.087   37.6s
+  C update 209  train  12.11%  reward -0.1811  fair -0.1725  varied 22  std 0.087   28.9s
+  C update 210  train  13.30%  reward -0.1889  fair -0.1804  varied 17  std 0.087   39.8s
+  C update 210  EVALUATION full  18.37%  varied   8.19%  average  13.28%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 211  train  13.40%  reward -0.1990  fair -0.1904  varied 19  std 0.087   38.5s
+  C update 212  train  14.09%  reward -0.2422  fair -0.2335  varied 17  std 0.087   37.5s
+  C update 213  train  12.90%  reward -0.1970  fair -0.1885  varied 20  std 0.086   34.8s
+  C update 214  train  15.22%  reward -0.2631  fair -0.2546  varied 17  std 0.086   38.5s
+  C update 215  train  14.36%  reward -0.2110  fair -0.2022  varied 16  std 0.086   38.5s
+  C update 216  train  12.08%  reward -0.1805  fair -0.1717  varied 24  std 0.086   33.7s
+  C update 217  train  14.10%  reward -0.2310  fair -0.2225  varied 18  std 0.086   34.9s
+  C update 218  train  12.86%  reward -0.1856  fair -0.1771  varied 16  std 0.086   35.9s
+  C update 219  train  12.06%  reward -0.1864  fair -0.1777  varied 21  std 0.086   38.9s
+  C update 220  train  11.27%  reward -0.1673  fair -0.1586  varied 29  std 0.086   26.8s
+  C update 220  EVALUATION full  18.43%  varied   8.04%  average  13.24%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 221  train  14.52%  reward -0.2407  fair -0.2321  varied 16  std 0.086   40.0s
+  C update 222  train  13.23%  reward -0.2084  fair -0.1998  varied 20  std 0.086   39.3s
+  C update 223  train  13.82%  reward -0.2249  fair -0.2161  varied 19  std 0.086   38.8s
+  C update 224  train  10.28%  reward -0.1521  fair -0.1437  varied 22  std 0.085   42.7s
+  C update 225  train  12.99%  reward -0.1856  fair -0.1770  varied 18  std 0.085   43.5s
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0225.pt
+  C update 226  train  12.94%  reward -0.1872  fair -0.1789  varied 17  std 0.086   47.0s
+  C update 227  train  13.42%  reward -0.2182  fair -0.2096  varied 20  std 0.085   47.9s
+  C update 228  train  11.86%  reward -0.2033  fair -0.1946  varied 24  std 0.085   35.7s
+  C update 229  train  13.76%  reward -0.2274  fair -0.2187  varied 19  std 0.086   38.5s
+  C update 230  train  11.85%  reward -0.1814  fair -0.1727  varied 24  std 0.085   35.2s
+  C update 230  EVALUATION full  18.73%  varied   8.59%  average  13.66%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 231  train  13.65%  reward -0.1985  fair -0.1899  varied 15  std 0.085   46.2s
+  C update 232  train  12.23%  reward -0.1763  fair -0.1677  varied 20  std 0.085   33.5s
+  C update 233  train  15.63%  reward -0.2839  fair -0.2753  varied 18  std 0.085   37.7s
+  C update 234  train  14.38%  reward -0.2181  fair -0.2096  varied 15  std 0.085   37.7s
+  C update 235  train  16.51%  reward -0.2954  fair -0.2869  varied 14  std 0.084   34.9s
+  C update 236  train  12.69%  reward -0.1843  fair -0.1757  varied 22  std 0.084   34.2s
+  C update 237  train  12.92%  reward -0.2101  fair -0.2016  varied 18  std 0.084   34.5s
+  C update 238  train  14.54%  reward -0.2506  fair -0.2418  varied 18  std 0.084   37.2s
+  C update 239  train  12.55%  reward -0.1772  fair -0.1687  varied 20  std 0.084   34.1s
+  C update 240  train  12.04%  reward -0.1752  fair -0.1667  varied 19  std 0.084   37.3s
+  C update 240  EVALUATION full  18.39%  varied   8.28%  average  13.33%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 241  train  14.31%  reward -0.3053  fair -0.2966  varied 27  std 0.084   26.7s
+  C update 242  train  12.51%  reward -0.1847  fair -0.1760  varied 18  std 0.084   34.1s
+  C update 243  train  12.58%  reward -0.1739  fair -0.1652  varied 21  std 0.084   33.8s
+  C update 244  train  14.46%  reward -0.2247  fair -0.2161  varied 17  std 0.084   32.3s
+  C update 245  train  12.23%  reward -0.1669  fair -0.1585  varied 16  std 0.084   36.1s
+  C update 246  train  14.71%  reward -0.2140  fair -0.2055  varied 17  std 0.084   38.4s
+  C update 247  train  13.21%  reward -0.1921  fair -0.1836  varied 15  std 0.084   34.8s
+  C update 248  train  12.92%  reward -0.1855  fair -0.1770  varied 17  std 0.084   37.3s
+  C update 249  train  12.57%  reward -0.2255  fair -0.2168  varied 22  std 0.083   30.1s
+  C update 250  train  13.56%  reward -0.2000  fair -0.1912  varied 17  std 0.083   31.7s
+  C update 250  EVALUATION full  18.74%  varied   7.98%  average  13.36%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0250.pt
+  C update 251  train  13.03%  reward -0.2045  fair -0.1959  varied 22  std 0.083   39.1s
+  C update 252  train  13.09%  reward -0.2051  fair -0.1963  varied 19  std 0.083   36.9s
+  C update 253  train  15.32%  reward -0.2450  fair -0.2363  varied 17  std 0.084   37.3s
+  C update 254  train  12.11%  reward -0.1883  fair -0.1797  varied 24  std 0.084   32.8s
+  C update 255  train  14.23%  reward -0.2429  fair -0.2344  varied 20  std 0.084   31.4s
+  C update 256  train  14.87%  reward -0.2264  fair -0.2177  varied 17  std 0.084   39.8s
+  C update 257  train  14.96%  reward -0.2736  fair -0.2651  varied 16  std 0.085   39.5s
+  C update 258  train  11.16%  reward -0.1590  fair -0.1503  varied 24  std 0.084   29.2s
+  C update 259  train  12.67%  reward -0.2009  fair -0.1923  varied 24  std 0.084   35.0s
+  C update 260  train  12.50%  reward -0.2019  fair -0.1931  varied 24  std 0.084   33.7s
+  C update 260  EVALUATION full  18.54%  varied   8.37%  average  13.46%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 261  train  14.70%  reward -0.2176  fair -0.2089  varied 15  std 0.084   37.4s
+  C update 262  train  13.23%  reward -0.2036  fair -0.1949  varied 22  std 0.084   32.6s
+  C update 263  train  15.10%  reward -0.2687  fair -0.2600  varied 22  std 0.084   34.6s
+  C update 264  train  13.94%  reward -0.2050  fair -0.1965  varied 12  std 0.084   45.6s
+  C update 265  train  14.68%  reward -0.2743  fair -0.2656  varied 19  std 0.085   37.1s
+  C update 266  train  11.99%  reward -0.1784  fair -0.1698  varied 20  std 0.085   40.5s
+  C update 267  train  12.85%  reward -0.2281  fair -0.2194  varied 21  std 0.085   36.4s
+  C update 268  train  11.99%  reward -0.1907  fair -0.1820  varied 23  std 0.085   40.2s
+  C update 269  train  13.57%  reward -0.2471  fair -0.2385  varied 27  std 0.085   40.8s
+  C update 270  train  13.82%  reward -0.2239  fair -0.2152  varied 23  std 0.085   37.3s
+  C update 270  EVALUATION full  18.99%  varied   8.62%  average  13.81%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 271  train  12.69%  reward -0.1940  fair -0.1853  varied 19  std 0.085   44.4s
+  C update 272  train  12.34%  reward -0.1881  fair -0.1796  varied 22  std 0.085   38.9s
+  C update 273  train  10.95%  reward -0.1561  fair -0.1475  varied 27  std 0.085   35.7s
+  C update 274  train  13.59%  reward -0.2250  fair -0.2163  varied 20  std 0.085   39.9s
+  C update 275  train   9.48%  reward -0.1301  fair -0.1219  varied 24  std 0.085   34.5s
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0275.pt
+  C update 276  train  13.92%  reward -0.2204  fair -0.2118  varied 18  std 0.085   39.8s
+  C update 277  train  14.86%  reward -0.2126  fair -0.2040  varied 15  std 0.085   45.3s
+  C update 278  train   9.84%  reward -0.1396  fair -0.1311  varied 22  std 0.085   39.5s
+  C update 279  train  11.40%  reward -0.1649  fair -0.1564  varied 20  std 0.085   37.0s
+  C update 280  train  13.49%  reward -0.1889  fair -0.1804  varied 15  std 0.085   39.7s
+  C update 280  EVALUATION full  18.17%  varied   8.26%  average  13.21%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 281  train  11.89%  reward -0.1843  fair -0.1756  varied 25  std 0.085   30.3s
+  C update 282  train  13.18%  reward -0.1859  fair -0.1773  varied 19  std 0.085   37.0s
+  C update 283  train  15.36%  reward -0.2923  fair -0.2836  varied 22  std 0.085   32.9s
+  C update 284  train  12.18%  reward -0.1711  fair -0.1625  varied 18  std 0.085   38.0s
+  C update 285  train   9.89%  reward -0.1305  fair -0.1220  varied 26  std 0.085   33.7s
+  C update 286  train  12.36%  reward -0.1913  fair -0.1827  varied 20  std 0.084   35.5s
+  C update 287  train  12.36%  reward -0.2005  fair -0.1921  varied 24  std 0.084   34.6s
+  C update 288  train  10.63%  reward -0.1439  fair -0.1353  varied 22  std 0.084   36.6s
+  C update 289  train  12.03%  reward -0.1877  fair -0.1790  varied 24  std 0.084   32.7s
+  C update 290  train  13.98%  reward -0.2243  fair -0.2157  varied 20  std 0.085   37.9s
+  C update 290  EVALUATION full  18.87%  varied   8.52%  average  13.69%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 291  train  14.39%  reward -0.2417  fair -0.2330  varied 19  std 0.085   32.3s
+  C update 292  train  14.86%  reward -0.2399  fair -0.2311  varied 19  std 0.085   37.9s
+  C update 293  train  13.48%  reward -0.2046  fair -0.1960  varied 20  std 0.085   38.2s
+  C update 294  train  13.95%  reward -0.2497  fair -0.2411  varied 22  std 0.084   32.7s
+  C update 295  train  14.06%  reward -0.2359  fair -0.2275  varied 18  std 0.084   32.4s
+  C update 296  train  13.00%  reward -0.1939  fair -0.1853  varied 20  std 0.084   32.5s
+  C update 297  train  11.29%  reward -0.1775  fair -0.1691  varied 21  std 0.083   43.1s
+  C update 298  train  14.33%  reward -0.2124  fair -0.2038  varied 15  std 0.083   42.0s
+  C update 299  train  14.21%  reward -0.2308  fair -0.2222  varied 20  std 0.083   34.6s
+  C update 300  train  12.50%  reward -0.1735  fair -0.1648  varied 19  std 0.083   33.2s
+  C update 300  EVALUATION full  19.08%  varied   8.04%  average  13.56%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0300.pt
+  C update 301  train  12.54%  reward -0.1880  fair -0.1793  varied 20  std 0.083   33.3s
+  C update 302  train  13.91%  reward -0.2274  fair -0.2192  varied 22  std 0.083   32.4s
+  C update 303  train  14.53%  reward -0.2043  fair -0.1956  varied 18  std 0.083   38.2s
+  C update 304  train  12.86%  reward -0.1965  fair -0.1879  varied 20  std 0.083   35.4s
+  C update 305  train  14.94%  reward -0.2925  fair -0.2839  varied 25  std 0.083   36.4s
+  C update 306  train  12.08%  reward -0.1719  fair -0.1633  varied 19  std 0.083   37.8s
+  C update 307  train  15.10%  reward -0.2527  fair -0.2439  varied 16  std 0.083   32.7s
+  C update 308  train  12.82%  reward -0.1960  fair -0.1873  varied 19  std 0.083   33.7s
+  C update 309  train  11.76%  reward -0.1715  fair -0.1629  varied 20  std 0.083   33.9s
+  C update 310  train  14.11%  reward -0.2059  fair -0.1973  varied 16  std 0.083   42.7s
+  C update 310  EVALUATION full  19.01%  varied   8.15%  average  13.58%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 311  train  13.61%  reward -0.2056  fair -0.1969  varied 19  std 0.083   31.0s
+  C update 312  train  12.34%  reward -0.1984  fair -0.1897  varied 21  std 0.082   34.7s
+  C update 313  train  12.45%  reward -0.1836  fair -0.1752  varied 19  std 0.082   38.9s
+  C update 314  train  10.99%  reward -0.1495  fair -0.1409  varied 21  std 0.082   32.9s
+  C update 315  train  12.13%  reward -0.1772  fair -0.1686  varied 19  std 0.082   36.7s
+  C update 316  train  14.01%  reward -0.2040  fair -0.1952  varied 15  std 0.082   35.9s
+  C update 317  train  10.86%  reward -0.1526  fair -0.1440  varied 21  std 0.081   36.9s
+  C update 318  train  11.93%  reward -0.1702  fair -0.1617  varied 19  std 0.082   34.9s
+  C update 319  train  12.97%  reward -0.1943  fair -0.1857  varied 17  std 0.082   38.2s
+  C update 320  train  11.09%  reward -0.1804  fair -0.1721  varied 23  std 0.082   31.1s
+  C update 320  EVALUATION full  18.84%  varied   7.88%  average  13.36%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 321  train  12.48%  reward -0.1683  fair -0.1596  varied 19  std 0.082   31.5s
+  C update 322  train  10.55%  reward -0.1366  fair -0.1282  varied 22  std 0.082   34.5s
+  C update 323  train  12.66%  reward -0.1779  fair -0.1694  varied 16  std 0.082   36.2s
+  C update 324  train  12.09%  reward -0.1726  fair -0.1640  varied 22  std 0.081   32.9s
+  C update 325  train  12.50%  reward -0.1833  fair -0.1746  varied 20  std 0.081   32.6s
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0325.pt
+  C update 326  train  12.95%  reward -0.1981  fair -0.1895  varied 16  std 0.081   35.0s
+  C update 327  train  13.78%  reward -0.2401  fair -0.2317  varied 21  std 0.081   37.0s
+  C update 328  train  12.60%  reward -0.2248  fair -0.2163  varied 25  std 0.081   29.6s
+  C update 329  train  14.49%  reward -0.2498  fair -0.2411  varied 20  std 0.081   32.2s
+  C update 330  train  11.60%  reward -0.1745  fair -0.1659  varied 23  std 0.081   35.1s
+  C update 330  EVALUATION full  18.30%  varied   7.53%  average  12.92%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 331  train  14.15%  reward -0.2035  fair -0.1948  varied 14  std 0.081   37.1s
+  C update 332  train  12.50%  reward -0.1866  fair -0.1780  varied 22  std 0.081   33.5s
+  C update 333  train  12.69%  reward -0.1786  fair -0.1700  varied 20  std 0.081   31.4s
+  C update 334  train  13.00%  reward -0.1944  fair -0.1860  varied 19  std 0.081   36.3s
+  C update 335  train  11.62%  reward -0.1636  fair -0.1548  varied 21  std 0.081   30.7s
+  C update 336  train  13.01%  reward -0.1999  fair -0.1913  varied 20  std 0.081   33.2s
+  C update 337  train  12.00%  reward -0.1887  fair -0.1799  varied 23  std 0.081   30.8s
+  C update 338  train  12.90%  reward -0.1784  fair -0.1697  varied 16  std 0.081   35.8s
+  C update 339  train  12.22%  reward -0.1804  fair -0.1719  varied 22  std 0.081   31.2s
+  C update 340  train  12.43%  reward -0.1811  fair -0.1723  varied 20  std 0.081   33.2s
+  C update 340  EVALUATION full  19.24%  varied   6.89%  average  13.07%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 341  train  10.44%  reward -0.1498  fair -0.1412  varied 26  std 0.080   28.9s
+  C update 342  train  12.09%  reward -0.1822  fair -0.1735  varied 21  std 0.080   32.4s
+  C update 343  train  12.31%  reward -0.1726  fair -0.1639  varied 20  std 0.080   31.4s
+  C update 344  train  12.58%  reward -0.1996  fair -0.1910  varied 22  std 0.080   30.8s
+  C update 345  train  11.92%  reward -0.1662  fair -0.1574  varied 22  std 0.080   35.4s
+  C update 346  train  13.26%  reward -0.1917  fair -0.1830  varied 19  std 0.081   41.1s
+  C update 347  train  12.60%  reward -0.1801  fair -0.1715  varied 18  std 0.080   46.5s
+  C update 348  train   9.88%  reward -0.1443  fair -0.1356  varied 25  std 0.081   32.2s
+  C update 349  train  13.19%  reward -0.2024  fair -0.1936  varied 19  std 0.081   39.3s
+  C update 350  train  11.36%  reward -0.1600  fair -0.1514  varied 22  std 0.081   34.8s
+  C update 350  EVALUATION full  18.74%  varied   8.46%  average  13.60%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0350.pt
+  C update 351  train  11.34%  reward -0.1654  fair -0.1567  varied 22  std 0.081   34.2s
+  C update 352  train  12.60%  reward -0.1884  fair -0.1797  varied 22  std 0.081   37.0s
+  C update 353  train  12.30%  reward -0.1857  fair -0.1771  varied 21  std 0.081   35.5s
+  C update 354  train  13.00%  reward -0.2016  fair -0.1929  varied 20  std 0.081   34.7s
+  C update 355  train  12.98%  reward -0.2161  fair -0.2074  varied 22  std 0.081   38.8s
+  C update 356  train  14.98%  reward -0.2131  fair -0.2044  varied 13  std 0.081   50.3s
+  C update 357  train  12.79%  reward -0.1784  fair -0.1698  varied 17  std 0.081   38.7s
+  C update 358  train  12.12%  reward -0.1718  fair -0.1632  varied 20  std 0.080   40.0s
+  C update 359  train  12.85%  reward -0.1794  fair -0.1707  varied 17  std 0.080   38.4s
+  C update 360  train  12.56%  reward -0.2040  fair -0.1952  varied 22  std 0.081   38.1s
+  C update 360  EVALUATION full  18.89%  varied   7.91%  average  13.40%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 361  train  11.96%  reward -0.1781  fair -0.1695  varied 22  std 0.081   35.4s
+  C update 362  train  11.78%  reward -0.1590  fair -0.1504  varied 19  std 0.080   37.3s
+  C update 363  train  12.62%  reward -0.1804  fair -0.1718  varied 18  std 0.080   40.7s
+  C update 364  train  13.08%  reward -0.1885  fair -0.1800  varied 19  std 0.081   43.1s
+  C update 365  train  11.27%  reward -0.1799  fair -0.1712  varied 23  std 0.081   38.0s
+  C update 366  train  11.17%  reward -0.1703  fair -0.1617  varied 24  std 0.081   36.9s
+  C update 367  train  12.18%  reward -0.1873  fair -0.1786  varied 20  std 0.081   41.4s
+  C update 368  train  12.96%  reward -0.2071  fair -0.1985  varied 19  std 0.081   42.9s
+  C update 369  train  12.84%  reward -0.1852  fair -0.1766  varied 19  std 0.080   41.9s
+  C update 370  train  11.87%  reward -0.1804  fair -0.1717  varied 24  std 0.080   37.9s
+  C update 370  EVALUATION full  18.96%  varied   7.31%  average  13.14%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 371  train  12.04%  reward -0.1720  fair -0.1633  varied 22  std 0.080   35.9s
+  C update 372  train  11.76%  reward -0.1738  fair -0.1651  varied 25  std 0.080   37.6s
+  C update 373  train  10.76%  reward -0.1650  fair -0.1565  varied 25  std 0.080   38.1s
+  C update 374  train  14.22%  reward -0.2325  fair -0.2237  varied 20  std 0.080   37.5s
+  C update 375  train  14.37%  reward -0.2089  fair -0.2001  varied 14  std 0.080   42.4s
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0375.pt
+  C update 376  train  12.43%  reward -0.1692  fair -0.1605  varied 18  std 0.080   42.8s
+  C update 377  train  12.33%  reward -0.1723  fair -0.1635  varied 19  std 0.080   37.3s
+  C update 378  train  12.63%  reward -0.1781  fair -0.1694  varied 19  std 0.080   38.5s
+  C update 379  train  13.57%  reward -0.2003  fair -0.1918  varied 16  std 0.080   40.7s
+  C update 380  train  11.90%  reward -0.1853  fair -0.1768  varied 23  std 0.081   29.0s
+  C update 380  EVALUATION full  18.83%  varied   6.81%  average  12.82%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 381  train  13.09%  reward -0.2123  fair -0.2039  varied 17  std 0.080   32.5s
+  C update 382  train  12.33%  reward -0.1842  fair -0.1756  varied 22  std 0.080   31.2s
+  C update 383  train  13.44%  reward -0.1926  fair -0.1840  varied 16  std 0.080   31.8s
+  C update 384  train  13.32%  reward -0.1943  fair -0.1856  varied 18  std 0.080   31.2s
+  C update 385  train  13.28%  reward -0.1880  fair -0.1793  varied 18  std 0.080   29.3s
+  C update 386  train  12.04%  reward -0.1635  fair -0.1547  varied 19  std 0.079   30.3s
+  C update 387  train  12.73%  reward -0.1905  fair -0.1820  varied 20  std 0.079   29.4s
+  C update 388  train  11.37%  reward -0.1533  fair -0.1446  varied 22  std 0.079   31.1s
+  C update 389  train  12.02%  reward -0.1801  fair -0.1715  varied 21  std 0.079   28.7s
+  C update 390  train  10.74%  reward -0.1590  fair -0.1502  varied 26  std 0.079   27.4s
+  C update 390  EVALUATION full  18.73%  varied   7.57%  average  13.15%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C update 391  train  10.35%  reward -0.1715  fair -0.1629  varied 27  std 0.079   28.8s
+  C update 392  train  13.06%  reward -0.1894  fair -0.1807  varied 18  std 0.079   32.0s
+  C update 393  train  14.05%  reward -0.2460  fair -0.2373  varied 22  std 0.079   29.1s
+  C update 394  train  12.45%  reward -0.1782  fair -0.1695  varied 18  std 0.079   30.8s
+  C update 395  train  13.37%  reward -0.1819  fair -0.1733  varied 14  std 0.079   33.9s
+  C update 396  train  13.83%  reward -0.2282  fair -0.2196  varied 19  std 0.079   30.4s
+  C update 397  train  12.10%  reward -0.1989  fair -0.1905  varied 21  std 0.079   30.3s
+  C update 398  train  11.92%  reward -0.1877  fair -0.1792  varied 21  std 0.079   31.1s
+  C update 399  train  13.04%  reward -0.1895  fair -0.1807  varied 21  std 0.079   27.7s
+  C update 400  train  12.37%  reward -0.1887  fair -0.1802  varied 21  std 0.079   30.3s
+  C update 400  EVALUATION full  18.96%  varied   7.45%  average  13.21%
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  checkpoint out/checkpoints/2c_round2/C/ckpt_0400.pt
+  C: 400 updates, best 12.79% at update 140, 4.58 h
+  wrote out/2c_r2_curve_C.csv
+  wrote out/2c_r2_log_C.csv
+  C: best actor re-validated at full 17.5210%, varied 8.0530%, average 12.7870% (curve best 12.7870%)
+  wrote out/2c_r2_validation.csv
+  /home/abed/miniconda3/bin/python /home/abed/fanet-rl-routing/rl_sim/scripts/edge_cases_2c.py --out-dir out --workers 20 --model out/models/2c/c_actor_r2_C.pt --out out/2c_edge_r2_C
+  /home/abed/miniconda3/bin/python /home/abed/fanet-rl-routing/rl_sim/scripts/edge_cases_2c.py --out-dir out --workers 20 --bigfleet --actor C=out/models/2c/c_actor_r2_C.pt --out out/2c_edge_bigfleet_r2_C
+  wrote out/2c_r2_summary.csv
+  wrote out/2c_r2_by_type.csv
+  wrote out/2c_r2_paired.csv
+  wrote out/2c_r2_edge.csv
+
+  Full-fleet validation 301-330 (from out/2c_r2_summary.csv)
+     policy  total  channel queue_fu no_route dead_end      ttl hop_limi link_bro stale_li  C flown
+    control  15.92     7.71     2.79     0.56     0.00     0.00     0.00     0.00     4.85    2342m
+          A  16.75     8.49     2.41     0.58     0.01     0.00     0.00     0.02     5.25    2358m
+          B  16.84     8.17     2.82     0.69     0.02     0.00     0.00     0.01     5.12    2345m
+          C  17.52     8.60     3.04     0.77     0.01     0.00     0.00     0.01     5.09    2382m
+     direct  16.69     8.26     2.67     0.66     0.04     0.00     0.00     0.00     5.06    2280m
+   midpoint  24.62     8.56     8.29     2.32     0.26     0.00     0.00     0.14     5.05    2110m
+      hover  27.83    11.86     3.91     6.12     0.60     0.00     0.00     0.17     5.16       0m
+
+  Varied validation 331-360
+     policy  total  worst M  M >50%  average   type a  type b  type c  type d
+    control  11.67    34.19    5.2%    13.80    11.23   17.39    9.76    7.55
+          A   9.22    26.65    2.1%    12.99     9.88   15.39    6.03    4.61
+          B   8.34    26.90    1.8%    12.59     9.79   12.19    6.14    4.50
+          C   8.05    22.16    0.8%    12.79     9.50   10.07    5.92    6.23
+     direct  10.61    31.63    2.9%    13.65    10.14   14.43    7.30   10.11
+   midpoint  10.12    32.47    5.2%    17.37    11.56    8.45   13.83    6.65
+      hover  17.29    44.10    9.9%    22.56    12.35   21.76   22.14   12.97
+
+  Paired against control (points of total loss)
+          A   full   +0.83 [+0.21, +1.45]  lower on 9/30
+          A varied   -2.45 [-4.57, -0.33]  lower on 16/30
+          B   full   +0.92 [+0.39, +1.44]  lower on 7/30
+          B varied   -3.33 [-5.79, -0.87]  lower on 16/30
+          C   full   +1.60 [+0.97, +2.22]  lower on 3/30
+          C varied   -3.62 [-5.90, -1.34]  lower on 17/30
+     direct   full   +0.77 [+0.22, +1.32]  lower on 7/30
+     direct varied   -1.06 [-3.49, +1.37]  lower on 16/30
+   midpoint   full   +8.70 [+7.11, +10.29]  lower on 1/30
+   midpoint varied   -1.56 [-5.54, +2.43]  lower on 13/30
+      hover   full  +11.91 [+9.85, +13.96]  lower on 0/30
+      hover varied   +5.62 [+2.54, +8.70]  lower on 2/30
+
+  Edge cases: total loss / flying-M loss, % (mean of 5 seeds)
+     policy          s1          s2          s3          s4          s5          s6          s7          s8          s9         s10         s11         s12         s13
+    control  88.7/ 88.7  88.0/ 88.0  88.3/ 88.3   0.8/  0.8  50.0/ 50.0  88.7/ 88.7  17.2/ 17.2  87.1/ 87.1   4.3/ 77.4  12.1/ 72.5   0.5/  9.2   2.3/ 41.0   8.4/ 16.6
+          A  88.4/ 88.4  88.4/ 88.4  86.1/ 86.1   0.8/  0.8  50.6/ 50.6  88.6/ 88.6  19.3/ 19.3  88.0/ 88.0   4.4/ 79.0  13.1/ 78.7   0.5/  9.2   2.3/ 40.8   9.8/ 19.2
+          B  84.6/ 84.6  79.0/ 79.0  84.1/ 84.1   0.8/  0.8  49.4/ 49.4  85.2/ 85.2  19.1/ 19.1  28.7/ 28.7   2.3/ 40.8  11.4/ 68.7   0.5/  9.2   1.1/ 19.3   9.1/ 18.1
+          C  84.2/ 84.2  79.3/ 79.3  83.3/ 83.3   0.8/  0.8  41.5/ 41.5  83.0/ 83.0  18.4/ 18.4  21.6/ 21.6   2.6/ 46.7  10.8/ 65.1   0.5/  9.2   1.4/ 25.2   7.9/ 15.8
+   midpoint  17.8/ 17.8  28.0/ 28.0  81.6/ 81.6   0.8/  0.8   8.8/  8.8  25.2/ 25.2  25.8/ 25.8  33.3/ 33.3   4.8/ 86.6  13.7/ 82.3   0.5/  9.2   2.7/ 49.4  36.8/ 72.4

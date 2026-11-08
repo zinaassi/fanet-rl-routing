@@ -1,9 +1,11 @@
-# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  window=[50,950) of 1000  |  commit=ef79bd0  |  phase 2c round 2, validation only, from the saved per-layout files; each policy minus control
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  window=[50,950) of 1000  |  commit=f39dcad  |  phase 2c round 2, validation only, from the saved per-layout files; each policy minus control
 policy,set,layouts,mean_diff,ci95_low,ci95_high,wins
 A,full,30,0.8325102880658437,0.21350631604093662,1.4515142600907507,9
 A,varied,30,-2.4525062168526213,-4.570756064259779,-0.3342563694454639,16
 B,full,30,0.9172839506172835,0.3895820814104516,1.4449858198241154,7
 B,varied,30,-3.326874109913325,-5.787260663525512,-0.8664875563011383,16
+C,full,30,1.5991769547325099,0.9747356868809014,2.2236182225841183,3
+C,varied,30,-3.618406332229861,-5.895123803082226,-1.3416888613774964,17
 direct,full,30,0.7666666666666667,0.21798120977079405,1.3153521235625394,7
 direct,varied,30,-1.0598012336247629,-3.4901638320534802,1.3705613648039545,16
 midpoint,full,30,8.697119341563786,7.1062557798393025,10.28798290328827,1

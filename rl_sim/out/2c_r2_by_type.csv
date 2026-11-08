@@ -1,4 +1,4 @@
-# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  window=[50,950) of 1000  |  commit=ef79bd0  |  phase 2c round 2, validation only, from the saved per-layout files
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  window=[50,950) of 1000  |  commit=f39dcad  |  phase 2c round 2, validation only, from the saved per-layout files
 policy,type,layouts,total_loss,worst_m_loss,pct_m_over_half
 control,a,8,11.226171023965142,24.305555555555554,1.25
 control,b,8,17.39335618085618,55.69444444444444,12.18344155844156
@@ -12,6 +12,10 @@ B,a,8,9.793545751633987,18.72222222222222,0.0
 B,b,8,12.186537999037999,46.611111111111114,6.880411255411255
 B,c,7,6.137230649835692,16.88888888888889,0.0
 B,d,7,4.504954304954305,23.746031746031747,0.0
+C,a,8,9.49828431372549,20.25,0.0
+C,b,8,10.065494227994227,24.27777777777778,3.125
+C,c,7,5.921111879095073,17.58730158730159,0.0
+C,d,7,6.233140933140933,26.507936507936506,0.0
 direct,a,8,10.138262527233115,19.52777777777778,0.0
 direct,b,8,14.425258537758538,53.02777777777778,11.047077922077923
 direct,c,7,7.300613174562755,20.03174603174603,0.0
