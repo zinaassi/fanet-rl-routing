@@ -1,0 +1,93 @@
+Round 2 settings:
+  runs (reward, varied)    {'A': ('fair', False), 'B': ('normal', True), 'C': ('fair', True)} [spec]
+  old reward               (delivered - lost)/created - C_FLIGHT_COST*m/speed               [c_interface.flight_reward]
+  C_FLIGHT_COST            0.01                                                             [config.py]
+  fair term                k*mean log(min(1,d_i/c_i)+0.05), 10.0 s window                   [spec, approved]
+  k                        1.4099498888140802                                               [--measure]
+  varied share             0.5                                                              [spec]
+  varied ranges            M 1-18, C 1-7, D (300.0, 650.0), far (450.0, 622.0), +-20 deg, hover (10.0, 30.0) [spec]
+  CONTINUE_STD             0.1                                                              [config.py]
+  critic-only warm-up      10                                                               [train_c_ppo.py]
+  PPO seed / updates       (2, 400)                                                         [train_c_ppo_round1.py]
+  episodes per update      40                                                               [train_c_ppo_m4.py]
+  clip / epochs / lr       (0.1, 5, 0.0003)                                                 [train_c_ppo.py]
+  grad clip / minibatch    (0.5, 1024)                                                      [train_c_ppo.py]
+  gamma / lambda           (0.97, 0.95)                                                     [train_c_ppo.py]
+  evaluate every           10                                                               [train_c_ppo.py]
+  checkpoint every         25                                                               [train_c_ppo_round1.py]
+  validation               full 301-330 seed 9100+; varied 331-360 seed 9200+               [spec]
+  keep rule                lowest average of the two validation losses                      [spec]
+
+=== resume test: run C, 30 straight vs 25 + resume, scratch /tmp/r2_resume_o0oalc8e ===
+  C update   1  train  13.49%  reward -0.2401  fair -0.2318  varied 21  std 0.100   33.4s
+  C update   2  train  13.70%  reward -0.2276  fair -0.2196  varied 16  std 0.100   34.0s
+  C update   3  train  13.58%  reward -0.2496  fair -0.2412  varied 19  std 0.100   30.1s
+  C update   4  train  15.46%  reward -0.3052  fair -0.2968  varied 19  std 0.100   32.5s
+  C update   5  train  14.56%  reward -0.2933  fair -0.2848  varied 23  std 0.100   27.5s
+  C update   6  train  15.57%  reward -0.3283  fair -0.3198  varied 21  std 0.100   29.3s
+  C update   7  train  12.87%  reward -0.2627  fair -0.2543  varied 26  std 0.100   25.4s
+  C update   8  train  13.17%  reward -0.2210  fair -0.2126  varied 19  std 0.100   29.0s
+  C update   9  train  12.85%  reward -0.2204  fair -0.2121  varied 21  std 0.100   29.8s
+  C update  10  train  12.70%  reward -0.1959  fair -0.1876  varied 20  std 0.100   32.4s
+  C update  10  EVALUATION full  16.69%  varied  10.61%  average  13.65%  <- best, saved
+  C update  11  train  14.67%  reward -0.2493  fair -0.2410  varied 15  std 0.100   34.5s
+  C update  12  train  13.47%  reward -0.2064  fair -0.1981  varied 15  std 0.100   33.7s
+  C update  13  train  13.63%  reward -0.2586  fair -0.2503  varied 21  std 0.100   35.2s
+  C update  14  train  15.99%  reward -0.3323  fair -0.3239  varied 20  std 0.100   30.6s
+  C update  15  train  13.09%  reward -0.2152  fair -0.2067  varied 17  std 0.100   33.4s
+  C update  16  train  14.53%  reward -0.2662  fair -0.2577  varied 20  std 0.100   30.7s
+  C update  17  train  15.34%  reward -0.3043  fair -0.2960  varied 22  std 0.100   32.1s
+  C update  18  train  12.98%  reward -0.2101  fair -0.2018  varied 20  std 0.099   32.7s
+  C update  19  train  13.00%  reward -0.2302  fair -0.2219  varied 18  std 0.099   36.6s
+  C update  20  train  15.31%  reward -0.2757  fair -0.2672  varied 17  std 0.099   33.5s
+  C update  20  EVALUATION full  17.18%  varied  10.17%  average  13.67%
+  C update  21  train  15.46%  reward -0.3274  fair -0.3191  varied 23  std 0.099   31.4s
+  C update  22  train  12.67%  reward -0.2036  fair -0.1952  varied 17  std 0.099   32.4s
+  C update  23  train  14.29%  reward -0.2519  fair -0.2435  varied 15  std 0.099   34.5s
+  C update  24  train  13.59%  reward -0.2186  fair -0.2104  varied 16  std 0.098   34.7s
+  C update  25  train  13.89%  reward -0.2629  fair -0.2545  varied 20  std 0.099   32.0s
+  checkpoint /tmp/r2_resume_o0oalc8e/a/ckpt_0025.pt
+  C update  26  train  13.25%  reward -0.2193  fair -0.2110  varied 21  std 0.099   35.5s
+  C update  27  train  12.76%  reward -0.2484  fair -0.2400  varied 25  std 0.099   29.5s
+  C update  28  train  12.93%  reward -0.2370  fair -0.2285  varied 25  std 0.099   28.6s
+  C update  29  train  14.52%  reward -0.2611  fair -0.2527  varied 20  std 0.099   31.1s
+  C update  30  train  13.70%  reward -0.2537  fair -0.2453  varied 20  std 0.098   32.0s
+  C update  30  EVALUATION full  17.39%  varied   9.78%  average  13.59%  <- best, saved
+  C update   1  train  13.49%  reward -0.2401  fair -0.2318  varied 21  std 0.100   28.5s
+  C update   2  train  13.70%  reward -0.2276  fair -0.2196  varied 16  std 0.100   34.1s
+  C update   3  train  13.58%  reward -0.2496  fair -0.2412  varied 19  std 0.100   30.7s
+  C update   4  train  15.46%  reward -0.3052  fair -0.2968  varied 19  std 0.100   31.8s
+  C update   5  train  14.56%  reward -0.2933  fair -0.2848  varied 23  std 0.100   29.0s
+  C update   6  train  15.57%  reward -0.3283  fair -0.3198  varied 21  std 0.100   30.0s
+  C update   7  train  12.87%  reward -0.2627  fair -0.2543  varied 26  std 0.100   27.0s
+  C update   8  train  13.17%  reward -0.2210  fair -0.2126  varied 19  std 0.100   30.3s
+  C update   9  train  12.85%  reward -0.2204  fair -0.2121  varied 21  std 0.100   30.0s
+  C update  10  train  12.70%  reward -0.1959  fair -0.1876  varied 20  std 0.100   30.9s
+  C update  10  EVALUATION full  16.69%  varied  10.61%  average  13.65%  <- best, saved
+  C update  11  train  14.67%  reward -0.2493  fair -0.2410  varied 15  std 0.100   33.9s
+  C update  12  train  13.47%  reward -0.2064  fair -0.1981  varied 15  std 0.100   34.2s
+  C update  13  train  13.63%  reward -0.2586  fair -0.2503  varied 21  std 0.100   34.1s
+  C update  14  train  15.99%  reward -0.3323  fair -0.3239  varied 20  std 0.100   30.7s
+  C update  15  train  13.09%  reward -0.2152  fair -0.2067  varied 17  std 0.100   32.7s
+  C update  16  train  14.53%  reward -0.2662  fair -0.2577  varied 20  std 0.100   30.0s
+  C update  17  train  15.34%  reward -0.3043  fair -0.2960  varied 22  std 0.100   30.3s
+  C update  18  train  12.98%  reward -0.2101  fair -0.2018  varied 20  std 0.099   32.6s
+  C update  19  train  13.00%  reward -0.2302  fair -0.2219  varied 18  std 0.099   34.6s
+  C update  20  train  15.31%  reward -0.2757  fair -0.2672  varied 17  std 0.099   31.2s
+  C update  20  EVALUATION full  17.18%  varied  10.17%  average  13.67%
+  C update  21  train  15.46%  reward -0.3274  fair -0.3191  varied 23  std 0.099   30.3s
+  C update  22  train  12.67%  reward -0.2036  fair -0.1952  varied 17  std 0.099   32.5s
+  C update  23  train  14.29%  reward -0.2519  fair -0.2435  varied 15  std 0.099   34.2s
+  C update  24  train  13.59%  reward -0.2186  fair -0.2104  varied 16  std 0.098   36.9s
+  C update  25  train  13.89%  reward -0.2629  fair -0.2545  varied 20  std 0.099   31.8s
+  checkpoint /tmp/r2_resume_o0oalc8e/b/ckpt_0025.pt
+  resumed from update 25
+  C update  26  train  13.25%  reward -0.2193  fair -0.2110  varied 21  std 0.099   36.6s
+  C update  27  train  12.76%  reward -0.2484  fair -0.2400  varied 25  std 0.099   29.6s
+  C update  28  train  12.93%  reward -0.2370  fair -0.2285  varied 25  std 0.099   28.5s
+  C update  29  train  14.52%  reward -0.2611  fair -0.2527  varied 20  std 0.099   30.9s
+  C update  30  train  13.70%  reward -0.2537  fair -0.2453  varied 20  std 0.098   32.6s
+  C update  30  EVALUATION full  17.39%  varied   9.78%  average  13.59%  <- best, saved
+  validation straight [(16.688477, 10.611605), (17.179835, 10.167379), (17.394239, 9.777195)]
+  validation resumed  [(16.688477, 10.611605), (17.179835, 10.167379), (17.394239, 9.777195)]
+  RESUME TEST PASSED: every update's losses, both validation sets and every actor and critic weight match exactly
