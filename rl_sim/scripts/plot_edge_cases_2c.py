@@ -246,10 +246,11 @@ def make_big_gif(rec_dir: str, edge_dir: str, scenario: int,
     return path
 
 
-def make_big_snapshots(rec_dir: str, edge_dir: str, scenario: int) -> str:
-    fig, axes = plt.subplots(len(BIG_POLICIES), len(SNAPSHOT_TIMES_S),
-                             figsize=(11, 3.1 * len(BIG_POLICIES)))
-    for row, policy in enumerate(BIG_POLICIES):
+def make_big_snapshots(rec_dir: str, edge_dir: str, scenario: int,
+                       policies: Sequence[str] = BIG_POLICIES) -> str:
+    fig, axes = plt.subplots(len(policies), len(SNAPSHOT_TIMES_S),
+                             figsize=(11, 3.1 * len(policies)), squeeze=False)
+    for row, policy in enumerate(policies):
         rec = load(rec_dir, scenario, policy)
         for col, t in enumerate(SNAPSHOT_TIMES_S):
             ax = axes[row, col]
@@ -259,7 +260,7 @@ def make_big_snapshots(rec_dir: str, edge_dir: str, scenario: int) -> str:
                 ax.set_ylabel(policy, fontsize=10)
     num_m, num_c, text = BIGFLEET[scenario]
     fig.suptitle(f"Scenario {scenario}: {text} ({num_m} M, {num_c} C), "
-                 f"run seed {SEED}; rows: " + ", ".join(BIG_POLICIES),
+                 f"run seed {SEED}; rows: " + ", ".join(policies),
                  fontsize=10)
     fig.legend(handles=big_legend(), loc="lower center", ncol=7,
                fontsize=7, frameon=False, bbox_to_anchor=(0.5, 0.02))
@@ -359,15 +360,21 @@ def main() -> None:
                              "spacing_large")
     parser.add_argument("--bigfleet", action="store_true",
                         help="draw scenarios 9-13 from 2c_edge_bigfleet")
+    parser.add_argument("--policies", type=str, nargs="+", default=None,
+                        help="with --bigfleet: which recordings to draw")
     args = parser.parse_args()
     if args.bigfleet:
         edge_dir = args.edge_dir or os.path.join(args.out_dir,
                                                  "2c_edge_bigfleet")
         rec_dir = os.path.join(edge_dir, "rec")
-        for scenario in BIGFLEET:
-            print(f"  wrote {make_big_snapshots(rec_dir, edge_dir, scenario)}",
+        policies = tuple(args.policies or BIG_POLICIES)
+        chosen = [k for k in BIGFLEET if k in args.scenarios] \
+            if args.scenarios != list(SCENARIOS) else list(BIGFLEET)
+        for scenario in chosen:
+            print(f"  wrote "
+                  f"{make_big_snapshots(rec_dir, edge_dir, scenario, policies)}",
                   flush=True)
-            for policy in BIG_POLICIES:
+            for policy in policies:
                 print(f"  wrote "
                       f"{make_big_gif(rec_dir, edge_dir, scenario, policy)}",
                       flush=True)

@@ -75,6 +75,13 @@ rl_sim/out/2c_edge_r1_*/rec/
 !rl_sim/out/2c_edge_bigfleet/
 !rl_sim/out/2c_edge_bigfleet/*.gif
 rl_sim/out/2c_edge_bigfleet/rec/
+# Round 2: edge-case tables and GIFs committed, recordings not.
+!rl_sim/out/2c_edge_r2_*/
+!rl_sim/out/2c_edge_r2_*/*.gif
+rl_sim/out/2c_edge_r2_*/rec/
+!rl_sim/out/2c_edge_bigfleet_r2_*/
+!rl_sim/out/2c_edge_bigfleet_r2_*/*.gif
+rl_sim/out/2c_edge_bigfleet_r2_*/rec/
 
 # The Phase-2c networks themselves. out/models/ is ignored wholesale above,
 # so each level has to be let through before the files inside can be: the

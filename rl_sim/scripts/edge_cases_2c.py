@@ -677,6 +677,9 @@ def main() -> None:
     parser.add_argument("--bigfleet", action="store_true",
                         help="run scenarios 9-13 into "
                              "<out-dir>/2c_edge_bigfleet instead")
+    parser.add_argument("--actor", type=str, action="append", default=None,
+                        help="with --bigfleet: NAME=PATH, repeatable; "
+                             "replaces direct and spacing_large")
     args = parser.parse_args()
     if args.bigfleet:
         run_bigfleet(args)
@@ -735,7 +738,8 @@ def main() -> None:
                  read_csv(os.path.join(edge_dir, "edge_s6_midpoint.csv")))
 
 
-def print_bigfleet(summary: Sequence[Dict[str, Any]]) -> None:
+def print_bigfleet(summary: Sequence[Dict[str, Any]],
+                   policies: Sequence[str] = BIGFLEET_POLICIES) -> None:
     """Print the big-fleet tables, from the rows read back from disk."""
     print(f"\n  Mean over run seeds {RUN_SEEDS}, % of packets created")
     print(f"  {'sc':>2} {'policy':>13} {'total':>6} {'flying':>6} "
@@ -745,7 +749,7 @@ def print_bigfleet(summary: Sequence[Dict[str, Any]]) -> None:
               f"{row['total_loss']:6.2f} {row['loss_flying']:6.2f} "
               f"{row['loss_staying']:7.2f} "
               + " ".join(f"{row[c]:8.2f}" for c in CAUSES))
-        if row["policy"] == BIGFLEET_POLICIES[-1]:
+        if row["policy"] == policies[-1]:
             print()
     print("  Farthest C-drone from the GS (m), C metres flown, closest C pair")
     print(f"  {'sc':>2} {'policy':>13} {'t=30':>6} {'t=60':>6} {'t=95':>6} "
@@ -755,7 +759,7 @@ def print_bigfleet(summary: Sequence[Dict[str, Any]]) -> None:
               f"{row['far_c_30']:6.0f} {row['far_c_60']:6.0f} "
               f"{row['far_c_95']:6.0f} {row['c_distance_flown_mean']:7.0f}m "
               f"{row['min_c_to_c_m']:6.1f} {row['min_c_to_c_m_worst']:7.1f}")
-        if row["policy"] == BIGFLEET_POLICIES[-1]:
+        if row["policy"] == policies[-1]:
             print()
 
 
@@ -767,16 +771,22 @@ def run_bigfleet(args: Any) -> None:
     rec_dir = os.path.join(edge_dir, "rec")
     os.makedirs(rec_dir, exist_ok=True)
     states = {}
-    for policy, path in BIGFLEET_MODELS.items():
-        full = os.path.join(args.out_dir, path)
+    if args.actor:
+        # NAME=PATH pairs replace the default actors; paths as given.
+        models = dict(pair.split("=", 1) for pair in args.actor)
+    else:
+        models = {name: os.path.join(args.out_dir, path)
+                  for name, path in BIGFLEET_MODELS.items()}
+    policies = ("hover", "midpoint") + tuple(models)
+    for policy, full in models.items():
         print(f"  {policy:>13}: {full}")
         states[policy] = torch.load(full, weights_only=True)
     print(f"placement seed {PLACEMENT_SEED}, run seeds {RUN_SEEDS}")
     jobs = [(scenario, policy, seed, states.get(policy), rec_dir)
-            for scenario in BIGFLEET for policy in BIGFLEET_POLICIES
+            for scenario in BIGFLEET for policy in policies
             for seed in RUN_SEEDS]
     print(f"Running {len(jobs)} runs: {len(BIGFLEET)} scenarios x "
-          f"{len(BIGFLEET_POLICIES)} policies x {len(RUN_SEEDS)} seeds ...",
+          f"{len(policies)} policies x {len(RUN_SEEDS)} seeds ...",
           flush=True)
     context = multiprocessing.get_context("spawn")
     with ProcessPoolExecutor(max_workers=args.workers,
@@ -790,16 +800,17 @@ def run_bigfleet(args: Any) -> None:
     note = (f"phase 2c big-fleet edge cases 9-13, 18M+7C from the near_gs "
             f"start draw of placement seed {PLACEMENT_SEED}, staying M hover, "
             f"flying M 20 m/s no delay, greedy routing, AVOID on, actors "
-            f"direct and spacing_large greedy, NO training")
+            f"{', '.join(models)} greedy, NO training")
     columns = SUMMARY_COLUMNS + BIGFLEET_COLUMNS
     write_csv(os.path.join(edge_dir, "edge_runs.csv"), rows,
               ["scenario", "policy", "run_seed", "num_m", "num_c"]
               + list(columns) + ["views_agree"], note)
-    summary = summarise(rows, tuple(BIGFLEET), BIGFLEET_POLICIES, columns)
+    summary = summarise(rows, tuple(BIGFLEET), policies, columns)
     write_csv(os.path.join(edge_dir, "edge_summary.csv"), summary,
               ["scenario", "policy", "seeds"] + list(columns)
               + ["min_c_to_c_m_worst"], note)
-    print_bigfleet(read_csv(os.path.join(edge_dir, "edge_summary.csv")))
+    print_bigfleet(read_csv(os.path.join(edge_dir, "edge_summary.csv")),
+                   policies)
 
 
 if __name__ == "__main__":
