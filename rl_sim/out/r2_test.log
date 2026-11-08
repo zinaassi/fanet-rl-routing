@@ -1,0 +1,112 @@
+Main comparisons, named before running: B minus control, B minus midpoint
+Checking the test sets ...
+  layouts 601-650, 651-750 and run seeds 9600-9649, 9700-9799 overlap nothing used before
+  worlds: {'normal': 50, 'a': 25, 'b': 25, 'c': 25, 'd': 25}
+Models:
+   control: out/models/2c/c_actor_r1_control.pt
+         A: out/models/2c/c_actor_r2_A.pt
+         B: out/models/2c/c_actor_r2_B.pt
+         C: out/models/2c/c_actor_r2_C.pt
+    direct: out/models/2c/c_actor_curriculum_direct.pt
+Reproducing validation ...
+  validation rerun matches the saved rows: 420 runs, largest gap 0.0e+00
+Running 1050 test episodes on 20 workers ...
+  wrote out/2c_r2_test.csv
+  wrote out/2c_r2_test_paired.csv
+
+  Full-fleet test 601-650, mean % of packets created (from out/2c_r2_test.csv)
+     policy  total  channel queue_fu no_route dead_end      ttl hop_limi link_bro stale_li  C flown
+    control  16.35     8.41     3.04     0.23     0.00     0.00     0.00     0.01     4.66    2309m
+          A  16.36     8.63     2.58     0.19     0.00     0.00     0.00     0.01     4.96    2334m
+          B  16.44     8.59     2.86     0.31     0.01     0.00     0.00     0.01     4.66    2302m
+          C  17.23     9.07     2.95     0.36     0.02     0.00     0.00     0.01     4.82    2357m
+     direct  16.60     8.69     2.89     0.30     0.00     0.00     0.00     0.01     4.71    2257m
+   midpoint  24.34     9.14     9.17     1.27     0.11     0.00     0.00     0.11     4.54    2167m
+      hover  25.85    12.81     4.09     3.72     0.19     0.00     0.00     0.16     4.87       0m
+
+  Varied test 651-750 (25 worlds per type)
+     policy  total  worst M  M >50%   type a  type b  type c  type d
+    control  12.85    35.61    8.5%    16.50   12.27   14.52    8.12
+          A  11.49    32.20    7.1%    14.56   10.58   12.63    8.20
+          B  10.35    30.31    5.3%    15.03    6.94   11.83    7.60
+          C   9.43    27.52    4.2%    14.75    7.37   10.48    5.12
+     direct  12.35    34.30    6.4%    15.87   11.77   13.84    7.93
+   midpoint   9.22    31.53    3.1%    14.14    8.67    8.90    5.17
+      hover  17.56    45.83   10.6%    20.43   15.39   24.63    9.80
+
+  Paired against control (points of total loss; * = main comparison)
+         A    full   +0.01 [-0.44, +0.46]  lower on 26/50
+         A  varied   -1.36 [-2.38, -0.34]  lower on 38/100
+         A  type a   -1.94 [-4.85, +0.96]  lower on 9/25
+         A  type b   -1.69 [-3.72, +0.33]  lower on 13/25
+         A  type c   -1.89 [-4.18, +0.40]  lower on 9/25
+         A  type d   +0.07 [-0.52, +0.66]  lower on 7/25
+ *       B    full   +0.09 [-0.35, +0.53]  lower on 26/50
+ *       B  varied   -2.50 [-3.92, -1.09]  lower on 54/100
+ *       B  type a   -1.47 [-4.12, +1.18]  lower on 7/25
+ *       B  type b   -5.33 [-9.67, -1.00]  lower on 20/25
+ *       B  type c   -2.69 [-5.32, -0.06]  lower on 16/25
+ *       B  type d   -0.52 [-1.34, +0.30]  lower on 11/25
+         C    full   +0.88 [+0.40, +1.36]  lower on 12/50
+         C  varied   -3.42 [-4.98, -1.87]  lower on 57/100
+         C  type a   -1.75 [-4.47, +0.96]  lower on 9/25
+         C  type b   -4.90 [-7.30, -2.50]  lower on 21/25
+         C  type c   -4.04 [-8.65, +0.57]  lower on 15/25
+         C  type d   -3.00 [-5.81, -0.19]  lower on 12/25
+    direct    full   +0.25 [-0.24, +0.74]  lower on 22/50
+    direct  varied   -0.50 [-1.47, +0.47]  lower on 35/100
+    direct  type a   -0.63 [-2.56, +1.29]  lower on 8/25
+    direct  type b   -0.50 [-2.41, +1.41]  lower on 9/25
+    direct  type c   -0.67 [-3.64, +2.29]  lower on 7/25
+    direct  type d   -0.19 [-0.90, +0.51]  lower on 11/25
+  midpoint    full   +7.99 [+6.89, +9.09]  lower on 1/50
+  midpoint  varied   -3.63 [-6.35, -0.91]  lower on 57/100
+  midpoint  type a   -2.36 [-7.61, +2.89]  lower on 13/25
+  midpoint  type b   -3.60 [-9.30, +2.09]  lower on 14/25
+  midpoint  type c   -5.61 [-12.79, +1.57]  lower on 14/25
+  midpoint  type d   -2.95 [-7.36, +1.45]  lower on 16/25
+     hover    full   +9.50 [+8.04, +10.96]  lower on 0/50
+     hover  varied   +4.71 [+3.20, +6.22]  lower on 19/100
+     hover  type a   +3.93 [-0.26, +8.12]  lower on 9/25
+     hover  type b   +3.12 [+1.14, +5.09]  lower on 3/25
+     hover  type c  +10.12 [+7.01, +13.22]  lower on 1/25
+     hover  type d   +1.68 [+0.21, +3.14]  lower on 6/25
+
+  Paired against midpoint (points of total loss; * = main comparison)
+   control    full   -7.99 [-9.09, -6.89]  lower on 49/50
+   control  varied   +3.63 [+0.91, +6.35]  lower on 40/100
+   control  type a   +2.36 [-2.89, +7.61]  lower on 11/25
+   control  type b   +3.60 [-2.09, +9.30]  lower on 10/25
+   control  type c   +5.61 [-1.57, +12.79]  lower on 11/25
+   control  type d   +2.95 [-1.45, +7.36]  lower on 8/25
+         A    full   -7.98 [-9.00, -6.95]  lower on 50/50
+         A  varied   +2.27 [-0.39, +4.93]  lower on 48/100
+         A  type a   +0.42 [-4.46, +5.30]  lower on 13/25
+         A  type b   +1.91 [-3.84, +7.65]  lower on 12/25
+         A  type c   +3.72 [-3.15, +10.60]  lower on 13/25
+         A  type d   +3.03 [-1.54, +7.59]  lower on 10/25
+ *       B    full   -7.90 [-8.96, -6.84]  lower on 50/50
+ *       B  varied   +1.13 [-1.24, +3.49]  lower on 53/100
+ *       B  type a   +0.89 [-4.20, +5.98]  lower on 11/25
+ *       B  type b   -1.73 [-4.31, +0.85]  lower on 16/25
+ *       B  type c   +2.92 [-3.82, +9.67]  lower on 14/25
+ *       B  type d   +2.43 [-2.00, +6.86]  lower on 12/25
+         C    full   -7.11 [-8.19, -6.03]  lower on 49/50
+         C  varied   +0.21 [-1.85, +2.27]  lower on 57/100
+         C  type a   +0.61 [-4.45, +5.67]  lower on 15/25
+         C  type b   -1.30 [-5.80, +3.19]  lower on 16/25
+         C  type c   +1.58 [-3.39, +6.54]  lower on 11/25
+         C  type d   -0.05 [-2.23, +2.13]  lower on 15/25
+    direct    full   -7.74 [-8.85, -6.63]  lower on 50/50
+    direct  varied   +3.13 [+0.44, +5.83]  lower on 47/100
+    direct  type a   +1.73 [-3.61, +7.07]  lower on 13/25
+    direct  type b   +3.10 [-2.80, +9.00]  lower on 12/25
+    direct  type c   +4.94 [-1.95, +11.83]  lower on 12/25
+    direct  type d   +2.76 [-1.46, +6.98]  lower on 10/25
+     hover    full   +1.51 [+0.08, +2.94]  lower on 19/50
+     hover  varied   +8.34 [+5.73, +10.95]  lower on 14/100
+     hover  type a   +6.29 [+0.96, +11.62]  lower on 7/25
+     hover  type b   +6.72 [+1.34, +12.09]  lower on 3/25
+     hover  type c  +15.73 [+9.91, +21.55]  lower on 2/25
+     hover  type d   +4.63 [+0.52, +8.74]  lower on 2/25
+EXIT 0
