@@ -1,0 +1,92 @@
+Round 2 settings:
+  runs (reward, varied)    {'A': ('fair', False), 'B': ('normal', True), 'C': ('fair', True)} [spec]
+  old reward               (delivered - lost)/created - C_FLIGHT_COST*m/speed               [c_interface.flight_reward]
+  C_FLIGHT_COST            0.01                                                             [config.py]
+  fair term                k*mean log(min(1,d_i/c_i)+0.05), 10.0 s window                   [spec, approved]
+  k                        1.4099498888140802                                               [--measure]
+  varied share             0.5                                                              [spec]
+  varied ranges            M 1-18, C 1-7, D (300.0, 650.0), far (450.0, 622.0), +-20 deg, hover (10.0, 30.0) [spec]
+  CONTINUE_STD             0.1                                                              [config.py]
+  critic-only warm-up      10                                                               [train_c_ppo.py]
+  PPO seed / updates       (2, 400)                                                         [train_c_ppo_round1.py]
+  episodes per update      40                                                               [train_c_ppo_m4.py]
+  clip / epochs / lr       (0.1, 5, 0.0003)                                                 [train_c_ppo.py]
+  grad clip / minibatch    (0.5, 1024)                                                      [train_c_ppo.py]
+  gamma / lambda           (0.97, 0.95)                                                     [train_c_ppo.py]
+  evaluate every           10                                                               [train_c_ppo.py]
+  checkpoint every         25                                                               [train_c_ppo_round1.py]
+  validation               full 301-330 seed 9100+; varied 331-360 seed 9200+               [spec]
+  keep rule                lowest average of the two validation losses                      [spec]
+  wrote out/2c_r2_varied_plans.csv
+
+Varied validation worlds (out/2c_r2_varied_plans.csv):
+  331 seed 9200 type a  17 M + 5 C  D 462  flyers 0  hover 
+  332 seed 9201 type b   7 M + 1 C  D 650  flyers 1  hover 
+  333 seed 9202 type c   8 M + 5 C  D 650  flyers 4  hover 
+  334 seed 9203 type d   2 M + 4 C  D 650  flyers 2  hover 24.6 29.4
+  335 seed 9204 type a  10 M + 7 C  D 516  flyers 0  hover 
+  336 seed 9205 type b   3 M + 6 C  D 650  flyers 3  hover 
+  337 seed 9206 type c  12 M + 2 C  D 650  flyers 6  hover 
+  338 seed 9207 type d   1 M + 7 C  D 650  flyers 1  hover 15.8
+  339 seed 9208 type a   2 M + 7 C  D 380  flyers 0  hover 
+  340 seed 9209 type b  15 M + 1 C  D 650  flyers 1  hover 
+  341 seed 9210 type c  14 M + 2 C  D 650  flyers 7  hover 
+  342 seed 9211 type d  12 M + 2 C  D 650  flyers 1  hover 18.0
+  343 seed 9212 type a   4 M + 5 C  D 381  flyers 0  hover 
+  344 seed 9213 type b   1 M + 2 C  D 650  flyers 1  hover 
+  345 seed 9214 type c  11 M + 3 C  D 650  flyers 6  hover 
+  346 seed 9215 type d  11 M + 4 C  D 650  flyers 1  hover 20.9
+  347 seed 9216 type a   1 M + 2 C  D 373  flyers 0  hover 
+  348 seed 9217 type b   4 M + 3 C  D 650  flyers 3  hover 
+  349 seed 9218 type c  17 M + 6 C  D 650  flyers 9  hover 
+  350 seed 9219 type d   5 M + 4 C  D 650  flyers 1  hover 20.9
+  351 seed 9220 type a  12 M + 1 C  D 591  flyers 0  hover 
+  352 seed 9221 type b  10 M + 7 C  D 650  flyers 2  hover 
+  353 seed 9222 type c   9 M + 2 C  D 650  flyers 5  hover 
+  354 seed 9223 type d  12 M + 6 C  D 650  flyers 2  hover 20.1 17.6
+  355 seed 9224 type a  17 M + 6 C  D 471  flyers 0  hover 
+  356 seed 9225 type b  11 M + 2 C  D 650  flyers 2  hover 
+  357 seed 9226 type c   8 M + 3 C  D 650  flyers 4  hover 
+  358 seed 9227 type d  15 M + 6 C  D 650  flyers 3  hover 29.2 21.1 14.6
+  359 seed 9228 type a   4 M + 7 C  D 314  flyers 0  hover 
+  360 seed 9229 type b  10 M + 3 C  D 650  flyers 1  hover 
+
+One episode per varied type (direct actor, sampled, fair reward):
+  type a  layout 101  11 M + 5 C  D 467  flyers 0  hover []  returned None  total loss 7.25%  worst M 18.0%  decisions 495  global width 141  views True
+  type b  layout 102   2 M + 6 C  D 650  flyers 2  hover []  returned None  total loss 11.00%  worst M 14.7%  decisions 594  global width 141  views True
+  type c  layout 103   7 M + 4 C  D 650  flyers 4  hover []  returned None  total loss 7.59%  worst M 25.6%  decisions 396  global width 141  views True
+  type d  layout 104   7 M + 5 C  D 650  flyers 2  hover [16.8, 28.4]  returned True  total loss 7.27%  worst M 37.6%  decisions 495  global width 141  views True
+  control full set vs round 1's saved validation: largest gap 0.0e+00
+  wrote out/2c_r2_references.csv
+  /home/abed/miniconda3/bin/python /home/abed/fanet-rl-routing/rl_sim/scripts/edge_cases_2c.py --out-dir out --workers 20 --bigfleet --actor control=out/models/2c/c_actor_r1_control.pt --out out/2c_edge_bigfleet_r2_control
+  wrote out/2c_r2_summary.csv
+  wrote out/2c_r2_by_type.csv
+  wrote out/2c_r2_paired.csv
+  wrote out/2c_r2_edge.csv
+
+  Full-fleet validation 301-330 (from out/2c_r2_summary.csv)
+     policy  total  channel queue_fu no_route dead_end      ttl hop_limi link_bro stale_li  C flown
+    control  15.92     7.71     2.79     0.56     0.00     0.00     0.00     0.00     4.85    2342m
+     direct  16.69     8.26     2.67     0.66     0.04     0.00     0.00     0.00     5.06    2280m
+   midpoint  24.62     8.56     8.29     2.32     0.26     0.00     0.00     0.14     5.05    2110m
+      hover  27.83    11.86     3.91     6.12     0.60     0.00     0.00     0.17     5.16       0m
+
+  Varied validation 331-360
+     policy  total  worst M  M >50%  average   type a  type b  type c  type d
+    control  11.67    34.19    5.2%    13.80    11.23   17.39    9.76    7.55
+     direct  10.61    31.63    2.9%    13.65    10.14   14.43    7.30   10.11
+   midpoint  10.12    32.47    5.2%    17.37    11.56    8.45   13.83    6.65
+      hover  17.29    44.10    9.9%    22.56    12.35   21.76   22.14   12.97
+
+  Paired against control (points of total loss)
+     direct   full   +0.77 [+0.22, +1.32]  lower on 7/30
+     direct varied   -1.06 [-3.49, +1.37]  lower on 16/30
+   midpoint   full   +8.70 [+7.11, +10.29]  lower on 1/30
+   midpoint varied   -1.56 [-5.54, +2.43]  lower on 13/30
+      hover   full  +11.91 [+9.85, +13.96]  lower on 0/30
+      hover varied   +5.62 [+2.54, +8.70]  lower on 2/30
+
+  Edge cases: total loss / flying-M loss, % (mean of 5 seeds)
+     policy          s1          s2          s3          s4          s5          s6          s7          s8          s9         s10         s11         s12         s13
+    control  88.7/ 88.7  88.0/ 88.0  88.3/ 88.3   0.8/  0.8  50.0/ 50.0  88.7/ 88.7  17.2/ 17.2  87.1/ 87.1   4.3/ 77.4  12.1/ 72.5   0.5/  9.2   2.3/ 41.0   8.4/ 16.6
+   midpoint  17.8/ 17.8  28.0/ 28.0  81.6/ 81.6   0.8/  0.8   8.8/  8.8  25.2/ 25.2  25.8/ 25.8  33.3/ 33.3   4.8/ 86.6  13.7/ 82.3   0.5/  9.2   2.7/ 49.4  36.8/ 72.4

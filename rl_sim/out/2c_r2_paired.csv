@@ -1,0 +1,8 @@
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  window=[50,950) of 1000  |  commit=2275e26  |  phase 2c round 2, validation only, from the saved per-layout files; each policy minus control
+policy,set,layouts,mean_diff,ci95_low,ci95_high,wins
+direct,full,30,0.7666666666666667,0.21798120977079405,1.3153521235625394,7
+direct,varied,30,-1.0598012336247629,-3.4901638320534802,1.3705613648039545,16
+midpoint,full,30,8.697119341563786,7.1062557798393025,10.28798290328827,1
+midpoint,varied,30,-1.5556742180598386,-5.5408844634623415,2.429536027342664,13
+hover,full,30,11.906995884773663,9.851604759169284,13.962387010378041,0
+hover,varied,30,5.617341843583675,2.5378861476917334,8.696797539475616,2
