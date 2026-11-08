@@ -663,11 +663,14 @@ plan: the 50-layout evaluation is the official test.
 | 1–50 | Phase 1b test; Phase 2c M3 |
 | 101–300 | training (Phase 1b and Phase 2c) |
 | 301–330 | validation (301–310 in Phase 1b, 301–330 in Phase 2c) |
+| 331–360 | Phase 2c round-2 varied-mission validation |
 | 401–450 | Phase 2c test: M4, the direct-650 actor, the 413/432 pictures, round 1 |
 | 501–550 | Phase 2c round-1 test (`scripts/evaluate_r1_test.py`), the pictures drawn from it |
+| 601–650 | Phase 2c round-2 full-fleet test (`scripts/evaluate_r2_test.py`) |
+| 651–750 | Phase 2c round-2 varied-mission test (`scripts/evaluate_r2_test.py`) |
 | 900 | Phase 2c edge cases |
 
-The next fresh test set must start at **601**.
+The next fresh test set must start at **751**.
 
 ### Results
 

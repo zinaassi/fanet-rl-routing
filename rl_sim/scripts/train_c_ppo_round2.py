@@ -138,6 +138,7 @@ DISTANCE_M: float = 650.0
 VARIED_SHARE: float = 0.5
 VARIED_TAG: int = 0x2C2A
 VARIED_VAL_TAG: int = 0x2C2B
+VARIED_TEST_TAG: int = 0x2C2C   # scripts/evaluate_r2_test.py, layouts 651-750
 TYPES: Tuple[str, ...] = ("a", "b", "c", "d")
 SPREAD_D_M: Tuple[float, float] = (300.0, 650.0)
 FAR_M: Tuple[float, float] = (450.0, 622.0)
