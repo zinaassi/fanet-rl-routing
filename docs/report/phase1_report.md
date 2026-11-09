@@ -821,28 +821,36 @@ when one M-drone flies far away alone, a C-drone should follow it and
 relay its packets. We ran each case five times, to check that the agent
 behaves sensibly, not only that it loses little on average.
 
-| case | what happens | RL agent (trained on the full fleet) | RL agent (also trained on varied missions) | midpoint rule |
-|---|---|---|---|---|
-| 1 | 1 M-drone and 1 C-drone; the M-drone flies 600 m away | 88.7% | 84.6% | 17.8% |
-| 2 | 1 M-drone and 3 C-drones; the M-drone flies to a corner | 88.0% | 79.0% | 28.0% |
-| 5 | 1 M-drone and 2 C-drones; the M-drone flies 600 m, waits 20 s, and comes back | 50.0% | 49.4% | 8.8% |
-| 6 | 1 M-drone and 1 C-drone; the M-drone flies to a corner | 88.7% | 85.2% | 25.2% |
-| 8 | 1 M-drone and 7 C-drones; the M-drone flies 600 m away | 87.1% | 28.7% | 33.3% |
-| 9 | full fleet (18 M-drones, 7 C-drones); 1 M-drone flies to a corner, the rest stay | 77.4% | 40.8% | 86.6% |
-| 10 | full fleet; 3 M-drones fly to three different corners, the rest stay | 72.5% | 68.7% | 82.3% |
-| 12 | full fleet; 1 M-drone flies to a corner and back, the rest stay | 41.0% | 19.3% | 49.4% |
-| 13 | full fleet; 9 M-drones fly together to one side, the rest stay | 16.6% | 18.1% | 72.4% |
+Of the 13 cases, Table 13 shows the 9 where the policies behave
+differently. Cases 1–5 are small fleets with one M-drone that flies
+away; cases 6–9 are the full fleet (18 M-drones and 7 C-drones), where
+only some M-drones fly away and the rest stay where they start. For
+each case the table gives the share of the flying M-drones' packets
+that never reach the GS, averaged over the five runs; lower is better.
+It already includes, for comparison, the agent after the extra
+training on varied missions described below.
 
-**Table 13:** Edge cases: loss of the M-drones that fly away, mean of 5
-runs. The second RL agent is the one trained also on varied missions
-(below).
-<!-- source: rl_sim/out/2c_r2_edge.csv — flying_m_loss, policies control (RL agent), B (RL, varied), midpoint; run seeds 9900-9904, placement seed 900; scenario definitions in rl_sim/scripts/edge_cases_2c.py. Cases 3, 4, 7 and 11 are left out: 4 and 11 are the same for all three (0.8 and 9.2), 3 is above 80% for all three (88.3 / 84.1 / 81.6), and in 7 the RL agents beat midpoint (17.2 / 19.1 / 25.8). -->
+| case | what happens | RL agent | RL agent after varied training | midpoint rule |
+|---|---|---|---|---|
+| 1 | 1 M-drone, 1 C-drone; the M-drone flies 600 m away | 88.7% | 84.6% | 17.8% |
+| 2 | 1 M-drone, 3 C-drones; the M-drone flies to a corner | 88.0% | 79.0% | 28.0% |
+| 3 | 1 M-drone, 2 C-drones; the M-drone flies 600 m, waits 20 s, and comes back | 50.0% | 49.4% | 8.8% |
+| 4 | 1 M-drone, 1 C-drone; the M-drone flies to a corner | 88.7% | 85.2% | 25.2% |
+| 5 | 1 M-drone, 7 C-drones; the M-drone flies 600 m away | 87.1% | 28.7% | 33.3% |
+| 6 | full fleet; 1 M-drone flies to a corner | 77.4% | 40.8% | 86.6% |
+| 7 | full fleet; 3 M-drones fly to three different corners | 72.5% | 68.7% | 82.3% |
+| 8 | full fleet; 1 M-drone flies to a corner and back | 41.0% | 19.3% | 49.4% |
+| 9 | full fleet; 9 M-drones fly together to one side | 16.6% | 18.1% | 72.4% |
+
+**Table 13:** Edge cases: % of the packets of the M-drones that fly
+away that never reach the GS, mean of 5 runs.
+<!-- source: rl_sim/out/2c_r2_edge.csv — flying_m_loss, policies control (RL agent), B (RL, varied), midpoint; run seeds 9900-9904, placement seed 900; scenario definitions in rl_sim/scripts/edge_cases_2c.py. Report case numbers 1-9 are script scenarios 1, 2, 5, 6, 8, 9, 10, 12, 13. Script scenarios 3, 4, 7 and 11 are left out: 4 and 11 are the same for all three (0.8 and 9.2), 3 is above 80% for all three (88.3 / 84.1 / 81.6), and in 7 the RL agents beat midpoint (17.2 / 19.1 / 25.8). -->
 
 The cases show a weakness. When few drones are left and one flies far
-away (cases 1, 2, 5, 6 and 8), the agent keeps its C-drones near the GS
-and the far drone loses almost all its packets, while midpoint follows
-it. In the full fleet, where the agent was trained, it does as well as
-or better than midpoint in every case.
+away (cases 1–5), the agent keeps its C-drones near the GS and the far
+drone loses almost all its packets, while midpoint follows it. In the
+full fleet (cases 6–9), where the agent was trained, it does better
+than midpoint in every case.
 
 **Training on varied missions**
 
@@ -905,15 +913,15 @@ Training on varied missions lowered the loss on varied missions from
 not cost anything in the full fleet (16.4% in both). Against midpoint,
 the varied agent is about level on varied missions (the 1.1-point gap
 is within the noise) and still 7.9 points better in the full fleet. In
-the edge cases (Table 13) it fixed case 8 and halved the loss in cases
-9 and 12, but cases 1, 2, 5 and 6 still fail.
+the edge cases (Table 13) it fixed case 5 and halved the loss in cases
+6 and 8, but cases 1–4 still fail.
 
 
 | midpoint rule | RL agent (also trained on varied missions) |
 |---|---|
 | ![case 9, midpoint](figures/2c_case9_midpoint.gif) | ![case 9, RL agent](figures/2c_case9_rl.gif) |
 
-**Figure 8:** Edge case 9: the full fleet, and one M-drone (red) flies
+**Figure 8:** Edge case 6: the full fleet, and one M-drone (red) flies
 to the far corner. Midpoint keeps its C-drones near the GS and the far
 M-drone is cut off; the RL agent sends C-drones out after it and relays
 its packets (purple line) for part of the flight.
