@@ -668,16 +668,13 @@ layouts, 200 ms, % of packets created).
 layouts, 200 ms, % of packets created).
 <!-- source: no-movement row from rl_sim/out/1b_test50_runs.csv (rule=random, load_ms=200, 50 rows, mean of total_loss and of each cause column); the other rows from rl_sim/out/2a_final_summary.csv (rule=random), same columns as Table 8 -->
 
-Movement alone costs a lot: with greedy routing the loss rises from
-25.0% to 44.5% when the C-drones hover. This is not because drones are
-cut off (97.6% of the packets are created while their drone has a path
-to the GS), but because of fuller queues (17.0% against 11.2%), greedy
-getting stuck with no neighbour closer to the GS (8.9%), and packets
-sent to neighbours that have already flown away (4.5%). Midpoint fills
-the gaps between the GS and the far M-drones: greedy then rarely gets
-stuck (1.0%) and the loss falls to 29.1%. Random walk and busiest do
-not help. Midpoint therefore became the rule the RL agent in Phase 2c
-had to beat.
+Movement alone costs a lot: with greedy routing and hovering C-drones,
+the loss rises from 25.0% to 44.5%. The drones are rarely cut off;
+the extra loss comes from fuller queues and from greedy getting stuck
+when no neighbour is closer to the GS. Midpoint fills the gaps between
+the GS and the far M-drones, so greedy rarely gets stuck and the loss
+falls to 29.1%. Random walk and busiest do not help. Midpoint is
+therefore the rule the RL agent in Phase 2c has to beat.
 <!-- source: rl_sim/out/2a_final_summary.csv (c_setting=hover, rule=greedy) — total_loss_mean 44.5, pct_packets_connected_mean 97.6, queue_full_mean 17.0, no_route_mean 8.9, stale_link_mean 4.5; midpoint s150: no_route_mean 1.0, total_loss_mean 29.1; walk 5s 45.5, busiest s150 43.7. No-movement figures from rl_sim/out/1b_test50_runs.csv (rule=greedy, load_ms=200): total 25.0, queue_full 11.2. -->
 
 ---
