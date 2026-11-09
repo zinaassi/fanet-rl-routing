@@ -646,6 +646,8 @@ and avoids targets within 150 m of another C-drone's, so they spread
 out. Tables 8 and 9 give the results on 50 test layouts.
 <!-- source: rl_sim/fanet_sim/config.py — C_RULES, C_TURN_INTERVAL=5.0, SHARE_TARGETS, C_TARGET_SPREAD_M=150; rl_sim/fanet_sim/envs/fanet_env.py (_choose_target) -->
 
+**Routing with greedy**
+
 | C-drone rule | total loss | channel | full queue | no route | dead end | ttl | hop limit | link broken | stale link |
 |---|---|---|---|---|---|---|---|---|---|
 | no movement (section 9) | 25.0% | 13.8% | 11.2% | 0.0% | 0.0% | 0.0% | 0.0% | – | – |
@@ -657,6 +659,8 @@ out. Tables 8 and 9 give the results on 50 test layouts.
 **Table 8:** Packet loss and its causes with greedy routing (50 test
 layouts, 200 ms, % of packets created).
 <!-- source: no-movement row from rl_sim/out/1b_test50_runs.csv (rule=greedy, load_ms=200, 50 rows, mean of total_loss and of each cause column); the other rows from rl_sim/out/2a_final_summary.csv (rule=greedy), columns total_loss_mean, channel_mean, queue_full_mean, no_route_mean, dead_end_mean, ttl_mean, hop_limit_mean, link_broken_mean, stale_link_mean -->
+
+**Routing with random**
 
 | C-drone rule | total loss | channel | full queue | no route | dead end | ttl | hop limit | link broken | stale link |
 |---|---|---|---|---|---|---|---|---|---|
