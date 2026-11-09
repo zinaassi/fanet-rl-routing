@@ -631,11 +631,17 @@ We added:
    drones within 50 m.
 <!-- source: rl_sim/fanet_sim/config.py — MAX_START_DELAY_S=50, DRONE_SPEED_MIN/MAX=10/30, HELLO_INTERVAL=1.0, HELLO_TIMEOUT_INTERVALS=3.0, hello heard with probability 1 - p_loss(distance), C_DRONE_SPEED=30, SENSOR_RANGE_M=50 -->
 
-We then compared four rules for the C-drones: hover (stay put), random
-walk (a new random direction every 5 s), busiest (fly toward the
-neighbour that relays the most packets) and midpoint (fly to the
-middle point between the GS and the farthest M-drone it hears). In
-busiest and midpoint each C-drone announces its target in its hello
+We defined four simple rules for moving the C-drones, to compare with
+the RL agent later:
+
+| rule | what the C-drone does |
+|---|---|
+| hover | stays where it is |
+| random walk | flies in a random direction, and picks a new one every 5 s |
+| busiest | flies toward the neighbour that relays the most packets |
+| midpoint | flies to the middle point between the GS and the farthest M-drone it hears |
+
+In busiest and midpoint each C-drone announces its target in its hello
 and avoids targets within 150 m of another C-drone's, so they spread
 out. Tables 8 and 9 give the results on 50 test layouts.
 <!-- source: rl_sim/fanet_sim/config.py — C_RULES, C_TURN_INTERVAL=5.0, SHARE_TARGETS, C_TARGET_SPREAD_M=150; rl_sim/fanet_sim/envs/fanet_env.py (_choose_target) -->
