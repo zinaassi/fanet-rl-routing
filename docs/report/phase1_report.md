@@ -941,7 +941,65 @@ fleets and fall back to midpoint in small ones.
 
 ## 12. Summary: Difficulties, Further Work, Conclusion
 
-_To be written after Phase 2._
+**Difficulties**
+
+- **Credit for failed hops.** A packet records only the hops that
+  succeeded, so the drones whose transmission failed, the decisions
+  the routing agent most needs to learn from, would never hear the
+  outcome. We stored every decision separately and gave each one the
+  packet's final outcome.
+- **The loss model changed twice.** It started as a hard wall at
+  250 m, became an S-curve, and then its 10% point moved out to 300 m.
+  Each change meant re-running every result.
+- **Stale knowledge in the moving world.** Once drones fly, links
+  break and neighbour lists go out of date, so we had to add hello
+  messages and re-routing before anything could be trained
+  (section 10).
+- **Good on average, bad in specific cases.** The C-drone agent beat
+  midpoint on random layouts but failed simple cases with a lone
+  flyer; only the hand-built edge cases showed it (section 11).
+- **Validation is optimistic.** On the validation layouts the
+  varied-mission agent looked 0.9 points worse than the first agent in
+  the full fleet; on fresh test layouts the gap disappeared. Every
+  claim had to be checked on layouts never used before.
+- **Long training.** Each C-drone training run took 4–5 hours, so
+  runs saved checkpoints every 25 updates and could be resumed exactly.
+<!-- source: decisions stored apart from Packet.path — CLAUDE.md "CRITICAL implementation note"; loss-model history — CLAUDE.md "Channel loss" History (wall at 250 m, S-curve 10% at 249.689 m, moved to 300 m on 2026-10-16); validation gap — B minus control full fleet 16.84 vs 15.92 on 301-330 (rl_sim/out/2c_r2_summary.csv) against +0.09 [-0.35, +0.53] on 601-650 (rl_sim/out/2c_r2_test_paired.csv); run times 5.11 h (A), 4.37 h (B), 4.58 h (C) in rl_sim/out/r2_runs.log; CHECKPOINT_EVERY = 25 and the resume tests in commits b64fb64 and 2206716 -->
+
+**Further work**
+
+- **RL routing in the moving world** (Phase 2b), and the routing and
+  C-drone agents together (Phase 2d).
+- **Acknowledgements while moving.** The routing agent learns from the
+  GS's acknowledgement walking back along the packet's path. When
+  drones move, that path may be gone. One plan is for the GS to send
+  the acknowledgement back along the path and measure how often it
+  arrives; another is GS beacons [CITE: Sliwa et al. 2021].
+- **Small fleets.** Train the C-drone agent more on small fleets, or
+  let a real system fall back to midpoint when there are few drones.
+- **Channel loss.** Most of the routing agent's remaining loss is on
+  the channel, on links it had no better alternative to.
+  Retransmissions would attack this, but first we must check whether
+  our loss curve already includes the radio's own retries.
+- **Hidden costs.** Hello messages and acknowledgements are free in our
+  simulator; they take no queue space and no link time.
+
+**Conclusion**
+
+We built a drone-network simulator and used it to ask whether RL can
+lose fewer packets than simple rules.
+- **Routing, static world:** the RL router lost 10.8% of the packets,
+  against 11.9% for the best simple rule and 25.0% for greedy.
+- **Moving world:** where the C-drones fly matters; midpoint cut
+  greedy's loss from 44.5% to 29.1%.
+- **C-drone placement with RL:** in the full fleet the RL agent lost
+  16.4% against 24.3% for midpoint. Trained also on varied missions, it
+  is level with midpoint there and keeps its full-fleet lead, but it is
+  still weaker in small fleets.
+
+RL helps most in large, busy networks; in small ones a simple rule is
+as good or better.
+<!-- source: rl_sim/out/1b_test50_runs.csv (rl 10.77, rate 11.93, greedy 24.97 at 200 ms); rl_sim/out/2a_final_summary.csv (greedy hover 44.5, midpoint 29.1); rl_sim/out/2c_r2_test.csv (full fleet: RL agent 16.35, midpoint 24.34; varied: 10.35 vs 9.22); rl_sim/out/2c_r2_test_by_fleet.csv (1-6 M-drones: 18.72 vs 11.01). Channel diagnosis for "most remaining loss is channel": CLAUDE.md / rl_sim/out/1b_channel_diagnosis.csv. Retries question and ACK plan: CLAUDE.md open questions. Hellos free: rl_sim/fanet_sim/config.py (hello comment). -->
 
 ---
 
