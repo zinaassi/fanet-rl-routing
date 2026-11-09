@@ -362,11 +362,21 @@ def main() -> None:
                         help="draw scenarios 9-13 from 2c_edge_bigfleet")
     parser.add_argument("--policies", type=str, nargs="+", default=None,
                         help="with --bigfleet: which recordings to draw")
+    parser.add_argument("--seed", type=int, default=SEED,
+                        help=f"run seed of the recordings (default {SEED})")
+    parser.add_argument("--write-dir", type=str, default=None,
+                        help="write the pictures here instead of the "
+                             "recordings' folder")
     args = parser.parse_args()
+    global SEED
+    SEED = args.seed
     if args.bigfleet:
         edge_dir = args.edge_dir or os.path.join(args.out_dir,
                                                  "2c_edge_bigfleet")
         rec_dir = os.path.join(edge_dir, "rec")
+        if args.write_dir:
+            os.makedirs(args.write_dir, exist_ok=True)
+            edge_dir = args.write_dir
         policies = tuple(args.policies or BIG_POLICIES)
         chosen = [k for k in BIGFLEET if k in args.scenarios] \
             if args.scenarios != list(SCENARIOS) else list(BIGFLEET)
@@ -381,6 +391,9 @@ def main() -> None:
         return
     edge_dir = args.edge_dir or os.path.join(args.out_dir, "2c_edge")
     rec_dir = os.path.join(edge_dir, "rec")
+    if args.write_dir:
+        os.makedirs(args.write_dir, exist_ok=True)
+        edge_dir = args.write_dir
     actor = f"{args.label} actor" if args.label else "direct actor"
     for scenario in args.scenarios:
         print(f"  wrote {make_snapshots(rec_dir, edge_dir, scenario, actor)}",
