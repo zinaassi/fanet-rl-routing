@@ -877,12 +877,9 @@ two.
 
 **Figure 8:** Validation loss while training on varied missions.
 
-Figure 8 shows what the training was like. The loss on varied missions
-fell from 10.6% to 8.3% in the first 100 updates, while the full-fleet
-loss stayed about where it started (16.7% to 16.8%). After that,
-neither improved: the varied loss moved between 8.2% and 9.6% and the
-full-fleet loss crept up to 17–18%. So the kept version is the one from
-update 100.
+In the first 100 updates the varied-mission loss fell from 10.6% to
+8.3% while the full-fleet loss held at about 16.8%. Neither improved
+after that, so we kept update 100.
 <!-- source: rl_sim/out/2c_r2_curve_B.csv (run B): update 10 full 16.69 varied 10.61; update 100 full 16.84 varied 8.34 (best average 12.59); after update 100 full 16.88-17.83, varied 8.21-9.62. Figure from rl_sim/scripts/report_figures_2c.py. -->
 
 **Results**
