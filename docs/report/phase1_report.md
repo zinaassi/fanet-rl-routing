@@ -1,8 +1,8 @@
 # Routing in a Drone Network: Baselines and a Learned Router
 
-**[SURNAMES]**
+**Abed Badran and Zina Assi**
 
-**[COURSE NUMBER], [SEMESTER]**
+**02360340, Spring 2026**
 
 Advisor: Eran, with Prof. Reuven Cohen
 
@@ -117,9 +117,10 @@ The reward is 1 if the packet reaches the GS and 0 if it does not, and
 every drone that chose a hop for that packet receives the same reward.
 
 In Phase 2c, the agent is a C-drone choosing where to fly. Every
-second, all C-drones receive the same reward: the packets delivered
-minus the packets lost, as a share of the packets created, minus a
-small charge for the distance the drone flew.
+second, all C-drones receive the same reward: the packets delivered in
+that second minus the packets lost in that second, divided by the
+packets created in that second, minus a small charge for the distance
+the drone flew.
 
 **Actor and critic (PPO)**
 
@@ -709,7 +710,7 @@ rules: hover and midpoint.
 | environment | the simulated drone network, with moving M-drones |
 | state | what the C-drone knows: its own position, queues and traffic, and the neighbours it hears in hello messages |
 | action | a waypoint to fly to, chosen once every second |
-| reward | packets delivered minus packets lost, as a share of the packets created in that second, minus a small cost for the distance flown |
+| reward | every second: packets delivered minus packets lost in that second, divided by the packets created in that second, minus a small cost for the distance flown |
 | episode | one 100-second run on one layout |
 
 **Table 10:** The RL setup for the C-drones.
@@ -931,18 +932,6 @@ cases 1–4 still fail.
 Before varied training it is cut off (86.9% lost); after, a C-drone
 follows and relays its packets (31.8% lost).
 <!-- source: GIFs drawn from saved recordings, run seed 9900 (rl_sim/out/2c_edge_bigfleet_r2_control/rec and rl_sim/out/2c_edge_bigfleet_r2_B/rec); per-run loss_flying from rl_sim/out/2c_edge_bigfleet_r2_control/edge_runs.csv (86.9) and rl_sim/out/2c_edge_bigfleet_r2_B/edge_runs.csv (31.8); copied by rl_sim/scripts/report_figures_2c.py -->
-
-
-**What we learned**
-
-The RL agent is clearly better than the simple rules in the full fleet,
-the setting it was trained for. Training on varied missions brought it
-level with midpoint on varied missions without losing that lead. It is
-still weak in small fleets: with 1–6 M-drones the varied agent loses
-18.7% against 11.0% for midpoint, while with 7 or more M-drones it
-loses less than midpoint. A real system could use the agent in large
-fleets and fall back to midpoint in small ones.
-<!-- source: rl_sim/out/2c_r2_test_by_fleet.csv — B: 18.72 (1-6 M), 6.26 (7-12), 7.39 (13-18); midpoint 11.01, 8.04, 8.98 -->
 
 ---
 
