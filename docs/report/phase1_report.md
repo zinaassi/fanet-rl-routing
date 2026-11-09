@@ -607,10 +607,11 @@ RL has the lowest loss at every queue size.
 
 In Phase 1 nothing moved. In Phase 2 the M-drones fly their missions,
 and the C-drones can move to help them. Before training an RL agent
-for the C-drones, we did this phase for two reasons:
-- to make the simulator work when drones move;
-- to have simple rules for moving the C-drones, so that the agent
-  would have something to beat.
+for the C-drones, we started with something easy:
+- simple, hand-written rules for moving the C-drones, whose behaviour
+  we can predict;
+- so that we could check that what we implemented for the moving world
+  is correct, before adding learning on top of it.
 
 The static simulator assumed that links never change and that every
 drone knows its neighbours for free, so we first fixed the environment.
@@ -629,14 +630,6 @@ We added:
    hellos they hear, and avoid collisions with a sensor that sees
    drones within 50 m.
 <!-- source: rl_sim/fanet_sim/config.py — MAX_START_DELAY_S=50, DRONE_SPEED_MIN/MAX=10/30, HELLO_INTERVAL=1.0, HELLO_TIMEOUT_INTERVALS=3.0, hello heard with probability 1 - p_loss(distance), C_DRONE_SPEED=30, SENSOR_RANGE_M=50 -->
-
-We added these one at a time and checked each step. With movement
-switched off, the new code reproduces the Phase 1 results exactly.
-Letting the M-drones fly raised greedy's loss from 28.3% to 47.7% on
-20 layouts, mostly because greedy got stuck with no neighbour closer
-to the GS. Learning neighbours from hellos every second, instead of
-knowing them for free, added only 0.4 points.
-<!-- source: rl_sim/out/2a_reference.csv (greedy 28.32 on layouts 1-20, nothing moving); rl_sim/out/2a_summary.csv (greedy 47.7, no_route 11.4, start delay 50 s, perfect neighbour knowledge); rl_sim/out/2a_hello_summary.csv (greedy 48.1 at 1 s against 47.7 ideal). These steps used layouts 1-20, which are among the 50 test layouts of Tables 8 and 9. -->
 
 We then compared four rules for the C-drones: hover (stay put), random
 walk (a new random direction every 5 s), busiest (fly toward the
