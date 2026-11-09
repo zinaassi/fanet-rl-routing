@@ -848,6 +848,15 @@ drone loses almost all its packets, while midpoint follows it. In the
 full fleet (cases 6–9), where the agent was trained, it does better
 than midpoint in every case.
 
+| midpoint rule | RL agent |
+|---|---|
+| ![case 1, midpoint](figures/2c_case1_midpoint.gif) | ![case 1, RL agent](figures/2c_case1_rl.gif) |
+
+**Figure 7:** Edge case 1: one M-drone and one C-drone. Midpoint flies
+the C-drone to the middle and keeps the M-drone connected; the RL
+agent's C-drone stays at the GS and the M-drone is cut off.
+<!-- source: GIFs drawn from saved recordings, run seed 9901 (rl_sim/out/2c_edge_r1_control/rec), copied by rl_sim/scripts/report_figures_2c.py -->
+
 **Training on varied missions**
 
 The agent had only ever trained with 18 M-drones and 7 C-drones, all
@@ -866,9 +875,9 @@ two.
 
 ![Training on varied missions](figures/2c_training_curve.png)
 
-**Figure 7:** Validation loss while training on varied missions.
+**Figure 8:** Validation loss while training on varied missions.
 
-Figure 7 shows what the training was like. The loss on varied missions
+Figure 8 shows what the training was like. The loss on varied missions
 fell from 10.6% to 8.3% in the first 100 updates, while the full-fleet
 loss stayed about where it started (16.7% to 16.8%). After that,
 neither improved: the varied loss moved between 8.2% and 9.6% and the
@@ -914,24 +923,17 @@ better than midpoint's 33.3%) and halved the loss in cases 6 (77.4% to
 40.8%) and 8 (41.0% to 19.3%), but cases 1–4 still fail (49–85%,
 against 9–28% for midpoint).
 
-
-| midpoint rule | RL agent (also trained on varied missions) |
+| before varied training | after varied training |
 |---|---|
-| ![case 9, midpoint](figures/2c_case9_midpoint.gif) | ![case 9, RL agent](figures/2c_case9_rl.gif) |
+| ![case 6, before](figures/2c_case6_before.gif) | ![case 6, after](figures/2c_case6_after.gif) |
 
-**Figure 8:** Edge case 6: the full fleet, and one M-drone (red) flies
-to the far corner. Midpoint keeps its C-drones near the GS and the far
-M-drone is cut off; the RL agent sends C-drones out after it and relays
-its packets (purple line) for part of the flight.
+**Figure 9:** Edge case 6: the full fleet, and one M-drone (red) flies
+to the far corner. Before the varied training the C-drones stay near
+the GS and the far M-drone is cut off; after it, a C-drone follows and
+relays its packets (purple line). In this run the far M-drone lost
+86.9% of its packets before and 31.8% after.
+<!-- source: GIFs drawn from saved recordings, run seed 9900 (rl_sim/out/2c_edge_bigfleet_r2_control/rec and rl_sim/out/2c_edge_bigfleet_r2_B/rec); per-run loss_flying from rl_sim/out/2c_edge_bigfleet_r2_control/edge_runs.csv (86.9) and rl_sim/out/2c_edge_bigfleet_r2_B/edge_runs.csv (31.8); copied by rl_sim/scripts/report_figures_2c.py -->
 
-| midpoint rule | RL agent (also trained on varied missions) |
-|---|---|
-| ![case 1, midpoint](figures/2c_case1_midpoint.gif) | ![case 1, RL agent](figures/2c_case1_rl.gif) |
-
-**Figure 9:** Edge case 1: one M-drone and one C-drone. Midpoint flies
-the C-drone to the middle and keeps the M-drone connected; the RL
-agent's C-drone stays at the GS, the case it still gets wrong.
-<!-- source: GIFs copied by rl_sim/scripts/report_figures_2c.py from rl_sim/out/2c_edge_bigfleet_r2_B/s9_*.gif and rl_sim/out/2c_edge_r2_B/s1_*.gif, run seed 9901 -->
 
 We also tried a reward that favours the M-drones that lose the most.
 With varied missions it made the losses more even (the worst-off
