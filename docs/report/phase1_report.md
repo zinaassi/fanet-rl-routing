@@ -605,11 +605,18 @@ RL has the lowest loss at every queue size.
 
 ## 10. Phase 2a: The Moving World
 
-In Phase 2 the drones move. Before training a new agent, we made the
-simulator work with moving drones and tested simple rules for moving
-the C-drones.
+In Phase 1 nothing moved. In Phase 2 the M-drones fly their missions,
+and the C-drones can move to help them. Before we could train an RL
+agent to move the C-drones, two things were needed: a simulator that
+still works when drones move, and simple rules for moving the C-drones,
+so that the RL agent would have something to beat. Phase 2a builds
+both.
 
 **What we added**
+
+The static simulator assumed that links never change and that every
+drone knows its neighbours for free. Neither is true once drones fly,
+so we added four things:
 
 1. **Moving M-drones:** each M-drone starts at its Phase 1 position,
    waits a random 0–50 s, then flies in a straight line, in a random
@@ -620,13 +627,42 @@ the C-drones.
    (link broken).
 3. **Hello messages:** drones no longer know their neighbours for free.
    Each drone sends a hello every 1 s with its position, speed and
-   load. A neighbour that is not heard for 3 s is forgotten. A packet
-   sent to a neighbour that has already flown away, and lost, counts
-   as stale link.
+   load, and it is heard with the same loss curve as data. A neighbour
+   that is not heard for 3 s is forgotten. A packet sent to a neighbour
+   that has already flown away, and lost, counts as stale link.
 4. **Moving C-drones:** C-drones fly at 30 m/s and decide using only
    the hellos they hear. They avoid collisions with an onboard sensor
    that sees drones within 50 m.
-<!-- source: rl_sim/fanet_sim/config.py — MAX_START_DELAY_S=50, DRONE_SPEED_MIN/MAX=10/30, HELLO_INTERVAL=1.0, HELLO_TIMEOUT_INTERVALS=3.0, C_DRONE_SPEED=30, SENSOR_RANGE_M=50 -->
+<!-- source: rl_sim/fanet_sim/config.py — MAX_START_DELAY_S=50, DRONE_SPEED_MIN/MAX=10/30, HELLO_INTERVAL=1.0, HELLO_TIMEOUT_INTERVALS=3.0, hello heard with probability 1 - p_loss(distance), C_DRONE_SPEED=30, SENSOR_RANGE_M=50 -->
+
+**How we did it**
+
+We added one piece at a time, and after each step checked what it
+changed, so that every jump in the loss could be traced to its cause.
+Steps 1–3 were run on 20 layouts; the final comparison on 50.
+
+- **Step 0, freeze the static world.** Before anything moved, we
+  recorded what the simulator did, and checked that with movement
+  switched off the new code reproduces the Phase 1 results exactly.
+  With nothing moving, greedy loses 28.3% on these 20 layouts and
+  random 63.8%.
+- **Step 1, the M-drones fly.** The drones still knew their neighbours
+  for free and the C-drones stayed still. Greedy's loss rose from 28.3%
+  to 47.7%, mostly because greedy got stuck with no neighbour closer to
+  the GS (no route, 11.4%). When all M-drones left at once instead of
+  over 50 s, it rose to 60.9%.
+- **Step 2, hello messages.** We tried hellos every 0.2, 0.5, 1 and 2 s.
+  The slower the hellos, the more packets went to drones that had
+  already left (stale link: 0.7% at 0.2 s, 4.3% at 1 s, 9.9% at 2 s),
+  but greedy's total loss barely changed (47.7% to 49.0%). We kept
+  1 s, which cost greedy only 0.4 points against perfect knowledge.
+- **Step 3, the C-drones move.** We compared four rules (table below).
+  Spreading the C-drones out, so that no two aim within 150 m of each
+  other, helped midpoint (35.0% to 29.5% with greedy).
+- **Step 4, the final comparison.** We gave the C-drones the 50 m
+  collision sensor and ran every rule on 50 test layouts. These are the
+  results below.
+<!-- source: step 0 rl_sim/out/2a_reference.csv (greedy 28.32, random 63.79 on layouts 1-20); step 1 rl_sim/out/2a_summary.csv (greedy 47.7, no_route 11.4 at start delay 50 s; 60.9 at 0 s); step 2 rl_sim/out/2a_hello_summary.csv (greedy total 47.7 / 47.7 / 48.1 / 49.0 and stale 0.7 / 1.9 / 4.3 / 9.9 at 0.2 / 0.5 / 1 / 2 s; ideal 47.7); step 3 rl_sim/out/2a_cdrone_summary.csv (greedy midpoint 35.0, midpoint s150 29.5); step 4 rl_sim/out/2a_final_summary.csv. Steps 1-3 used layouts 1-20; step 4 used layouts 1-50, which include them. -->
 
 **C-drone rules**
 
@@ -684,6 +720,19 @@ then rarely gets stuck (1.0%), and its loss falls from 44.5% to
 are worse than hovering, and with greedy they change the loss by about
 1%.
 <!-- source: rl_sim/out/2a_final_summary.csv — rule=greedy: no_route_mean 1.0 and total_loss_mean 29.1 at c_setting=midpoint s150, against 44.5 at hover, 45.5 at walk 5s and 43.7 at busiest s150. rule=random: 73.7 at hover against 77.5 at walk 5s and 77.6 at busiest s150. -->
+
+**Why this mattered**
+
+Phase 2a showed two things that shaped Phase 2c. First, movement alone
+costs a lot: with greedy routing the loss rose from 25.0% to 44.5% when
+the M-drones flew and the C-drones stayed still. Second, where the
+C-drones fly matters: placing them in the gaps (midpoint) won back most
+of that loss, while moving them without a plan (random walk) or toward
+traffic (busiest) did not. Midpoint therefore became the rule the RL
+agent in Phase 2c had to beat. The new parts of the simulator also
+proved cheap: hellos every second cost greedy less than half a point,
+and re-routing kept link-broken drops under 1% for every rule.
+<!-- source: rl_sim/out/2a_final_summary.csv (rule=greedy: hover 44.5, midpoint 29.1, walk 5s 45.5, busiest s150 43.7; link_broken_mean at most 0.7 across rules and routings) and rl_sim/out/1b_test50_runs.csv (greedy 200 ms: 25.0); hello cost from rl_sim/out/2a_hello_summary.csv (greedy 48.1 at 1 s against 47.7 ideal) -->
 
 ---
 
