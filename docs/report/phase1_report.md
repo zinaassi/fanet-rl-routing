@@ -627,8 +627,7 @@ We added:
    where it is. A neighbour not heard for 3 s is forgotten.
 <!-- source: rl_sim/fanet_sim/config.py — MAX_START_DELAY_S=50, DRONE_SPEED_MIN/MAX=10/30, HELLO_INTERVAL=1.0, HELLO_TIMEOUT_INTERVALS=3.0, hello heard with probability 1 - p_loss(distance), C_DRONE_SPEED=30, SENSOR_RANGE_M=50 -->
 
-We defined four simple rules for moving the C-drones, to compare with
-the RL agent later:
+We defined four simple rules for moving the C-drones:
 
 | rule | what the C-drone does |
 |---|---|
@@ -684,8 +683,7 @@ lot: with greedy routing and C-drones that only hover, the loss rises
 from 25.0% to 44.5%. Second, moving the C-drones helps only with the
 right rule: midpoint, which places them in the gaps between the GS and
 the far M-drones, brings the loss down to 29.1%, while random walk and
-busiest do not help. Midpoint is therefore the best simple rule, and
-the one the RL agent in Phase 2c has to beat.
+busiest do not help. Midpoint is therefore the best simple rule.
 <!-- source: rl_sim/out/2a_final_summary.csv (c_setting=hover, rule=greedy) — total_loss_mean 44.5, pct_packets_connected_mean 97.6, queue_full_mean 17.0, no_route_mean 8.9, stale_link_mean 4.5; midpoint s150: no_route_mean 1.0, total_loss_mean 29.1; walk 5s 45.5, busiest s150 43.7. No-movement figures from rl_sim/out/1b_test50_runs.csv (rule=greedy, load_ms=200): total 25.0, queue_full 11.2. -->
 
 ---
