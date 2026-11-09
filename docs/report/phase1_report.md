@@ -920,11 +920,9 @@ cases 1–4 still fail.
 |---|---|
 | ![case 6, before](figures/2c_case6_before.gif) | ![case 6, after](figures/2c_case6_after.gif) |
 
-**Figure 9:** Edge case 6: the full fleet, and one M-drone (red) flies
-to the far corner. Before the varied training the C-drones stay near
-the GS and the far M-drone is cut off; after it, a C-drone follows and
-relays its packets (purple line). In this run the far M-drone lost
-86.9% of its packets before and 31.8% after.
+**Figure 9:** Edge case 6: one M-drone (red) flies to the far corner.
+Before varied training it is cut off (86.9% lost); after, a C-drone
+follows and relays its packets (31.8% lost).
 <!-- source: GIFs drawn from saved recordings, run seed 9900 (rl_sim/out/2c_edge_bigfleet_r2_control/rec and rl_sim/out/2c_edge_bigfleet_r2_B/rec); per-run loss_flying from rl_sim/out/2c_edge_bigfleet_r2_control/edge_runs.csv (86.9) and rl_sim/out/2c_edge_bigfleet_r2_B/edge_runs.csv (31.8); copied by rl_sim/scripts/report_figures_2c.py -->
 
 
