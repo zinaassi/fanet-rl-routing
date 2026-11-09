@@ -795,11 +795,10 @@ where each drone happened to start.
 **Training**
 
 We trained the agent in three steps:
-1. **Copy midpoint:** we ran midpoint on the training layouts and
-   recorded 140,000 of its decisions: what each C-drone saw, and the
-   waypoint midpoint chose. The actor learned to give the same waypoint
-   for the same input. This gives it a sensible start instead of random
-   flying.
+1. **Copy midpoint:** we recorded 140,000 of midpoint's decisions and
+   trained the actor to predict midpoint's waypoint from what the
+   C-drone saw. Its waypoints ended up 31 m from midpoint's on average,
+   a sensible start instead of random flying.
 2. **PPO, M-drones still:** PPO then improved the actor with the
    M-drones standing still.
 3. **PPO, M-drones flying:** finally PPO trained it with the M-drones
