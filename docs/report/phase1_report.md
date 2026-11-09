@@ -788,9 +788,11 @@ more or less likely than before, the update stops pushing it further.
 All drones start within 100 m of the
 GS. Each M-drone gets a random direction, a speed of 10–30 m/s and a
 start delay of 0–50 s, then flies 325–650 m outward and hovers there.
+650 m is the bound: the farthest point of the area, a corner, is about
+622 m from the GS, so a longer flight would just stop at the edge.
 This lets us set how far the network spreads, instead of leaving it to
 where each drone happened to start.
-<!-- source: rl_sim/fanet_sim/config.py — MISSION "near_gs", START_RADIUS_M=100, MISSION_DISTANCE_M (D=650 in every Phase 2c result below), DRONE_SPEED_MIN/MAX=10/30, MAX_START_DELAY_S=50; rl_sim/fanet_sim/envs/fanet_env.py _assign_mobility — distance uniform in [0.5 D, D] = [325, 650] m, clipped inside the border -->
+<!-- source: rl_sim/fanet_sim/config.py — MISSION "near_gs", START_RADIUS_M=100, MISSION_DISTANCE_M (D=650 in every Phase 2c result below), DRONE_SPEED_MIN/MAX=10/30, MAX_START_DELAY_S=50; rl_sim/fanet_sim/envs/fanet_env.py _assign_mobility — distance uniform in [0.5 D, D] = [325, 650] m, clipped inside the border. Corner: 450*sqrt(2) = 636 m from the GS, minus the 10 m border margin along the diagonal = 622 m (FAR_M in rl_sim/scripts/train_c_ppo_round2.py); at D = 650, 50.4% of end points are clipped at the border (rl_sim/out/2c_curriculum1b_summary.csv). -->
 
 **Training**
 
