@@ -824,11 +824,6 @@ before.
 layouts, greedy routing, 200 ms, % of packets created.
 <!-- source: rl_sim/out/2c_r2_test.csv, set=full (layouts 601-650): hover, midpoint, control (= the RL agent). Small causes (dead end, ttl, hop limit, link broken) are all at most 0.2 and are left out. -->
 
-The RL agent loses 8 points less than midpoint, and less on 49 of the
-50 layouts. Most of the difference is in full queues (3.0% against
-9.2%), and the agent's packets almost never get stuck with no route.
-<!-- source: rl_sim/out/2c_r2_test_paired.csv — control minus midpoint, full: -7.99 [-9.09, -6.89], lower on 49/50; full queue 3.04 against 9.17 from rl_sim/out/2c_r2_test.csv -->
-
 **Edge cases**
 
 The test layouts are random, so they rarely contain hard but realistic
