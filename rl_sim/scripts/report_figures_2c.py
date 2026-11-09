@@ -36,12 +36,19 @@ from scripts.train_c_ppo_round1 import read_csv
 FIGURES_DIR = os.path.join("..", "docs", "report", "figures")
 CURVE = "2c_training_curve.png"
 
-#: report name -> committed source under out/
+#: report name -> source under out/. Drawn from the saved recordings by
+#: plot_edge_cases_2c.py --write-dir out/2c_report_gifs/... (no new runs):
+#:   case 1 (script scenario 1), run seed 9901: the first RL agent (round-1
+#:     control) and midpoint, recordings in out/2c_edge_r1_control/rec;
+#:   case 6 (script scenario 9), run seed 9900: the first RL agent
+#:     (out/2c_edge_bigfleet_r2_control/rec) and the agent after varied
+#:     training (run B, out/2c_edge_bigfleet_r2_B/rec). 9900 is a typical
+#:     seed: the first agent loses 86.9% there, as on 3 of its 5 seeds.
 GIFS = {
-    "2c_case9_rl.gif": "2c_edge_bigfleet_r2_B/s9_B.gif",
-    "2c_case9_midpoint.gif": "2c_edge_bigfleet_r2_B/s9_midpoint.gif",
-    "2c_case1_rl.gif": "2c_edge_r2_B/s1_B.gif",
-    "2c_case1_midpoint.gif": "2c_edge_r2_B/s1_midpoint.gif",
+    "2c_case1_rl.gif": "2c_report_gifs/case1/s1_control.gif",
+    "2c_case1_midpoint.gif": "2c_report_gifs/case1/s1_midpoint.gif",
+    "2c_case6_before.gif": "2c_report_gifs/case6_before/s9_control.gif",
+    "2c_case6_after.gif": "2c_report_gifs/case6_after/s9_B.gif",
 }
 
 
