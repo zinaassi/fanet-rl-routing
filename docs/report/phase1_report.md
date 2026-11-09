@@ -943,28 +943,19 @@ fleets and fall back to midpoint in small ones.
 
 **Difficulties**
 
-- **Credit for failed hops.** A packet records only the hops that
-  succeeded, so the drones whose transmission failed, the decisions
-  the routing agent most needs to learn from, would never hear the
-  outcome. We stored every decision separately and gave each one the
-  packet's final outcome.
-- **The loss model changed twice.** It started as a hard wall at
-  250 m, became an S-curve, and then its 10% point moved out to 300 m.
-  Each change meant re-running every result.
-- **Stale knowledge in the moving world.** Once drones fly, links
-  break and neighbour lists go out of date, so we had to add hello
-  messages and re-routing before anything could be trained
-  (section 10).
-- **Good on average, bad in specific cases.** The C-drone agent beat
-  midpoint on random layouts but failed simple cases with a lone
-  flyer; only the hand-built edge cases showed it (section 11).
-- **Validation is optimistic.** On the validation layouts the
-  varied-mission agent looked 0.9 points worse than the first agent in
-  the full fleet; on fresh test layouts the gap disappeared. Every
-  claim had to be checked on layouts never used before.
-- **Long training.** Each C-drone training run took 4–5 hours, so
-  runs saved checkpoints every 25 updates and could be resumed exactly.
-<!-- source: decisions stored apart from Packet.path — CLAUDE.md "CRITICAL implementation note"; loss-model history — CLAUDE.md "Channel loss" History (wall at 250 m, S-curve 10% at 249.689 m, moved to 300 m on 2026-10-16); validation gap — B minus control full fleet 16.84 vs 15.92 on 301-330 (rl_sim/out/2c_r2_summary.csv) against +0.09 [-0.35, +0.53] on 601-650 (rl_sim/out/2c_r2_test_paired.csv); run times 5.11 h (A), 4.37 h (B), 4.58 h (C) in rl_sim/out/r2_runs.log; CHECKPOINT_EVERY = 25 and the resume tests in commits b64fb64 and 2206716 -->
+- **Choosing the environment.** Small choices in the world decide how
+  much there is to learn. With a short link range many layouts leave
+  drones cut off; with a long one most drones reach the GS directly and
+  there is little to route. We compared ranges from 300 to 450 m on
+  3000 random layouts and chose 350 m, where about 95% of layouts are
+  connected and about half the M-drones still need a relay. For the
+  moving world we also had to design a mission whose spread we could
+  control (section 11).
+- **Choosing the loss model.** It started as a hard wall at 250 m,
+  became an S-curve, and then its 10% point moved out to 300 m to
+  follow the 802.11 definition of receiver sensitivity. Each change
+  meant re-running every result.
+<!-- source: link-edge choice — CLAUDE.md "Link existence" (edges 300-450 m on 3000 random layouts, rl_sim/out/edge_scan.csv: 350 m, ~95% of layouts connected, 52% of M-drones need a relay); loss-model history — CLAUDE.md "Channel loss" History (wall at 250 m, S-curve with the 10% point at 249.689 m, moved to 300 m on 2026-10-16); mission — rl_sim/fanet_sim/config.py MISSION comment ("border" flight length decided by chance, "near_gs" a dial) -->
 
 **Further work**
 
