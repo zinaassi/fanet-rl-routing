@@ -910,15 +910,11 @@ layouts, greedy routing, 200 ms, % of packets created.
 type), greedy routing, 200 ms, % of packets created.
 <!-- source: rl_sim/out/2c_r2_test.csv, set=varied (layouts 651-750): hover, midpoint, control (RL agent), B (RL, varied); totals and per-type means -->
 
-Training on varied missions lowered the loss on varied missions from
-12.9% to 10.4%, most of all with lone flyers (12.3% to 6.9%), and did
-not cost anything in the full fleet (16.4% in both). Against midpoint,
-the varied agent is about level on varied missions (the 1.1-point gap
-is within the noise) and still 7.9 points better in the full fleet. In
-the edge cases of Table 13 it fixed case 5 (from 87.1% to 28.7%, now
-better than midpoint's 33.3%) and halved the loss in cases 6 (77.4% to
-40.8%) and 8 (41.0% to 19.3%), but cases 1–4 still fail (49–85%,
-against 9–28% for midpoint).
+Varied training cut the loss on varied missions from 12.9% to 10.4%
+at no cost in the full fleet. The agent is now level with midpoint on
+varied missions and still 7.9 points better in the full fleet. In the
+edge cases it fixed case 5 and halved the loss in cases 6 and 8, but
+cases 1–4 still fail.
 
 | before varied training | after varied training |
 |---|---|
