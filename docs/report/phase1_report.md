@@ -785,8 +785,7 @@ more or less likely than before, the update stops pushing it further.
 
 **The mission**
 
-Phase 2c uses a different mission from Phase 2a, so its numbers cannot
-be compared with Tables 8 and 9. All drones start within 100 m of the
+All drones start within 100 m of the
 GS. Each M-drone gets a random direction, a speed of 10–30 m/s and a
 start delay of 0–50 s, then flies 325–650 m outward and hovers there.
 This lets us set how far the network spreads, instead of leaving it to
@@ -795,17 +794,17 @@ where each drone happened to start.
 
 **Training**
 
-We trained the agent in steps. First the actor learned to copy
-midpoint, so it started from a sensible rule instead of from random
-flying. Then PPO trained it, first with the M-drones standing still and
-then with them flying. For the flying world we tried two orders with
-the same number of updates (1240): raising the flight distance step by
-step from 250 m to 650 m, or training at 650 m from the start. Training
-at 650 m from the start was better on the validation layouts (16.7%
-against 21.0%), so we kept it. We then trained it for 400 more updates;
-this is the agent whose results we report below. Adding a penalty for
-C-drones flying close together changed the loss by less than a point,
-so we did not keep it.
+We trained the agent in three steps:
+1. **Copy midpoint:** we ran midpoint on the training layouts and
+   recorded 140,000 of its decisions: what each C-drone saw, and the
+   waypoint midpoint chose. The actor learned to give the same waypoint
+   for the same input. This gives it a sensible start instead of random
+   flying.
+2. **PPO, M-drones still:** PPO then improved the actor with the
+   M-drones standing still.
+3. **PPO, M-drones flying:** finally PPO trained it with the M-drones
+   flying 650 m out, and then for 400 more updates. This is the RL
+   agent in the results below.
 
 The agent trained on layouts 101–300, was chosen on layouts 301–330,
 and was tested on layouts 601–650, which no part of the work had used
