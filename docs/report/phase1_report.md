@@ -757,23 +757,32 @@ their average and their maximum.
 
 **Learning**
 
-| | |
+Training repeats one cycle, called an update:
+1. **Fly:** the C-drones fly 40 runs with the current actor, without
+   changing it. Each C-drone decides once a second, so this gives about
+   28,000 decisions, each with the reward that followed it.
+2. **Learn:** the decisions are split into batches of 1024. The
+   networks adjust their weights a little after each batch, and go over
+   all the batches 5 times, shuffling them each time.
+3. **Start again:** the decisions are thrown away, and the next update
+   flies with the new actor.
+
+We ran 400 updates and kept the actor that did best on the validation
+layouts.
+
+| setting | value |
 |---|---|
 | method | PPO with a shared critic (MAPPO) |
-| episodes per update | 40 |
-| passes over the data per update | 5 |
-| batch size | 1024 decisions |
 | clip | 0.1 |
 | optimizer | Adam, learning rate 0.0003 |
 | discount (γ) / GAE (λ) | 0.97 / 0.95 |
-| exploration | random noise around the chosen waypoint (spread 0.1, about 45 m) during training; none when testing |
+| exploration | random noise around the chosen waypoint (about 45 m) during training; none when testing |
 
 **Table 12:** The learning settings.
 
-In each update the agent flies 40 runs, and the networks are then
-adjusted using what happened. The clip keeps each update small: once a
-decision has become about 10% more or less likely than before, the
-update stops pushing it further.
+The clip keeps each update small: once a decision has become about 10%
+more or less likely than before, the update stops pushing it further.
+<!-- source: rl_sim/scripts/train_c_ppo_round2.py lines 545-568 (5 passes, torch.randperm each pass, minibatches of MINIBATCH=1024, one optimiser step per minibatch); decisions per update from rl_sim/out/2c_r2_log_A.csv (27720 = 40 runs x 7 C-drones x 99) and 2c_r2_log_B.csv (17424-25146, mean 21737, smaller fleets in varied missions); 400 updates and keep-best on validation are round 2's settings (UPDATES, evaluate every 10 updates) -->
 <!-- source: rl_sim/fanet_sim/envs/c_interface.py (features, reward, global state), rl_sim/agents/c_actor.py (layers), rl_sim/scripts/train_c_ppo.py (GAMMA, GAE_LAMBDA, CLIP, EPOCHS_PER_UPDATE, LEARNING_RATE, MINIBATCH), rl_sim/scripts/train_c_ppo_m4.py (EPISODES_PER_UPDATE_M4 = 40), rl_sim/fanet_sim/config.py (C_FLIGHT_COST, C_DRONE_SPEED, SHARE_TARGETS) -->
 
 ---
