@@ -926,13 +926,6 @@ follows and relays its packets (31.8% lost).
 <!-- source: GIFs drawn from saved recordings, run seed 9900 (rl_sim/out/2c_edge_bigfleet_r2_control/rec and rl_sim/out/2c_edge_bigfleet_r2_B/rec); per-run loss_flying from rl_sim/out/2c_edge_bigfleet_r2_control/edge_runs.csv (86.9) and rl_sim/out/2c_edge_bigfleet_r2_B/edge_runs.csv (31.8); copied by rl_sim/scripts/report_figures_2c.py -->
 
 
-We also tried a reward that favours the M-drones that lose the most.
-With varied missions it made the losses more even (the worst-off
-M-drone lost 27.5% against 30.3%), but it lost 0.8 points more in the
-full fleet. On the validation layouts the normal reward did better
-overall, so we kept it.
-<!-- source: rl_sim/out/2c_r2_test_paired.csv — B minus control: varied -2.50 [-3.92, -1.09], full +0.09 [-0.35, +0.53]; B minus midpoint: varied +1.13 [-1.24, +3.49], full -7.90 [-8.96, -6.84]; edge cases from rl_sim/out/2c_r2_edge.csv. Fair reward = runs A (full fleet only) and C (varied missions). C against B (both varied): worst M-drone on the varied test 27.5 against 30.3, full fleet 17.23 against 16.44 (rl_sim/out/2c_r2_test.csv). Validation average (full + varied)/2 from rl_sim/out/2c_r2_summary.csv: B 12.59, C 12.79, A 12.99; B kept by that rule. -->
-
 **What we learned**
 
 The RL agent is clearly better than the simple rules in the full fleet,
