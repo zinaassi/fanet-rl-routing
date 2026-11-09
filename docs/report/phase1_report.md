@@ -20,27 +20,122 @@ Advisor: Eran, with Prof. Reuven Cohen
 8. [The RL Agent](#8-the-rl-agent)
 9. [Results](#9-results)
 10. [Phase 2a: The Moving World](#10-phase-2a-the-moving-world)
-11. [Summary: Difficulties, Further Work, Conclusion](#11-summary-difficulties-further-work-conclusion)
-12. [References](#12-references)
-13. [Appendix](#13-appendix)
+11. [Phase 2c: Moving the C-drones with RL](#11-phase-2c-moving-the-c-drones-with-rl)
+12. [Summary: Difficulties, Further Work, Conclusion](#12-summary-difficulties-further-work-conclusion)
+13. [References](#13-references)
+14. [Appendix](#14-appendix)
 
 ---
 
 ## 1. Abstract
 
-_To be written after Phase 2._
+In a drone network, mission drones (M-drones) send data to a ground
+station (GS), often through other drones. Packets are lost when links
+are long, queues fill up, or drones move away. Our goal was to lose as
+few packets as possible, using reinforcement learning (RL).
+
+We built our own simulator for this. First, in a static world, we
+compared simple routing rules with an RL router. The RL router lost
+10.8% of the packets, against 11.9% for the best simple rule and 25.0%
+for greedy routing.
+
+Next, we let the drones move and added relay drones (C-drones) whose
+only job is to carry packets. We trained an RL agent that decides where
+the C-drones fly. In a full fleet it lost 16.4% of the packets, against
+24.3% for a simple rule that places each C-drone halfway to the
+farthest drone. Tests on small, hand-built cases showed a weakness:
+the agent stayed near the GS and abandoned drones that flew away alone.
+Training it on varied missions fixed some of these cases. On varied
+missions it then lost 10.4%, close to the simple rule (9.2%), and it
+kept its lead in the full fleet (16.4% against 24.3%).
+
+The RL agents work best in large, busy networks. In small fleets the
+simple rule loses fewer packets, so a real system could combine the
+two.
+<!-- source: rl_sim/out/1b_test50_runs.csv (200 ms: rl 10.77, rate 11.93, greedy 24.97); rl_sim/out/2c_r2_test.csv (full 601-650: control 16.35, B 16.44, midpoint 24.34; varied 651-750: B 10.35, midpoint 9.22); edge cases rl_sim/out/2c_r2_edge.csv. The small-fleet claim (1-6 M-drones: B 18.72 vs midpoint 11.01) was computed from 2c_r2_test.csv and is not yet in a saved file. -->
 
 ---
 
 ## 2. Introduction
 
-_To be written after Phase 2._
+A group of drones that talk to each other by radio is called a flying
+ad-hoc network (FANET). In our network there are two kinds of drones.
+Mission drones (M-drones) collect data and send it to a ground station
+(GS). Relay drones (C-drones) create no data; they only carry other
+drones' packets.
+
+Let's look at a very simple network: a GS, one M-drone and one C-drone.
+
+![Simple example](figures/intro_example.png)
+
+**Figure 1:** The M-drone is too far from the GS, so its packets go
+through the C-drone.
+
+When the M-drone flies away, its link gets longer and more packets are
+lost. The C-drone can fly between them, so each packet makes two short
+hops instead of one long one. With many drones, queues can also fill up,
+and moving drones can break routes.
+
+So two decisions matter: which neighbour each drone sends to (routing),
+and where the C-drones fly (placement). We asked whether reinforcement
+learning (RL) can make these decisions better than simple rules.
+
+We studied routing in a static world (Phase 1), then let the drones
+move and tested simple placement rules for the C-drones (Phase 2a).
+Finally, we trained an RL agent that places the C-drones (Phase 2c). In
+Phase 2c the packets are routed by the simple greedy rule, so that any
+gain comes from placement alone. RL routing in the moving world
+(Phase 2b), and the two agents together, are left for future work.
 
 ---
 
 ## 3. Background
 
-_To be written after Phase 2._
+**Routing in a drone network**
+
+In a FANET the drones move, so routes change all the time. A common
+simple approach is greedy forwarding [CITE: Karp & Kung 2000]: each
+drone sends a packet to the neighbour that is closest to the
+destination. It needs no route tables, only the positions of the
+neighbours, which the drones learn from short "hello" messages they
+send to each other.
+
+**Reinforcement learning (RL)**
+
+In RL, an agent learns by trial and error [CITE: Sutton & Barto 2018].
+At each step it looks at the state of its environment, chooses an
+action, and receives a reward. Over many tries it learns which actions
+lead to more reward.
+
+![The RL loop](figures/rl_loop.png)
+
+**Figure 2:** The RL loop. The agent sees the state, acts, and gets a
+reward.
+
+In Phase 1, the agent is a drone choosing the next hop for a packet.
+The reward is 1 if the packet reaches the GS and 0 if it does not, and
+every drone that chose a hop for that packet receives the same reward.
+
+In Phase 2c, the agent is a C-drone choosing where to fly. Every
+second, all C-drones receive the same reward: the packets delivered
+minus the packets lost, as a share of the packets created, minus a
+small charge for the distance the drone flew.
+
+**Actor and critic (PPO)**
+
+For Phase 2c we used PPO [CITE: Schulman et al. 2017], a common RL
+method with two networks:
+- The **actor** chooses the action.
+- The **critic** estimates how much reward is still to come, so the
+  actor can tell whether an action was better or worse than expected.
+
+PPO also keeps each learning step small, so the actor does not change
+too much at once.
+
+All C-drones work as one team and share one actor. During training
+only, the critic sees the whole network [CITE: Yu et al. 2022]. When
+flying, each C-drone uses only the actor, with its own state and the
+hello messages it receives from its neighbours.
 
 ---
 
@@ -63,7 +158,7 @@ through other drones; otherwise a new layout is drawn.
 
 ![Example layout](figures/example_layout.png)
 
-**Figure 1:** An example layout. Solid lines are good links, dotted
+**Figure 3:** An example layout. Solid lines are good links, dotted
 lines are weak links. The orange arrows show one route to the GS.
 
 **Radio channel**
@@ -111,7 +206,7 @@ values that produce this curve; they do not affect the results.
 
 ![Loss against distance](figures/ploss_curve.png)
 
-**Figure 2:** Loss per transmission as a function of distance. Beyond
+**Figure 4:** Loss per transmission as a function of distance. Beyond
 350 m a drone does not accept the other as a neighbour.
 
 **No resends:** a lost transmission is not resent, so one lost hop
@@ -263,7 +358,20 @@ reproduced from its random seeds.
 
 ## 5. Goals
 
-_To be written after Phase 2._
+Our measure throughout is the total packet loss: the share of created
+packets that never reach the GS. Loss by cause (channel, full queues,
+no route, and so on) is used only to explain the total.
+
+1. Build a simulator of a drone network with a realistic loss model,
+   queues and moving drones.
+2. Compare simple routing rules in a static world, and test whether an
+   RL router loses fewer packets.
+3. Let the drones move, and compare simple rules for placing the
+   C-drones.
+4. Train an RL agent that decides where the C-drones fly, and test
+   whether it loses fewer packets than the simple rules:
+   - on fresh layouts it never saw in training;
+   - on hand-built edge cases, such as a drone flying away alone.
 
 ---
 
@@ -291,11 +399,11 @@ drone has locally.
 **Results**
 
 We ran both rules on 20 random layouts at each of the four loads.
-Figure 3 shows the total loss and its causes.
+Figure 5 shows the total loss and its causes.
 
 ![Loss and its causes](figures/1a_loss_heatmaps.png)
 
-**Figure 3:** Total packet loss and its causes for greedy and random,
+**Figure 5:** Total packet loss and its causes for greedy and random,
 at each load (mean over 20 layouts, standard deviation in brackets).
 
 Greedy loses much less than random at every load, on all 20 layouts.
@@ -579,13 +687,105 @@ are worse than hovering, and with greedy they change the loss by about
 
 ---
 
-## 11. Summary: Difficulties, Further Work, Conclusion
+## 11. Phase 2c: Moving the C-drones with RL
+
+In this phase an RL agent decides where the C-drones fly. Routing stays
+greedy, as in Phase 2a. We compare the agent with two simple rules from
+Phase 2a:
+- **hover:** the C-drones stay where they start;
+- **midpoint:** each C-drone flies halfway between the GS and the
+  farthest M-drone it hears. The C-drones do not coordinate, so several
+  of them can pick the same point.
+
+**The RL setup**
+
+| RL part | in our problem |
+|---|---|
+| agent | each C-drone (all 7 share one network) |
+| environment | the simulated drone network, with moving M-drones |
+| state | what the C-drone knows: its own position, queues and traffic, and the neighbours it hears in hello messages |
+| action | a waypoint to fly to, chosen once every second |
+| reward | packets delivered minus packets lost, as a share of the packets created in that second, minus a small cost for the distance flown |
+| episode | one 100-second run on one layout |
+
+**Table 10:** The RL setup for the C-drones.
+
+All C-drones get the same delivery reward, because they work as one
+team. The flight cost is 0.01 for flying at full speed (30 m/s) for one
+second, so the agent does not fly without a reason.
+
+**The model**
+
+The agent has two networks: the actor, which chooses the waypoint, and
+the critic, which is used only during training (section 3).
+
+The actor gets two kinds of input:
+1. **Itself (15 numbers):**
+   - its position, and its distance and direction to the GS;
+   - whether it hears the GS;
+   - how full its queues are;
+   - how many packets it relayed in the last second, and for how many
+     different drones;
+   - the share of its transmissions that were acknowledged;
+   - how many neighbours it hears;
+   - the time, and its own velocity.
+2. **Each neighbour (14 numbers each):**
+   - its position, estimated from its last hello;
+   - its velocity;
+   - its type (M, C or GS);
+   - its queue fill, and how many packets it relayed;
+   - how much closer to the GS it is;
+   - whether it can reach the GS;
+   - how old its hello is;
+   - where it is flying to.
+
+The number of neighbours changes all the time, so each neighbour goes
+through the same small network, and the results are combined by taking
+their average and their maximum.
+
+![The actor network](figures/actor_network.png)
+
+**Figure 6:** The actor network.
+
+| | actor | critic |
+|---|---|---|
+| input | 15 (self) + 14 per neighbour | the whole network: 5 numbers per drone (25 × 5), plus the C-drone's own 15 numbers and the time: 141 in all |
+| layers | neighbour 14 → 64 → 64 (average and max); self 15 → 64; together 192 → 128 → 2 | 141 → 128 → 128 → 1 |
+| output | a waypoint, at most 450 m from the GS on each axis | the expected reward |
+| used when flying | yes | no, training only |
+
+**Table 11:** The two networks.
+
+**Learning**
+
+| | |
+|---|---|
+| method | PPO with a shared critic (MAPPO) |
+| episodes per update | 40 |
+| passes over the data per update | 5 |
+| batch size | 1024 decisions |
+| clip | 0.1 |
+| optimizer | Adam, learning rate 0.0003 |
+| discount (γ) / GAE (λ) | 0.97 / 0.95 |
+| exploration | random noise around the chosen waypoint (spread 0.1, about 45 m) during training; none when testing |
+
+**Table 12:** The learning settings.
+
+In each update the agent flies 40 runs, and the networks are then
+adjusted using what happened. The clip keeps each update small: once a
+decision has become about 10% more or less likely than before, the
+update stops pushing it further.
+<!-- source: rl_sim/fanet_sim/envs/c_interface.py (features, reward, global state), rl_sim/agents/c_actor.py (layers), rl_sim/scripts/train_c_ppo.py (GAMMA, GAE_LAMBDA, CLIP, EPOCHS_PER_UPDATE, LEARNING_RATE, MINIBATCH), rl_sim/scripts/train_c_ppo_m4.py (EPISODES_PER_UPDATE_M4 = 40), rl_sim/fanet_sim/config.py (C_FLIGHT_COST, C_DRONE_SPEED, SHARE_TARGETS) -->
+
+---
+
+## 12. Summary: Difficulties, Further Work, Conclusion
 
 _To be written after Phase 2._
 
 ---
 
-## 12. References
+## 13. References
 
 _To be written after Phase 2._
 
@@ -608,6 +808,6 @@ Running list of citations still needed:
 
 ---
 
-## 13. Appendix
+## 14. Appendix
 
 _To be written after Phase 2._
