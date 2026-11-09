@@ -616,9 +616,11 @@ for the C-drones, we started with something easy:
 The static simulator assumed that links never change and that every
 drone knows its neighbours for free, so we first fixed the environment.
 We added:
-1. **Moving drones:** each M-drone waits 0–50 s, then flies straight
-   to the edge of the area at 10–30 m/s. C-drones fly at 30 m/s and
-   avoid collisions with a 50 m sensor.
+1. **Moving drones:** each M-drone starts at its Phase 1 position and
+   gets a random direction and a random speed of 10–30 m/s. It waits
+   0–50 s, then flies straight in that direction to the edge of the
+   area, and hovers there. C-drones fly at 30 m/s and avoid collisions
+   with a 50 m sensor.
 2. **Re-routing:** when a link breaks, its waiting packets are sent to
    another neighbour.
 3. **Hello messages:** every second each drone tells its neighbours
@@ -637,7 +639,16 @@ the RL agent later:
 
 In busiest and midpoint each C-drone announces its target in its hello
 and avoids targets within 150 m of another C-drone's, so they spread
-out. Tables 8 and 9 give the results on 50 test layouts.
+out.
+
+There is no training in this phase: the rules are fixed. We ran each
+rule once on each of the 50 test layouts of Phase 1, with greedy and
+with random routing. As in Phase 1, a run lasts 100 s, each M-drone
+creates a packet every 200 ms, and we count the packets created
+between 5 s and 95 s. On a given layout the M-drones fly exactly the
+same paths under every rule, so the differences between the rules come
+from the C-drones alone. Tables 8 and 9 give the results.
+<!-- source: rl_sim/out/2a_final_runs.csv — 50 runs per (C-drone rule, routing), placement seeds 1-50; rl_sim/fanet_sim/config.py — MAX_STEPS=1000 at TIMESTEP 0.1 s, PACKET_INTERVAL_STEPS=2, window [WARMUP_STEPS=50, MAX_STEPS-DRAIN_STEPS=950); rl_sim/fanet_sim/envs/fanet_env.py _assign_mobility — direction uniform in [0, 360), speed uniform 10-30 m/s, start delay uniform 0-50 s, end point where the ray leaves the arena minus BORDER_MARGIN_M=10, all drawn from SeedSequence([placement_seed, MOBILITY_STREAM_TAG]) so the flights do not depend on the C-drone rule -->
 <!-- source: rl_sim/fanet_sim/config.py — C_RULES, C_TURN_INTERVAL=5.0, SHARE_TARGETS, C_TARGET_SPREAD_M=150; rl_sim/fanet_sim/envs/fanet_env.py (_choose_target) -->
 
 **Routing with greedy**
