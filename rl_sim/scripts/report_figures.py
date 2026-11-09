@@ -76,7 +76,10 @@ COPIED = (
 OWN = ("ploss_curve.png", "1a_loss_heatmaps.png")
 
 #: Figures that live in the report folder but are NOT produced here.
-KEEP = ("example_layout.png",)
+#: intro_example.png comes from plot_intro_example.py; rl_loop.png and
+#: actor_network.png from plot_report_diagrams.py (each with --report).
+KEEP = ("example_layout.png", "intro_example.png", "rl_loop.png",
+        "actor_network.png")
 
 
 def _style(ax: plt.Axes) -> None:
