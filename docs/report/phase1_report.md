@@ -951,10 +951,11 @@ fleets and fall back to midpoint in small ones.
   connected and about half the M-drones still need a relay. For the
   moving world we also had to design a mission whose spread we could
   control (section 11).
-- **Choosing the loss model.** It started as a hard wall at 250 m,
-  became an S-curve, and then its 10% point moved out to 300 m to
-  follow the 802.11 definition of receiver sensitivity. Each change
-  meant re-running every result.
+- **Choosing the loss model.** It started as a hard wall at 250 m.
+  We replaced it with an S-curve where the receiver's sensitivity means
+  10% loss, as in 802.11, and later made the curve steeper, so the loss
+  climbs from 10% to 50% between 300 and 350 m. Each change meant
+  re-running every result.
 <!-- source: link-edge choice — CLAUDE.md "Link existence" (edges 300-450 m on 3000 random layouts, rl_sim/out/edge_scan.csv: 350 m, ~95% of layouts connected, 52% of M-drones need a relay); loss-model history — CLAUDE.md "Channel loss" History (wall at 250 m, S-curve with the 10% point at 249.689 m, moved to 300 m on 2026-10-16); mission — rl_sim/fanet_sim/config.py MISSION comment ("border" flight length decided by chance, "near_gs" a dial) -->
 
 **Further work**
