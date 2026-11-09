@@ -347,6 +347,7 @@ def make_snapshots(rec_dir: str, edge_dir: str, scenario: int,
 
 
 def main() -> None:
+    global SEED
     parser = argparse.ArgumentParser(
         description="Phase 2c edge cases: GIFs and snapshots from recordings."
     )
@@ -368,7 +369,6 @@ def main() -> None:
                         help="write the pictures here instead of the "
                              "recordings' folder")
     args = parser.parse_args()
-    global SEED
     SEED = args.seed
     if args.bigfleet:
         edge_dir = args.edge_dir or os.path.join(args.out_dir,
