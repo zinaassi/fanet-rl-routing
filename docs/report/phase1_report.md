@@ -814,11 +814,11 @@ before.
 
 **Results in the full fleet**
 
-| C-drones | total loss | channel | full queue | no route | stale link |
+| how the C-drones move | total loss | lost on the channel | queue full | no route to the GS | sent to a drone that had left |
 |---|---|---|---|---|---|
-| hover | 25.9% | 12.8% | 4.1% | 3.7% | 4.9% |
-| midpoint | 24.3% | 9.1% | 9.2% | 1.3% | 4.5% |
-| RL agent | **16.4%** | 8.4% | 3.0% | 0.2% | 4.7% |
+| hover (stay where they start) | 25.9% | 12.8% | 4.1% | 3.7% | 4.9% |
+| midpoint rule | 24.3% | 9.1% | 9.2% | 1.3% | 4.5% |
+| RL agent (trained on the full fleet) | **16.4%** | 8.4% | 3.0% | 0.2% | 4.7% |
 
 **Table 13:** Packet loss in the full fleet (18 M + 7 C), 50 test
 layouts, greedy routing, 200 ms, % of packets created.
@@ -833,20 +833,20 @@ when one M-drone flies far away alone, a C-drone should follow it and
 relay its packets. We ran each case five times, to check that the agent
 behaves sensibly, not only that it loses little on average.
 
-| case | what happens | RL agent | RL, varied | midpoint |
+| case | what happens | RL agent (trained on the full fleet) | RL agent (also trained on varied missions) | midpoint rule |
 |---|---|---|---|---|
-| 1 | 1 M, 1 C: the M-drone flies 600 m away | 88.7% | 84.6% | 17.8% |
-| 2 | 1 M, 3 C: the M-drone flies to a corner | 88.0% | 79.0% | 28.0% |
-| 5 | 1 M, 2 C: the M-drone flies 600 m, waits 20 s, and comes back | 50.0% | 49.4% | 8.8% |
-| 6 | 1 M, 1 C: the M-drone flies to a corner | 88.7% | 85.2% | 25.2% |
-| 8 | 1 M, 7 C: the M-drone flies 600 m away | 87.1% | 28.7% | 33.3% |
-| 9 | full fleet, 1 M flies to a corner | 77.4% | 40.8% | 86.6% |
-| 10 | full fleet, 3 M fly to three corners | 72.5% | 68.7% | 82.3% |
-| 12 | full fleet, 1 M flies to a corner and back | 41.0% | 19.3% | 49.4% |
-| 13 | full fleet, 9 M fly together to one side | 16.6% | 18.1% | 72.4% |
+| 1 | 1 M-drone and 1 C-drone; the M-drone flies 600 m away | 88.7% | 84.6% | 17.8% |
+| 2 | 1 M-drone and 3 C-drones; the M-drone flies to a corner | 88.0% | 79.0% | 28.0% |
+| 5 | 1 M-drone and 2 C-drones; the M-drone flies 600 m, waits 20 s, and comes back | 50.0% | 49.4% | 8.8% |
+| 6 | 1 M-drone and 1 C-drone; the M-drone flies to a corner | 88.7% | 85.2% | 25.2% |
+| 8 | 1 M-drone and 7 C-drones; the M-drone flies 600 m away | 87.1% | 28.7% | 33.3% |
+| 9 | full fleet (18 M-drones, 7 C-drones); 1 M-drone flies to a corner, the rest stay | 77.4% | 40.8% | 86.6% |
+| 10 | full fleet; 3 M-drones fly to three different corners, the rest stay | 72.5% | 68.7% | 82.3% |
+| 12 | full fleet; 1 M-drone flies to a corner and back, the rest stay | 41.0% | 19.3% | 49.4% |
+| 13 | full fleet; 9 M-drones fly together to one side, the rest stay | 16.6% | 18.1% | 72.4% |
 
 **Table 14:** Edge cases: loss of the M-drones that fly away, mean of 5
-runs. "RL, varied" is the agent after training on varied missions
+runs. The second RL agent is the one trained also on varied missions
 (below).
 <!-- source: rl_sim/out/2c_r2_edge.csv — flying_m_loss, policies control (RL agent), B (RL, varied), midpoint; run seeds 9900-9904, placement seed 900; scenario definitions in rl_sim/scripts/edge_cases_2c.py. Cases 3, 4, 7 and 11 are left out: 4 and 11 are the same for all three (0.8 and 9.2), 3 is above 80% for all three (88.3 / 84.1 / 81.6), and in 7 the RL agents beat midpoint (17.2 / 19.1 / 25.8). -->
 
@@ -871,12 +871,12 @@ the varied validation layouts, and tested it on 100 new varied missions
 (layouts 651–750, 25 of each type).
 <!-- source: rl_sim/scripts/train_c_ppo_round2.py — draw_varied (n_M 1-18, n_C 1-7, types a-d, SPREAD_D_M 300-650, FAR_M 450-622, HOVER_S 10-30), VARIED_SHARE 0.5, keep-best on the mean of full 301-330 and varied 331-360; run B, best at update 100. Test sets in rl_sim/scripts/evaluate_r2_test.py. -->
 
-| C-drones | all | spread | lone flyers | group | out and back |
+| how the C-drones move | all missions | spread | lone flyers | group | out and back |
 |---|---|---|---|---|---|
-| hover | 17.6% | 20.4% | 15.4% | 24.6% | 9.8% |
-| midpoint | **9.2%** | **14.1%** | 8.7% | **8.9%** | **5.2%** |
-| RL agent | 12.9% | 16.5% | 12.3% | 14.5% | 8.1% |
-| RL, varied | 10.4% | 15.0% | **6.9%** | 11.8% | 7.6% |
+| hover (stay where they start) | 17.6% | 20.4% | 15.4% | 24.6% | 9.8% |
+| midpoint rule | **9.2%** | **14.1%** | 8.7% | **8.9%** | **5.2%** |
+| RL agent (trained on the full fleet) | 12.9% | 16.5% | 12.3% | 14.5% | 8.1% |
+| RL agent (also trained on varied missions) | 10.4% | 15.0% | **6.9%** | 11.8% | 7.6% |
 
 **Table 15:** Packet loss on 100 varied test missions (25 of each
 type), greedy routing, 200 ms, % of packets created.
