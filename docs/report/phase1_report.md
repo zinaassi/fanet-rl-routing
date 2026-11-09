@@ -826,9 +826,12 @@ layouts, greedy routing, 200 ms, % of packets created.
 
 **Edge cases**
 
-The test layouts are random, so they rarely contain hard but realistic
-cases, such as one drone flying far away alone. We built 13 such cases
-by hand and ran each one five times.
+A good average over random layouts can hide situations where the
+agent fails, and random layouts rarely contain the hard ones. So we
+built 13 cases by hand, each with a clear right answer. For example,
+when one M-drone flies far away alone, a C-drone should follow it and
+relay its packets. We ran each case five times, to check that the agent
+behaves sensibly, not only that it loses little on average.
 
 | case | what happens | RL agent | RL, varied | midpoint |
 |---|---|---|---|---|
