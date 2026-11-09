@@ -77,9 +77,11 @@ OWN = ("ploss_curve.png", "1a_loss_heatmaps.png")
 
 #: Figures that live in the report folder but are NOT produced here.
 #: intro_example.png comes from plot_intro_example.py; rl_loop.png and
-#: actor_network.png from plot_report_diagrams.py (each with --report).
+#: actor_network.png from plot_report_diagrams.py; 2c_training_curve.png
+#: (and the 2c_case*.gif files, which prune never touches) from
+#: report_figures_2c.py (each with --report).
 KEEP = ("example_layout.png", "intro_example.png", "rl_loop.png",
-        "actor_network.png")
+        "actor_network.png", "2c_training_curve.png")
 
 
 def _style(ax: plt.Axes) -> None:
