@@ -799,9 +799,11 @@ We trained the agent in two steps:
    trained the actor to predict midpoint's waypoint from what the
    C-drone saw. Its waypoints ended up 31 m from midpoint's on average,
    a sensible start instead of random flying.
-2. **PPO:** PPO then trained it with the M-drones flying 650 m out,
-   and then for 400 more updates. This is the RL agent in the results
-   below.
+2. **PPO:** PPO then trained the actor in the full mission, with the
+   M-drones flying up to 650 m out, using the learning cycle described
+   above, for about 1,600 updates. Every 10 updates we tested it on the
+   validation layouts and kept the best version. This is the RL agent
+   in the results below.
 
 The agent trained on layouts 101–300, was chosen on layouts 301–330,
 and was tested on layouts 601–650, which no part of the work had used
