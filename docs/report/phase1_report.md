@@ -824,20 +824,19 @@ behaves sensibly, not only that it loses little on average.
 Table 13 comes from running the trained RL agent (as explained in
 Training above) and the midpoint rule on each case, with the agent
 frozen, greedy routing and 200 ms load as in Table 14. It shows the 9
-cases where they differ. The middle column is the agent after the
-varied-mission training explained below.
+cases where they differ.
 
-| case | what happens | RL agent | RL agent after varied training | midpoint rule |
-|---|---|---|---|---|
-| 1 | 1 M-drone, 1 C-drone; the M-drone flies 600 m away | 88.7% | 84.6% | 17.8% |
-| 2 | 1 M-drone, 3 C-drones; the M-drone flies to a corner | 88.0% | 79.0% | 28.0% |
-| 3 | 1 M-drone, 2 C-drones; the M-drone flies 600 m, waits 20 s, and comes back | 50.0% | 49.4% | 8.8% |
-| 4 | 1 M-drone, 1 C-drone; the M-drone flies to a corner | 88.7% | 85.2% | 25.2% |
-| 5 | 1 M-drone, 7 C-drones; the M-drone flies 600 m away | 87.1% | 28.7% | 33.3% |
-| 6 | full fleet; 1 M-drone flies to a corner | 77.4% | 40.8% | 86.6% |
-| 7 | full fleet; 3 M-drones fly to three different corners | 72.5% | 68.7% | 82.3% |
-| 8 | full fleet; 1 M-drone flies to a corner and back | 41.0% | 19.3% | 49.4% |
-| 9 | full fleet; 9 M-drones fly together to one side | 16.6% | 18.1% | 72.4% |
+| case | what happens | RL agent | midpoint rule |
+|---|---|---|---|
+| 1 | 1 M-drone, 1 C-drone; the M-drone flies 600 m away | 88.7% | 17.8% |
+| 2 | 1 M-drone, 3 C-drones; the M-drone flies to a corner | 88.0% | 28.0% |
+| 3 | 1 M-drone, 2 C-drones; the M-drone flies 600 m, waits 20 s, and comes back | 50.0% | 8.8% |
+| 4 | 1 M-drone, 1 C-drone; the M-drone flies to a corner | 88.7% | 25.2% |
+| 5 | 1 M-drone, 7 C-drones; the M-drone flies 600 m away | 87.1% | 33.3% |
+| 6 | full fleet; 1 M-drone flies to a corner | 77.4% | 86.6% |
+| 7 | full fleet; 3 M-drones fly to three different corners | 72.5% | 82.3% |
+| 8 | full fleet; 1 M-drone flies to a corner and back | 41.0% | 49.4% |
+| 9 | full fleet; 9 M-drones fly together to one side | 16.6% | 72.4% |
 
 **Table 13:** Edge cases: % of the packets of the M-drones that fly
 away that never reach the GS, mean of 5 runs.
@@ -910,8 +909,10 @@ Training on varied missions lowered the loss on varied missions from
 not cost anything in the full fleet (16.4% in both). Against midpoint,
 the varied agent is about level on varied missions (the 1.1-point gap
 is within the noise) and still 7.9 points better in the full fleet. In
-the edge cases (Table 13) it fixed case 5 and halved the loss in cases
-6 and 8, but cases 1–4 still fail.
+the edge cases of Table 13 it fixed case 5 (from 87.1% to 28.7%, now
+better than midpoint's 33.3%) and halved the loss in cases 6 (77.4% to
+40.8%) and 8 (41.0% to 19.3%), but cases 1–4 still fail (49–85%,
+against 9–28% for midpoint).
 
 
 | midpoint rule | RL agent (also trained on varied missions) |
