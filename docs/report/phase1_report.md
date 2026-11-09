@@ -616,19 +616,13 @@ for the C-drones, we started with something easy:
 The static simulator assumed that links never change and that every
 drone knows its neighbours for free, so we first fixed the environment.
 We added:
-1. **Moving drones:** each M-drone waits a random 0–50 s, then flies
-   in a straight line at 10–30 m/s to the edge of the area, and hovers
-   there. C-drones fly at 30 m/s, decide only from the hellos they
-   hear, and avoid collisions with a sensor that sees drones within
-   50 m.
-2. **Re-routing:** when drones move, links break, and the packets
-   waiting on a broken link need a new route. We take those packets
-   and send them to a different neighbour. If there is none, they are
-   lost.
-3. **Hello messages:** drones learn their neighbours from hellos sent
-   every second, heard with the same loss curve as data. A neighbour
-   not heard for 3 s is forgotten. A packet sent to a neighbour that
-   has already flown away counts as stale link.
+1. **Moving drones:** each M-drone waits 0–50 s, then flies straight
+   to the edge of the area at 10–30 m/s. C-drones fly at 30 m/s and
+   avoid collisions with a 50 m sensor.
+2. **Re-routing:** when a link breaks, its waiting packets are sent to
+   another neighbour.
+3. **Hello messages:** every second each drone tells its neighbours
+   where it is. A neighbour not heard for 3 s is forgotten.
 <!-- source: rl_sim/fanet_sim/config.py — MAX_START_DELAY_S=50, DRONE_SPEED_MIN/MAX=10/30, HELLO_INTERVAL=1.0, HELLO_TIMEOUT_INTERVALS=3.0, hello heard with probability 1 - p_loss(distance), C_DRONE_SPEED=30, SENSOR_RANGE_M=50 -->
 
 We defined four simple rules for moving the C-drones, to compare with
