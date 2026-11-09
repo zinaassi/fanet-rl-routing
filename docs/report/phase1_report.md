@@ -693,12 +693,8 @@ the one the RL agent in Phase 2c has to beat.
 ## 11. Phase 2c: Moving the C-drones with RL
 
 In this phase an RL agent decides where the C-drones fly. Routing stays
-greedy, as in Phase 2a. We compare the agent with two simple rules from
-Phase 2a:
-- **hover:** the C-drones stay where they start;
-- **midpoint:** each C-drone flies halfway between the GS and the
-  farthest M-drone it hears. The C-drones do not coordinate, so several
-  of them can pick the same point.
+greedy, as in Phase 2a. We compare the agent with two of the Phase 2a
+rules: hover and midpoint.
 
 **The RL setup**
 
