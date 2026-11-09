@@ -821,14 +821,11 @@ when one M-drone flies far away alone, a C-drone should follow it and
 relay its packets. We ran each case five times, to check that the agent
 behaves sensibly, not only that it loses little on average.
 
-Of the 13 cases, Table 13 shows the 9 where the policies behave
-differently. Cases 1–5 are small fleets with one M-drone that flies
-away; cases 6–9 are the full fleet (18 M-drones and 7 C-drones), where
-only some M-drones fly away and the rest stay where they start. For
-each case the table gives the share of the flying M-drones' packets
-that never reach the GS, averaged over the five runs; lower is better.
-It already includes, for comparison, the agent after the extra
-training on varied missions described below.
+Table 13 comes from running the trained RL agent (as explained in
+Training above) and the midpoint rule on each case, with the agent
+frozen, greedy routing and 200 ms load as in Table 14. It shows the 9
+cases where they differ. The middle column is the agent after the
+varied-mission training explained below.
 
 | case | what happens | RL agent | RL agent after varied training | midpoint rule |
 |---|---|---|---|---|
