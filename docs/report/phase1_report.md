@@ -783,6 +783,133 @@ more or less likely than before, the update stops pushing it further.
 <!-- source: rl_sim/scripts/train_c_ppo_round2.py lines 545-568 (5 passes, torch.randperm each pass, minibatches of MINIBATCH=1024, one optimiser step per minibatch); decisions per update from rl_sim/out/2c_r2_log_A.csv (27720 = 40 runs x 7 C-drones x 99) and 2c_r2_log_B.csv (17424-25146, mean 21737, smaller fleets in varied missions); 400 updates and keep-best on validation are round 2's settings (UPDATES, evaluate every 10 updates) -->
 <!-- source: rl_sim/fanet_sim/envs/c_interface.py (features, reward, global state), rl_sim/agents/c_actor.py (layers), rl_sim/scripts/train_c_ppo.py (GAMMA, GAE_LAMBDA, CLIP, EPOCHS_PER_UPDATE, LEARNING_RATE, MINIBATCH), rl_sim/scripts/train_c_ppo_m4.py (EPISODES_PER_UPDATE_M4 = 40), rl_sim/fanet_sim/config.py (C_FLIGHT_COST, C_DRONE_SPEED, SHARE_TARGETS) -->
 
+**The mission**
+
+Phase 2c uses a different mission from Phase 2a, so its numbers cannot
+be compared with Tables 8 and 9. All drones start within 100 m of the
+GS. Each M-drone gets a random direction, a speed of 10–30 m/s and a
+start delay of 0–50 s, then flies 325–650 m outward and hovers there.
+This lets us set how far the network spreads, instead of leaving it to
+where each drone happened to start.
+<!-- source: rl_sim/fanet_sim/config.py — MISSION "near_gs", START_RADIUS_M=100, MISSION_DISTANCE_M (D=650 in every Phase 2c result below), DRONE_SPEED_MIN/MAX=10/30, MAX_START_DELAY_S=50; rl_sim/fanet_sim/envs/fanet_env.py _assign_mobility — distance uniform in [0.5 D, D] = [325, 650] m, clipped inside the border -->
+
+**Training**
+
+We trained the agent in steps. First the actor learned to copy
+midpoint, so it started from a sensible rule instead of from random
+flying. Then PPO trained it, first with the M-drones standing still and
+then with them flying. For the flying world we tried two orders with
+the same number of updates (1240): raising the flight distance step by
+step from 250 m to 650 m, or training at 650 m from the start. Training
+at 650 m from the start was better on the validation layouts (16.7%
+against 21.0%), so we kept it. We then trained it for 400 more updates;
+this is the agent whose results we report below. Adding a penalty for
+C-drones flying close together changed the loss by less than a point,
+so we did not keep it.
+
+The agent trained on layouts 101–300, was chosen on layouts 301–330,
+and was tested on layouts 601–650, which no part of the work had used
+before.
+<!-- source: staged vs direct at equal budget from commit b9e4162 (rl_sim/out/2c_curriculum_staged_curve.csv, 2c_curriculum_direct_curve.csv): validation 301-330 at D=650, direct 16.69, staged 21.00, 1240 updates each. "400 more updates" = round 1 control, rl_sim/out/models/2c/c_actor_r1_control.pt. Spacing penalty: rl_sim/out/2c_r1_test_paired.csv, spacing_large minus control -0.74 on 501-550 and -0.27 on 401-450. -->
+
+**Results in the full fleet**
+
+| C-drones | total loss | channel | full queue | no route | stale link |
+|---|---|---|---|---|---|
+| hover | 25.9% | 12.8% | 4.1% | 3.7% | 4.9% |
+| midpoint | 24.3% | 9.1% | 9.2% | 1.3% | 4.5% |
+| RL agent | **16.4%** | 8.4% | 3.0% | 0.2% | 4.7% |
+
+**Table 13:** Packet loss in the full fleet (18 M + 7 C), 50 test
+layouts, greedy routing, 200 ms, % of packets created.
+<!-- source: rl_sim/out/2c_r2_test.csv, set=full (layouts 601-650): hover, midpoint, control (= the RL agent). Small causes (dead end, ttl, hop limit, link broken) are all at most 0.2 and are left out. -->
+
+The RL agent loses 8 points less than midpoint, and less on 49 of the
+50 layouts. Most of the difference is in full queues (3.0% against
+9.2%), and the agent's packets almost never get stuck with no route.
+<!-- source: rl_sim/out/2c_r2_test_paired.csv — control minus midpoint, full: -7.99 [-9.09, -6.89], lower on 49/50; full queue 3.04 against 9.17 from rl_sim/out/2c_r2_test.csv -->
+
+**Edge cases**
+
+The test layouts are random, so they rarely contain hard but realistic
+cases, such as one drone flying far away alone. We built 13 such cases
+by hand and ran each one five times.
+
+| case | what happens | RL agent | RL, varied | midpoint |
+|---|---|---|---|---|
+| 1 | 1 M, 1 C: the M-drone flies 600 m away | 88.7% | 84.6% | 17.8% |
+| 2 | 1 M, 3 C: the M-drone flies to a corner | 88.0% | 79.0% | 28.0% |
+| 5 | 1 M, 2 C: the M-drone flies 600 m, waits 20 s, and comes back | 50.0% | 49.4% | 8.8% |
+| 6 | 1 M, 1 C: the M-drone flies to a corner | 88.7% | 85.2% | 25.2% |
+| 8 | 1 M, 7 C: the M-drone flies 600 m away | 87.1% | 28.7% | 33.3% |
+| 9 | full fleet, 1 M flies to a corner | 77.4% | 40.8% | 86.6% |
+| 10 | full fleet, 3 M fly to three corners | 72.5% | 68.7% | 82.3% |
+| 12 | full fleet, 1 M flies to a corner and back | 41.0% | 19.3% | 49.4% |
+| 13 | full fleet, 9 M fly together to one side | 16.6% | 18.1% | 72.4% |
+
+**Table 14:** Edge cases: loss of the M-drones that fly away, mean of 5
+runs. "RL, varied" is the agent after training on varied missions
+(below).
+<!-- source: rl_sim/out/2c_r2_edge.csv — flying_m_loss, policies control (RL agent), B (RL, varied), midpoint; run seeds 9900-9904, placement seed 900; scenario definitions in rl_sim/scripts/edge_cases_2c.py. Cases 3, 4, 7 and 11 are left out: 4 and 11 are the same for all three (0.8 and 9.2), 3 is above 80% for all three (88.3 / 84.1 / 81.6), and in 7 the RL agents beat midpoint (17.2 / 19.1 / 25.8). -->
+
+The cases show a weakness. When few drones are left and one flies far
+away (cases 1, 2, 5, 6 and 8), the agent keeps its C-drones near the GS
+and the far drone loses almost all its packets, while midpoint follows
+it. In the full fleet, where the agent was trained, it does as well as
+or better than midpoint in every case.
+
+**Training on varied missions**
+
+The agent had only ever trained with 18 M-drones and 7 C-drones, all
+flying outward. So we trained it again, starting from the model before the 400 extra updates, with half of the runs drawn from varied missions: 1–18 M-drones, 1–7
+C-drones, and one of four mission types:
+- **spread:** all M-drones fly outward, as in the full-fleet mission;
+- **lone flyers:** 1–3 M-drones fly far away, the rest stay;
+- **group:** half the M-drones fly far together in one direction;
+- **out and back:** 1–3 M-drones fly far, wait 10–30 s, and return.
+
+We kept the version that did best on the average of the full-fleet and
+the varied validation layouts, and tested it on 100 new varied missions
+(layouts 651–750, 25 of each type).
+<!-- source: rl_sim/scripts/train_c_ppo_round2.py — draw_varied (n_M 1-18, n_C 1-7, types a-d, SPREAD_D_M 300-650, FAR_M 450-622, HOVER_S 10-30), VARIED_SHARE 0.5, keep-best on the mean of full 301-330 and varied 331-360; run B, best at update 100. Test sets in rl_sim/scripts/evaluate_r2_test.py. -->
+
+| C-drones | all | spread | lone flyers | group | out and back |
+|---|---|---|---|---|---|
+| hover | 17.6% | 20.4% | 15.4% | 24.6% | 9.8% |
+| midpoint | **9.2%** | **14.1%** | 8.7% | **8.9%** | **5.2%** |
+| RL agent | 12.9% | 16.5% | 12.3% | 14.5% | 8.1% |
+| RL, varied | 10.4% | 15.0% | **6.9%** | 11.8% | 7.6% |
+
+**Table 15:** Packet loss on 100 varied test missions (25 of each
+type), greedy routing, 200 ms, % of packets created.
+<!-- source: rl_sim/out/2c_r2_test.csv, set=varied (layouts 651-750): hover, midpoint, control (RL agent), B (RL, varied); totals and per-type means -->
+
+Training on varied missions lowered the loss on varied missions from
+12.9% to 10.4%, most of all with lone flyers (12.3% to 6.9%), and did
+not cost anything in the full fleet (16.4% in both). Against midpoint,
+the varied agent is about level on varied missions (the 1.1-point gap
+is within the noise) and still 7.9 points better in the full fleet. In
+the edge cases (Table 14) it fixed case 8 and halved the loss in cases
+9 and 12, but cases 1, 2, 5 and 6 still fail.
+
+We also tried a reward that favours the M-drones that lose the most.
+With varied missions it made the losses more even (the worst-off
+M-drone lost 27.5% against 30.3%), but it lost 0.8 points more in the
+full fleet. On the validation layouts the normal reward did better
+overall, so we kept it.
+<!-- source: rl_sim/out/2c_r2_test_paired.csv — B minus control: varied -2.50 [-3.92, -1.09], full +0.09 [-0.35, +0.53]; B minus midpoint: varied +1.13 [-1.24, +3.49], full -7.90 [-8.96, -6.84]; edge cases from rl_sim/out/2c_r2_edge.csv. Fair reward = runs A (full fleet only) and C (varied missions). C against B (both varied): worst M-drone on the varied test 27.5 against 30.3, full fleet 17.23 against 16.44 (rl_sim/out/2c_r2_test.csv). Validation average (full + varied)/2 from rl_sim/out/2c_r2_summary.csv: B 12.59, C 12.79, A 12.99; B kept by that rule. -->
+
+**What we learned**
+
+The RL agent is clearly better than the simple rules in the full fleet,
+the setting it was trained for. Training on varied missions brought it
+level with midpoint on varied missions without losing that lead. It is
+still weak in small fleets: with 1–6 M-drones the varied agent loses
+18.7% against 11.0% for midpoint, while with 7 or more M-drones it
+loses less than midpoint. A real system could use the agent in large
+fleets and fall back to midpoint in small ones.
+<!-- source: rl_sim/out/2c_r2_test_by_fleet.csv — B: 18.72 (1-6 M), 6.26 (7-12), 7.39 (13-18); midpoint 11.01, 8.04, 8.98 -->
+
 ---
 
 ## 12. Summary: Difficulties, Further Work, Conclusion
