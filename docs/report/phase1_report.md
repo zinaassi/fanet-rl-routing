@@ -94,7 +94,7 @@ gain comes from placement alone. RL routing in the moving world
 **Routing in a drone network**
 
 In a FANET the drones move, so routes change all the time. A common
-simple approach is greedy forwarding [CITE: Karp & Kung 2000]: each
+simple approach is greedy forwarding [1]: each
 drone sends a packet to the neighbour that is closest to the
 destination. It needs no route tables, only the positions of the
 neighbours, which the drones learn from short "hello" messages they
@@ -102,7 +102,7 @@ send to each other.
 
 **Reinforcement learning (RL)**
 
-In RL, an agent learns by trial and error [CITE: Sutton & Barto 2018].
+In RL, an agent learns by trial and error [2].
 At each step it looks at the state of its environment, chooses an
 action, and receives a reward. Over many tries it learns which actions
 lead to more reward.
@@ -123,7 +123,7 @@ small charge for the distance the drone flew.
 
 **Actor and critic (PPO)**
 
-For Phase 2c we used PPO [CITE: Schulman et al. 2017], a common RL
+For Phase 2c we used PPO [3], a common RL
 method with two networks:
 - The **actor** chooses the action.
 - The **critic** estimates how much reward is still to come, so the
@@ -133,7 +133,7 @@ PPO also keeps each learning step small, so the actor does not change
 too much at once.
 
 All C-drones work as one team and share one actor. During training
-only, the critic sees the whole network [CITE: Yu et al. 2022]. When
+only, the critic sees the whole network [4]. When
 flying, each C-drone uses only the actor, with its own state and the
 hello messages it receives from its neighbours.
 
@@ -179,12 +179,11 @@ Where:
 - P_T: transmit power, 1 W
 - G_T, G_R: antenna gains, 2 dBi
 - S: receiver sensitivity, −55.6 dBm: the power at which 10% of
-  packets are lost [CITE: 802.11 receiver minimum input sensitivity]
+  packets are lost [5]
 - b: set so that the loss is 50% at 350 m
 
 Real wireless links behave this way: reliable up to some distance,
-then a gradual rise in loss, then no connection [CITE: Zúñiga &
-Krishnamachari 2004].
+then a gradual rise in loss, then no connection [6].
 
 The curve is set by two distances that we chose: 10% loss at 300 m
 and 50% loss at 350 m. The 350 m comes from the layout scan below.
@@ -192,7 +191,7 @@ With these two points, links work well for most of their range, and
 the loss rises quickly only in the last 50 m.
 
 A similar quick rise was measured on a real Wi-Fi link connected by
-cable, where the signal is steady [CITE: Halperin 2013]. In the open
+cable, where the signal is steady [7]. In the open
 air the signal changes from moment to moment, so the rise is slower.
 We do not model these changes.
 
@@ -219,7 +218,7 @@ would lose fewer packets on the channel.
 A drone accepts another drone as a neighbour only if more than half of
 its hello messages arrive (loss below 50%). This is our own design
 choice; real routing protocols such as OLSR also use link-quality
-thresholds for their neighbours [CITE: RFC 3626]. With our loss curve,
+thresholds for their neighbours [8]. With our loss curve,
 the loss reaches 50% at 350 m, so drones more than 350 m apart are not
 neighbours. A link losing more than half its packets is rarely useful:
 two 175 m hops lose only 0.01%, while one 350 m hop loses 50%.
@@ -274,7 +273,7 @@ changed later, even if the queue is long.
 Each packet carries a list of the drones it has already visited, and a
 drone may not send it to any of them. This prevents packets from going
 in circles. A similar idea is used in Internet routing (BGP)
-[CITE: BGP AS_PATH].
+[9].
 
 **One time step**
 
@@ -377,7 +376,15 @@ no route, and so on) is used only to explain the total.
 
 ## 6. Timetable
 
-_To be written after Phase 2._
+| dates (2026) | phase | what we did |
+|---|---|---|
+| 27 Sep – 3 Oct | Simulator, Phase 1a | static world, queues, loss model; greedy and random routing |
+| 4 – 16 Oct | Phase 1b | RL routing agent; steeper loss curve, every result re-run |
+| 20 – 24 Oct | Phase 2a | moving drones, hello messages, re-routing; four C-drone rules |
+| 25 Oct – 6 Nov | Phase 2c | RL agent for the C-drones: copying midpoint, PPO, edge cases |
+| 7 – 8 Nov | Phase 2c | training on varied missions; final tests on new layouts |
+| 8 – 9 Nov | Report | this report |
+<!-- source: git commit dates on branches phase-1a, phase-2a and phase-2c: d3145b8 (27 Sep, static world), 989e354 (3 Oct, Phase 1a figures), c0cc4c3 (7 Oct, Phase 1b agent), 3ff9840 (16 Oct, steeper curve re-run), f1a1c23 to dc6e188 (20-24 Oct, Phase 2a), 7dc1c5b (25 Oct, Phase 2c M0/M1) to 5f8fcdc (6 Nov, edge cases), 8427026 to 76928a3 (7-8 Nov, rounds 1-2 and tests) -->
 
 ---
 
@@ -966,7 +973,7 @@ fleets and fall back to midpoint in small ones.
   GS's acknowledgement walking back along the packet's path. When
   drones move, that path may be gone. One plan is for the GS to send
   the acknowledgement back along the path and measure how often it
-  arrives; another is GS beacons [CITE: Sliwa et al. 2021].
+  arrives; another is GS beacons [10].
 - **Small fleets.** Train the C-drone agent more on small fleets, or
   let a real system fall back to midpoint when there are few drones.
 - **Channel loss.** Most of the routing agent's remaining loss is on
@@ -997,27 +1004,41 @@ as good or better.
 
 ## 13. References
 
-_To be written after Phase 2._
-
-<!--
-Running list of citations still needed:
-- [CITE: 802.11 receiver minimum input sensitivity] — the clause defining
-  sensitivity as the power giving a 10% packet error rate, which is what
-  anchors the loss curve. Cited in section 4.
-- [CITE: Zuniga & Krishnamachari 2004] — for the claim that real wireless
-  links are reliable up to some distance, then degrade gradually, then fail.
-  Cited in section 4.
-- [CITE: RFC 3626] — OLSR, as an example of a routing protocol that uses
-  link-quality thresholds for its neighbours. Cited in section 4.
-- [CITE: Halperin 2013] — D. Halperin, PhD thesis, arXiv:1301.6644.
-  The rise from lossy to reliable takes 2–4 dB on a cabled link and
-  10 dB or more over the air. Cited in section 4.
-- [CITE: BGP AS_PATH] — the standard precedent for carrying a visited-list in
-  the packet header. Cited in section 4.
--->
+1. B. Karp and H. T. Kung, "GPSR: Greedy Perimeter Stateless Routing for Wireless Networks," in *Proc. ACM MobiCom*, 2000.
+2. R. S. Sutton and A. G. Barto, *Reinforcement Learning: An Introduction*, 2nd ed. MIT Press, 2018.
+3. J. Schulman, F. Wolski, P. Dhariwal, A. Radford and O. Klimov, "Proximal Policy Optimization Algorithms," arXiv:1707.06347, 2017.
+4. C. Yu, A. Velu, E. Vinitsky, J. Gao, Y. Wang, A. Bayen and Y. Wu, "The Surprising Effectiveness of PPO in Cooperative Multi-Agent Games," in *NeurIPS Datasets and Benchmarks Track*, 2022.
+5. IEEE Std 802.11-2020, *Wireless LAN Medium Access Control (MAC) and Physical Layer (PHY) Specifications*, OFDM PHY: receiver minimum input sensitivity (10% packet error rate on 1000-octet frames).
+6. M. Zúñiga and B. Krishnamachari, "Analyzing the Transitional Region in Low Power Wireless Links," in *Proc. IEEE SECON*, 2004.
+7. D. Halperin, "Simplifying the Configuration of 802.11 Wireless Networks with Effective SNR," PhD thesis, University of Washington, arXiv:1301.6644, 2013.
+8. T. Clausen and P. Jacquet (eds.), "Optimized Link State Routing Protocol (OLSR)," RFC 3626, IETF, 2003.
+9. Y. Rekhter, T. Li and S. Hares (eds.), "A Border Gateway Protocol 4 (BGP-4)," RFC 4271, IETF, 2006 (the AS_PATH attribute).
+10. B. Sliwa, C. Schüler, M. Patchou and C. Wietfeld, "PARRoT: Predictive Ad-hoc Routing Fueled by Reinforcement Learning and Trajectory Knowledge," in *Proc. IEEE VTC2021-Spring*, 2021.
 
 ---
 
 ## 14. Appendix
 
-_To be written after Phase 2._
+**Layouts used**
+
+Each layout is a random placement of the drones, named by its seed.
+A layout used for testing is never used again.
+
+| layouts | used for |
+|---|---|
+| 1–50 | Phase 1 test; Phase 2a test |
+| 101–300 | training (Phase 1b and Phase 2c) |
+| 301–330 | validation (Phase 1b used 301–310) |
+| 331–360 | validation, varied missions (Phase 2c) |
+| 401–450, 501–550 | earlier Phase 2c tests |
+| 601–650 | Phase 2c final test, full fleet |
+| 651–750 | Phase 2c final test, varied missions |
+| 900 | Phase 2c edge cases |
+<!-- source: README.md layout-seed table; Phase 2a test 1-50 from rl_sim/out/2a_final_runs.csv -->
+
+**Reproducing the results**
+
+All code is in `rl_sim/`. Every figure and table file carries a stamp
+with the settings and the code version that produced it, and every
+number in this report has a hidden comment naming the file it comes
+from.
