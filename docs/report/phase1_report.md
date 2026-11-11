@@ -867,18 +867,32 @@ agent's C-drone stays at the GS and the M-drone is cut off.
 
 **Training on varied missions**
 
-The agent had only ever trained with 18 M-drones and 7 C-drones, all
-flying outward. So we trained it again, starting from the model before the 400 extra updates, with half of the runs drawn from varied missions: 1–18 M-drones, 1–7
-C-drones, and one of four mission types:
-- **spread:** all M-drones fly outward, as in the full-fleet mission;
-- **lone flyers:** 1–3 M-drones fly far away, the rest stay;
-- **group:** half the M-drones fly far together in one direction;
-- **out and back:** 1–3 M-drones fly far, wait 10–30 s, and return.
+The agent had only ever trained in one kind of world: 18 M-drones and
+7 C-drones, all flying outward. To show it other situations, we trained
+it again on a mix of worlds, starting from the model before the 400
+extra updates.
 
-As before, it trained for 400 updates, and every 10 updates we tested it
-on two sets of validation layouts: the full fleet (301–330) and varied
-missions (331–360). We kept the version with the lowest average of the
-two.
+Training worked as before, 40 runs per update for 400 updates, but each
+run got its own world, drawn at random. Half the runs were the normal
+full-fleet mission. The other half were a varied world: a training
+layout with 1–18 M-drones and 1–7 C-drones, all starting within 100 m
+of the GS, and one of four mission types:
+
+| type | what the M-drones do |
+|---|---|
+| spread | every M-drone flies outward, as in the full-fleet mission, but only up to a random 300–650 m |
+| lone flyers | 1–3 M-drones fly to a random point 450–622 m from the GS; the rest hover where they start |
+| group | half the M-drones fly to points 450–622 m away, all within 20° of one random direction; the rest hover |
+| out and back | like lone flyers, but each flyer waits 10–30 s at its far point and then flies back to where it started |
+
+As in the full-fleet mission, each flying M-drone has a random speed of
+10–30 m/s and starts after a random 0–50 s. So in every update the
+agent flew about 20 full-fleet runs and 20 varied ones, each in a
+different world.
+
+Every 10 updates we tested it on the full-fleet validation layouts
+(301–330) and on 30 fixed varied worlds (331–360, the four types in
+turn), and kept the version with the lowest average of the two.
 <!-- source: rl_sim/scripts/train_c_ppo_round2.py — draw_varied (n_M 1-18, n_C 1-7, types a-d, SPREAD_D_M 300-650, FAR_M 450-622, HOVER_S 10-30), VARIED_SHARE 0.5, keep-best on the mean of full 301-330 and varied 331-360; run B, best at update 100. Test sets in rl_sim/scripts/evaluate_r2_test.py. -->
 
 ![Training on varied missions](figures/2c_training_curve.png)
