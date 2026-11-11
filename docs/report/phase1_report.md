@@ -867,16 +867,11 @@ agent's C-drone stays at the GS and the M-drone is cut off.
 
 **Training on varied missions**
 
-The agent had only ever trained in one kind of world: 18 M-drones and
-7 C-drones, all flying outward. To show it other situations, we trained
-it again on a mix of worlds, starting from the model before the 400
-extra updates.
-
-Training worked as before, 40 runs per update for 400 updates, but each
-run got its own world, drawn at random. Half the runs were the normal
-full-fleet mission. The other half were a varied world: a training
-layout with 1–18 M-drones and 1–7 C-drones, all starting within 100 m
-of the GS, and one of four mission types:
+The agent had only ever trained in one kind of world. So we trained it
+again, from the model before the 400 extra updates, in the same way but
+with a new random world in every run: half the runs were the full-fleet
+mission, and half a varied world with 1–18 M-drones, 1–7 C-drones and
+one of four mission types:
 
 | type | what the M-drones do |
 |---|---|
@@ -885,14 +880,8 @@ of the GS, and one of four mission types:
 | group | half the M-drones fly to points 450–622 m away, all within 20° of one random direction; the rest hover |
 | out and back | like lone flyers, but each flyer waits 10–30 s at its far point and then flies back to where it started |
 
-As in the full-fleet mission, each flying M-drone has a random speed of
-10–30 m/s and starts after a random 0–50 s. So in every update the
-agent flew about 20 full-fleet runs and 20 varied ones, each in a
-different world.
-
-Every 10 updates we tested it on the full-fleet validation layouts
-(301–330) and on 30 fixed varied worlds (331–360, the four types in
-turn), and kept the version with the lowest average of the two.
+We kept the version with the lowest average loss over the full-fleet
+validation layouts and 30 varied validation worlds (331–360).
 <!-- source: rl_sim/scripts/train_c_ppo_round2.py — draw_varied (n_M 1-18, n_C 1-7, types a-d, SPREAD_D_M 300-650, FAR_M 450-622, HOVER_S 10-30), VARIED_SHARE 0.5, keep-best on the mean of full 301-330 and varied 331-360; run B, best at update 100. Test sets in rl_sim/scripts/evaluate_r2_test.py. -->
 
 ![Training on varied missions](figures/2c_training_curve.png)
