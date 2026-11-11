@@ -880,8 +880,10 @@ one of four mission types:
 | group | half the M-drones fly to points 450–622 m away, all within 20° of one random direction; the rest hover |
 | out and back | like lone flyers, but each flyer waits 10–30 s at its far point and then flies back to where it started |
 
-We kept the version with the lowest average loss over the full-fleet
-validation layouts and 30 varied validation worlds (331–360).
+As before, we checked the agent on validation layouts, but now on two
+sets: the full-fleet layouts (301–330) and 30 varied worlds
+(331–360). Each check gives one loss per set, and we kept the version
+whose average of the two was lowest.
 <!-- source: rl_sim/scripts/train_c_ppo_round2.py — draw_varied (n_M 1-18, n_C 1-7, types a-d, SPREAD_D_M 300-650, FAR_M 450-622, HOVER_S 10-30), VARIED_SHARE 0.5, keep-best on the mean of full 301-330 and varied 331-360; run B, best at update 100. Test sets in rl_sim/scripts/evaluate_r2_test.py. -->
 
 ![Training on varied missions](figures/2c_training_curve.png)
