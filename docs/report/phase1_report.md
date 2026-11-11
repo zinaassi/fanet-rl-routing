@@ -868,10 +868,12 @@ agent's C-drone stays at the GS and the M-drone is cut off.
 **Training on varied missions**
 
 The agent had only ever trained in one kind of world. So we trained it
-again, from the model before the 400 extra updates, in the same way but
-with a new random world in every run: half the runs were the full-fleet
-mission, and half a varied world with 1–18 M-drones, 1–7 C-drones and
-one of four mission types:
+again, from the model before the 400 extra updates, in the same way
+except for the worlds. Before each of the 40 runs of an update we
+flipped a coin: heads, the run used the full-fleet mission; tails, a
+varied world with a random 1–18 M-drones, 1–7 C-drones and one of four
+mission types. So each update had about 20 runs of each kind (between
+12 and 29 varied), and the agent learned from all 40 together. The four mission types:
 
 | type | what the M-drones do |
 |---|---|
