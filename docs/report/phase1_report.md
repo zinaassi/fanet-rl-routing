@@ -867,13 +867,17 @@ agent's C-drone stays at the GS and the M-drone is cut off.
 
 **Training on varied missions**
 
-The agent had only ever trained in one kind of world. So we trained it
-again, from the model before the 400 extra updates, in the same way
-except for the worlds. Before each of the 40 runs of an update we
-flipped a coin: heads, the run used the full-fleet mission; tails, a
-varied world with a random 1–18 M-drones, 1–7 C-drones and one of four
-mission types. So each update had about 20 runs of each kind (between
-12 and 29 varied), and the agent learned from all 40 together. The four mission types:
+The edge cases showed that the agent only knows the world it trained
+in: 18 M-drones and 7 C-drones, all flying outward. So we trained it
+again on many kinds of worlds.
+
+We restarted from the agent before the 400 extra updates and trained
+it for 400 updates, exactly as before, with one change: every run got a
+new random world. For each run:
+1. With probability 1/2, the world is the full-fleet mission.
+2. Otherwise it is a varied world: a training layout with a random
+   number of M-drones (1–18) and C-drones (1–7), and one of these four
+   mission types, chosen at random:
 
 | type | what the M-drones do |
 |---|---|
@@ -882,10 +886,12 @@ mission types. So each update had about 20 runs of each kind (between
 | group | half the M-drones fly to points 450–622 m away, all within 20° of one random direction; the rest hover |
 | out and back | like lone flyers, but each flyer waits 10–30 s at its far point and then flies back to where it started |
 
-As before, we checked the agent on validation layouts, but now on two
-sets: the full-fleet layouts (301–330) and 30 varied worlds
-(331–360). Each check gives one loss per set, and we kept the version
-whose average of the two was lowest.
+On average, 20 of the 40 runs in each update were varied worlds.
+
+To choose which version to keep, every 10 updates we measured the loss
+on the 30 full-fleet validation layouts (301–330) and on 30 varied
+validation worlds (331–360), and kept the version with the lowest
+average of these two losses.
 <!-- source: rl_sim/scripts/train_c_ppo_round2.py — draw_varied (n_M 1-18, n_C 1-7, types a-d, SPREAD_D_M 300-650, FAR_M 450-622, HOVER_S 10-30), VARIED_SHARE 0.5, keep-best on the mean of full 301-330 and varied 331-360; run B, best at update 100. Test sets in rl_sim/scripts/evaluate_r2_test.py. -->
 
 ![Training on varied missions](figures/2c_training_curve.png)
