@@ -1,14 +1,14 @@
-# Routing in a Drone Network: Baselines and a Learned Router
+# Routing and Relay Placement in a Drone Network: Baselines and Learned Agents
 
-**Abed Badran and Zina Assi**
+**Spring 2026 — Project in Computer Communication (02360340) — Students:
+Abed-Al-Rahman Badran 325424752, Zina Assi 213813165**
 
-**02360340, Spring 2026**
-
-Advisor: Eran, with Prof. Reuven Cohen
+![Technion, Faculty of Computer Science, CS4People](figures/technion_header.png)
+<!-- source: title block and header image from Project Report.docx (2026-11-12), the master version -->
 
 ---
 
-## Table of Contents
+## Contents
 
 1. [Abstract](#1-abstract)
 2. [Introduction](#2-introduction)
@@ -384,8 +384,8 @@ no route, and so on) is used only to explain the total.
 | 20 – 24 Oct | Phase 2a | moving drones, hello messages, re-routing; four C-drone rules |
 | 25 Oct – 6 Nov | Phase 2c | RL agent for the C-drones: copying midpoint, PPO, edge cases |
 | 7 – 8 Nov | Phase 2c | training on varied missions; final tests on new layouts |
-| 8 – 9 Nov | Report | this report |
-<!-- source: git commit dates on branches phase-1a, phase-2a and phase-2c: d3145b8 (27 Sep, static world), 989e354 (3 Oct, Phase 1a figures), c0cc4c3 (7 Oct, Phase 1b agent), 3ff9840 (16 Oct, steeper curve re-run), f1a1c23 to dc6e188 (20-24 Oct, Phase 2a), 7dc1c5b (25 Oct, Phase 2c M0/M1) to 5f8fcdc (6 Nov, edge cases), 8427026 to 76928a3 (7-8 Nov, rounds 1-2 and tests) -->
+| 8 – 11 Nov | Report | this report |
+<!-- source: git commit dates on branches phase-1a, phase-2a and phase-2c: d3145b8 (27 Sep, static world), 989e354 (3 Oct, Phase 1a figures), c0cc4c3 (7 Oct, Phase 1b agent), 3ff9840 (16 Oct, steeper curve re-run), f1a1c23 to dc6e188 (20-24 Oct, Phase 2a), 7dc1c5b (25 Oct, Phase 2c M0/M1) to 5f8fcdc (6 Nov, edge cases), 8427026 to 76928a3 (7-8 Nov, rounds 1-2 and tests); report commits on docs/report/phase1_report.md dated 9 and 11 Nov (git log) -->
 
 ---
 
@@ -710,7 +710,7 @@ rules: hover and midpoint.
 | environment | the simulated drone network, with moving M-drones |
 | state | what the C-drone knows: its own position, queues and traffic, and the neighbours it hears in hello messages |
 | action | a waypoint to fly to, chosen once every second |
-| reward | every second: packets delivered minus packets lost in that second, divided by the packets created in that second, minus a small cost for the distance flown |
+| reward | every second: packets delivered minus packets lost divided by the packets created, minus a small cost for the distance flown |
 | episode | one 100-second run on one layout |
 
 **Table 10:** The RL setup for the C-drones.
@@ -867,31 +867,19 @@ agent's C-drone stays at the GS and the M-drone is cut off.
 
 **Training on varied missions**
 
-The edge cases showed that the agent only knows the world it trained
-in: 18 M-drones and 7 C-drones, all flying outward. So we trained it
-again on many kinds of worlds.
+The agent had only ever trained with 18 M-drones and 7 C-drones, all
+flying outward. So we trained it again, starting from the model before
+the 400 extra updates, with half of the runs drawn from varied missions:
+1–18 M-drones, 1–7 C-drones, and one of four mission types:
+- **spread:** all M-drones fly outward, as in the full-fleet mission;
+- **lone flyers:** 1–3 M-drones fly far away, the rest stay;
+- **group:** half the M-drones fly far together in one direction;
+- **out and back:** 1–3 M-drones fly far, wait 10–30 s, and return.
 
-We restarted from the agent before the 400 extra updates and trained
-it for 400 updates, exactly as before, with one change: every run got a
-new random world. For each run:
-1. With probability 1/2, the world is the full-fleet mission.
-2. Otherwise it is a varied world: a training layout with a random
-   number of M-drones (1–18) and C-drones (1–7), and one of these four
-   mission types, chosen at random:
-
-| type | what the M-drones do |
-|---|---|
-| spread | every M-drone flies outward, as in the full-fleet mission, but only up to a random 300–650 m |
-| lone flyers | 1–3 M-drones fly to a random point 450–622 m from the GS; the rest hover where they start |
-| group | half the M-drones fly to points 450–622 m away, all within 20° of one random direction; the rest hover |
-| out and back | like lone flyers, but each flyer waits 10–30 s at its far point and then flies back to where it started |
-
-On average, 20 of the 40 runs in each update were varied worlds.
-
-To choose which version to keep, every 10 updates we measured the loss
-on the 30 full-fleet validation layouts (301–330) and on 30 varied
-validation worlds (331–360), and kept the version with the lowest
-average of these two losses.
+As before, it trained for 400 updates, and every 10 updates we tested it
+on two sets of validation layouts: the full fleet (301–330) and varied
+missions (331–360). We kept the version with the lowest average of the
+two.
 <!-- source: rl_sim/scripts/train_c_ppo_round2.py — draw_varied (n_M 1-18, n_C 1-7, types a-d, SPREAD_D_M 300-650, FAR_M 450-622, HOVER_S 10-30), VARIED_SHARE 0.5, keep-best on the mean of full 301-330 and varied 331-360; run B, best at update 100. Test sets in rl_sim/scripts/evaluate_r2_test.py. -->
 
 ![Training on varied missions](figures/2c_training_curve.png)
@@ -920,6 +908,16 @@ had used these layouts before.
 layouts, greedy routing, 200 ms, % of packets created.
 <!-- source: rl_sim/out/2c_r2_test.csv, set=full (layouts 601-650): hover, midpoint, control (RL agent trained on the full fleet, 16.35), B (also trained on varied missions, 16.44; channel 8.59, queue_full 2.86, no_route 0.31, stale_link 4.66). Small causes (dead end, ttl, hop limit, link broken) are all at most 0.2 and are left out. -->
 
+| midpoint rule | RL agent |
+|---|---|
+| ![full fleet, midpoint](figures/2c_full_test_midpoint.gif) | ![full fleet, RL agent](figures/2c_full_test_rl.gif) |
+
+**Figure 9:** Full fleet, test layout 620: all 18 M-drones fly outward,
+and both spread the C-drones 100–300 m around the GS; midpoint loses
+19.2% of the packets and the RL agent (trained on the full fleet)
+16.4%.
+<!-- source: rl_sim/out/2c_r2_test.csv, set=full, layout 620, run seed 9619: midpoint 19.2099, control 16.3827. Layout 620 is the one whose control loss is closest to control's median (16.4444) over 601-650. Re-run with recording by rl_sim/scripts/report_gifs_full_fleet_2c.py (commit ccbc694), which stops unless both losses reproduce the test CSV to 1e-9 (they did; rl_sim/out/2c_report_gifs/full_fleet/test_L620_loss.csv); model rl_sim/out/models/2c/c_actor_r1_control.pt. C-drone distances from the GS at t = 60 and 95 s, from the recordings: midpoint 96-260 m, RL agent 131-298 m (one RL C-drone at 16 m at t = 60 s). Printed version: figures/2c_full_test_snapshots.png (t = 30, 60, 95 s). -->
+
 | how the C-drones move | all missions | spread | lone flyers | group | out and back |
 |---|---|---|---|---|---|
 | hover (stay where they start) | 17.6% | 20.4% | 15.4% | 24.6% | 9.8% |
@@ -941,10 +939,37 @@ cases 1–4 still fail.
 |---|---|
 | ![case 6, before](figures/2c_case6_before.gif) | ![case 6, after](figures/2c_case6_after.gif) |
 
-**Figure 9:** Edge case 6: one M-drone (red) flies to the far corner.
+**Figure 10:** Edge case 6: one M-drone (red) flies to the far corner.
 Before varied training it is cut off (86.9% lost); after, a C-drone
 follows and relays its packets (31.8% lost).
-<!-- source: GIFs drawn from saved recordings, run seed 9900 (rl_sim/out/2c_edge_bigfleet_r2_control/rec and rl_sim/out/2c_edge_bigfleet_r2_B/rec); per-run loss_flying from rl_sim/out/2c_edge_bigfleet_r2_control/edge_runs.csv (86.9) and rl_sim/out/2c_edge_bigfleet_r2_B/edge_runs.csv (31.8); copied by rl_sim/scripts/report_figures_2c.py -->
+<!-- source: GIFs drawn from saved recordings, run seed 9900 (rl_sim/out/2c_edge_bigfleet_r2_control/rec and rl_sim/out/2c_edge_bigfleet_r2_B/rec); per-run loss_flying from rl_sim/out/2c_edge_bigfleet_r2_control/edge_runs.csv (86.9) and rl_sim/out/2c_edge_bigfleet_r2_B/edge_runs.csv (31.8); copied by rl_sim/scripts/report_figures_2c.py. Printed version: figures/2c_case6_snapshots.png (t = 30, 60, 95 s), from rl_sim/scripts/report_gifs_full_fleet_2c.py. -->
+
+| before varied training | after varied training |
+|---|---|
+| ![case 7, before](figures/2c_case7_before.gif) | ![case 7, after](figures/2c_case7_after.gif) |
+
+**Figure 11:** Edge case 7: three M-drones fly to three corners. Before
+varied training all C-drones are back at the GS by 60 s and the flyers
+are cut off (81.0% lost); after, one C-drone stays out toward one
+corner (64.3% lost).
+
+| before varied training | after varied training |
+|---|---|
+| ![case 8, before](figures/2c_case8_before.gif) | ![case 8, after](figures/2c_case8_after.gif) |
+
+**Figure 12:** Edge case 8: one M-drone flies to a corner and back.
+Before varied training the C-drone that follows it turns back while the
+flyer is still out (35.6% lost); after, it stays out until the flyer
+returns (21.3% lost).
+
+| before varied training | after varied training |
+|---|---|
+| ![case 9, before](figures/2c_case9_before.gif) | ![case 9, after](figures/2c_case9_after.gif) |
+
+**Figure 13:** Edge case 9: nine M-drones fly together to one side.
+Both agents keep C-drones out between the group and the GS, one before
+varied training and two after (19.0% and 18.5% lost).
+<!-- source: Figures 11-13 drawn by rl_sim/scripts/report_gifs_full_fleet_2c.py (commit ccbc694) from the recordings saved while Table 13's runs were scored, nothing re-simulated: before = rl_sim/out/2c_edge_bigfleet_r2_control/rec (model rl_sim/out/models/2c/c_actor_r1_control.pt), after = rl_sim/out/2c_edge_bigfleet_r2_B/rec (model rl_sim/out/models/2c/c_actor_r2_B.pt). Report case 7 = script scenario 10, case 8 = scenario 12, case 9 = scenario 13. One run seed per case, the seed whose before and after losses are together closest to their five-run means: case 7 seed 9904, case 8 seed 9902, case 9 seed 9901. Losses are loss_flying for that seed from each folder's edge_runs.csv: case 7 81.0 / 64.3, case 8 35.6 / 21.3, case 9 19.0 / 18.5. C-drone distances from the GS, from the recordings: case 7 before all within 64 m at 60 and 95 s, after one at 328 m (60 s) and 312 m (95 s); case 8 before one at 313 m at 30 s, all within 85 m at 60 s, after one at 341 m (30 s) and 259 m (60 s), all within 54 m at 95 s after the flyer is back; case 9 before one at 253-286 m, after two at 262-317 m. Printed versions: figures/2c_case7_snapshots.png, 2c_case8_snapshots.png, 2c_case9_snapshots.png (t = 30, 60, 95 s). -->
 
 ---
 
@@ -966,6 +991,28 @@ follows and relays its packets (31.8% lost).
   climbs from 10% to 50% between 300 and 350 m. Each change meant
   re-running every result.
 <!-- source: link-edge choice — CLAUDE.md "Link existence" (edges 300-450 m on 3000 random layouts, rl_sim/out/edge_scan.csv: 350 m, ~95% of layouts connected, 52% of M-drones need a relay); loss-model history — CLAUDE.md "Channel loss" History (wall at 250 m, S-curve with the 10% point at 249.689 m, moved to 300 m on 2026-10-16); mission — rl_sim/fanet_sim/config.py MISSION comment ("border" flight length decided by chance, "near_gs" a dial) -->
+
+**Limitations**
+
+- **One training run.** Each Phase 2c agent comes from a single training
+  run. A second run with different random seeds could end a little
+  better or worse.
+- **A simplified world.** Hello messages and acknowledgements are free
+  and never delayed, every link has its own transmitter, lost packets
+  are never resent, and drones fly in 2D with no battery limit. Real
+  networks lose fewer packets on the channel (they resend) but pay for
+  control messages.
+- **The agent only knows what it trained on.** It does well in the full
+  fleet, but with 1–3 C-drones and a drone flying away alone it still
+  keeps its C-drones near the GS (Table 13, cases 1–4).
+- **No memory.** The agent decides from what it hears right now. Once a
+  drone flies out of hearing range, the agent cannot follow it.
+- **Placement measured with greedy routing only.** We did not test how
+  the C-drone agent works with other routing rules.
+- **Small differences are within the noise.** On varied missions the RL
+  agent (10.4%) and midpoint (9.2%) are not clearly different on 100
+  test missions.
+<!-- source: one run — rl_sim/scripts/train_c_ppo_round2.py (run B: one PPO seed, 400 updates) and the round-1 control (one run, rl_sim/out/models/2c/c_actor_r1_control.pt). Simplified world — rl_sim/fanet_sim/config.py hello comment ("Hellos are FREE"), hop ACKs recorded at the moment of sending (rl_sim/fanet_sim/envs/fanet_env.py note_hop_ack in the transmit step), MAX_TX_PER_STEP per link, no retransmission, USE_3D = False, energy counted but never limits a drone (rl_sim/fanet_sim/envs/drone.py). Cases 1-4 after varied training — rl_sim/out/2c_r2_edge.csv, B flying_m_loss 84.6 / 79.0 / 49.4 / 85.2 (scenarios 1, 2, 5, 6; 1, 3, 2, 1 C-drones), against midpoint 17.8 / 28.0 / 8.8 / 25.2; C-drones within 75 m of the GS at 60 s and 62 m at 95 s in all of them (rl_sim/out/2c_edge_r2_B/edge_geometry.csv, policy "direct" = c_actor_r2_B.pt). No memory — rl_sim/agents/c_actor.py (feed-forward, no recurrent state), inputs from the hello table only, entries dropped after HELLO_TIMEOUT_INTERVALS = 3 s. Greedy only — every Phase 2c run uses ROUTING = greedy (rl_sim/scripts/train_c_ppo.py). Noise — rl_sim/out/2c_r2_test.csv (varied: B 10.35, midpoint 9.22) and rl_sim/out/2c_r2_test_paired.csv (B minus midpoint, varied, all: +1.13 points, 95% CI -1.24 to +3.49, lower on 53 of 100). -->
 
 **Further work**
 

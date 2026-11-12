@@ -1,0 +1,4 @@
+# channel=fspl_sigmoid  |  f=2.4GHz  |  Pt=30dBm  |  G=2dBi  |  sens=-55.6dBm@10%  |  b=1.641/dB  |  edge=350m  |  loop_guard=path  |  area=900x900 m  |  18M+7C  |  Q=10/link  |  N=1/link/step  |  load=200 ms  |  window=[50,950) of 1000  |  commit=ccbc694  |  phase 2c full-fleet test layout 620, run seed 9619, re-run for pictures; must equal 2c_r2_test.csv
+policy,placement_seed,run_seed,total_loss,test_csv_total_loss
+midpoint,620,9619,19.209876543209877,19.209876543209877
+control,620,9619,16.38271604938272,16.38271604938272

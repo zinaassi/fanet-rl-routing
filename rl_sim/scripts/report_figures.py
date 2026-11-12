@@ -81,7 +81,10 @@ OWN = ("ploss_curve.png", "1a_loss_heatmaps.png")
 #: (and the 2c_case*.gif files, which prune never touches) from
 #: report_figures_2c.py (each with --report).
 KEEP = ("example_layout.png", "intro_example.png", "rl_loop.png",
-        "actor_network.png", "2c_training_curve.png")
+        "actor_network.png", "2c_training_curve.png", "technion_header.png",
+        "2c_full_test_snapshots.png", "2c_case6_snapshots.png",
+        "2c_case7_snapshots.png", "2c_case8_snapshots.png",
+        "2c_case9_snapshots.png")
 
 
 def _style(ax: plt.Axes) -> None:
